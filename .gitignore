@@ -27,6 +27,48 @@ go.work.sum
 # env file
 .env
 
+# Build output (project-specific, safe defaults)
+bin/
+dist/
+
+# Go build/cache artifacts
+*.a
+*.o
+*.prof
+*.trace
+__debug_bin*
+
+# Logs
+*.log
+
+# Dart / Flutter
+.dart_tool/
+.packages
+.pub/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# Flutter platform folders - generated/ephemeral content
+android/.gradle/
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/.last_build_id
+macos/Pods/
+macos/Flutter/ephemeral/
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.history/
+
+# OS
+.DS_Store
