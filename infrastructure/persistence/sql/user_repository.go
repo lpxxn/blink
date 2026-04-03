@@ -28,6 +28,25 @@ func (r *UserRepository) Create(ctx context.Context, u *domainuser.User) error {
 	return err
 }
 
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*domainuser.User, error) {
+	row := r.DB.QueryRowContext(ctx, `
+		SELECT snowflake_id, email, name, wechat_id, phone, password_hash, password_salt, status, role
+		FROM users WHERE email = ? AND deleted_at IS NULL
+	`, email)
+	var u domainuser.User
+	err := row.Scan(
+		&u.SnowflakeID, &u.Email, &u.Name, &u.WechatID, &u.Phone,
+		&u.PasswordHash, &u.PasswordSalt, &u.Status, &u.Role,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, domainuser.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
 func (r *UserRepository) GetByID(ctx context.Context, id int64) (*domainuser.User, error) {
 	row := r.DB.QueryRowContext(ctx, `
 		SELECT snowflake_id, email, name, wechat_id, phone, password_hash, password_salt, status, role
