@@ -80,6 +80,8 @@
 - **`users`**：含邮箱、展示名、`password_hash`（bcrypt）等。仅通过第三方 OAuth 创建的用户使用随机占位密码，不能用于 IdP 密码登录。  
 - **`oauth_identities`**：`platform/db/0004_oauth_identities.sql`，`(provider, provider_subject)` 唯一。
 
+应用层通过 [sqlx](https://github.com/jmoiron/sqlx) 访问上述表，说明见 [`docs/database-sqlx.md`](database-sqlx.md)。
+
 ### Redis
 
 | 用途 | Key 前缀 | 说明 |

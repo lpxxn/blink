@@ -7,6 +7,7 @@ require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-sql-driver/mysql v1.9.3
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.12.1
 	github.com/redis/go-redis/v9 v9.18.0
 	golang.org/x/crypto v0.49.0

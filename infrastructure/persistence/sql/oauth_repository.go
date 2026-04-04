@@ -7,27 +7,44 @@ import (
 	"time"
 
 	domainoauth "github.com/lpxxn/blink/domain/oauth"
+	"github.com/jmoiron/sqlx"
 )
 
+// OAuthRepository implements domain/oauth.Repository using sqlx.
 type OAuthRepository struct {
-	DB *sql.DB
+	DB *sqlx.DB
+}
+
+type oauthRow struct {
+	SnowflakeID       int64  `db:"snowflake_id"`
+	Provider          string `db:"provider"`
+	ProviderSubject   string `db:"provider_subject"`
+	UserID            int64  `db:"user_id"`
+}
+
+func (r *oauthRow) toDomain() *domainoauth.Identity {
+	return &domainoauth.Identity{
+		SnowflakeID:     r.SnowflakeID,
+		Provider:        r.Provider,
+		ProviderSubject: r.ProviderSubject,
+		UserID:          r.UserID,
+	}
 }
 
 func (r *OAuthRepository) FindByProviderSubject(ctx context.Context, provider, subject string) (*domainoauth.Identity, error) {
-	row := r.DB.QueryRowContext(ctx, `
+	var row oauthRow
+	err := r.DB.GetContext(ctx, &row, `
 		SELECT snowflake_id, provider, provider_subject, user_id
 		FROM oauth_identities
 		WHERE provider = ? AND provider_subject = ? AND deleted_at IS NULL
 	`, provider, subject)
-	var o domainoauth.Identity
-	err := row.Scan(&o.SnowflakeID, &o.Provider, &o.ProviderSubject, &o.UserID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domainoauth.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &o, nil
+	return row.toDomain(), nil
 }
 
 func (r *OAuthRepository) Create(ctx context.Context, id *domainoauth.Identity) error {

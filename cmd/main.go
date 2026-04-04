@@ -12,6 +12,7 @@ import (
 
 	"github.com/bwmarrin/snowflake"
 	"github.com/go-chi/chi/v5"
+	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 
@@ -33,13 +34,17 @@ func main() {
 	ctx := context.Background()
 
 	dsn := getenv("BLINK_DATABASE_DSN", "file:./data/blink.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
-	db, err := sql.Open("sqlite", dsn)
+	sqldb, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer sqldb.Close()
+	db := sqlx.NewDb(sqldb, "sqlite")
+	if err := db.Ping(); err != nil {
+		log.Fatal(err)
+	}
 	migDir := getenv("BLINK_MIGRATIONS_DIR", "platform/db")
-	if err := migrator.Run(db, "sqlite", migDir); err != nil {
+	if err := migrator.Run(sqldb, "sqlite", migDir); err != nil {
 		log.Fatal(err)
 	}
 
