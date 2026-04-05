@@ -6,7 +6,7 @@ import (
 
 	"github.com/bwmarrin/snowflake"
 
-	sqlrepo "github.com/lpxxn/blink/infrastructure/persistence/sql"
+	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
 	"github.com/lpxxn/blink/internal/testutil"
 )
 
@@ -17,8 +17,8 @@ func TestRegisterWithPassword_CreatesBuiltinIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := &RegisterService{
-		Users:      &sqlrepo.UserRepository{DB: db},
-		Identities: &sqlrepo.OAuthRepository{DB: db},
+		Users:      &gormdb.UserRepository{DB: db},
+		Identities: &gormdb.OAuthRepository{DB: db},
 		Node:       node,
 	}
 	ctx := context.Background()
@@ -30,7 +30,7 @@ func TestRegisterWithPassword_CreatesBuiltinIdentity(t *testing.T) {
 		t.Fatal("expected user id")
 	}
 	sub := FormatBuiltinSubject(id)
-	o, err := (&sqlrepo.OAuthRepository{DB: db}).FindByProviderSubject(ctx, "builtin", sub)
+	o, err := (&gormdb.OAuthRepository{DB: db}).FindByProviderSubject(ctx, "builtin", sub)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,8 +43,8 @@ func TestRegisterWithPassword_DuplicateEmail(t *testing.T) {
 	db := testutil.OpenSQLiteMemory(t)
 	node, _ := snowflake.NewNode(1)
 	svc := &RegisterService{
-		Users:      &sqlrepo.UserRepository{DB: db},
-		Identities: &sqlrepo.OAuthRepository{DB: db},
+		Users:      &gormdb.UserRepository{DB: db},
+		Identities: &gormdb.OAuthRepository{DB: db},
 		Node:       node,
 	}
 	ctx := context.Background()

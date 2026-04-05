@@ -1,31 +1,34 @@
 package testutil
 
 import (
-	"database/sql"
 	"path/filepath"
 	"runtime"
 	"testing"
 
-	"github.com/jmoiron/sqlx"
-	_ "modernc.org/sqlite"
+	glsqlite "github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 
 	"github.com/lpxxn/blink/internal/migrator"
 )
 
-// OpenSQLiteMemory runs platform migrations against an in-memory SQLite DB and returns sqlx.DB.
-func OpenSQLiteMemory(t *testing.T) *sqlx.DB {
+// OpenSQLiteMemory runs platform migrations against an in-memory SQLite DB and returns *gorm.DB.
+func OpenSQLiteMemory(t *testing.T) *gorm.DB {
 	t.Helper()
-	sqldb, err := sql.Open("sqlite", "file::memory:?cache=shared")
+	gdb, err := gorm.Open(glsqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqldb, err := gdb.DB()
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = sqldb.Close() })
-	db := sqlx.NewDb(sqldb, "sqlite")
+	sqldb.SetMaxOpenConns(1)
 	dir := filepath.Join(moduleRoot(t), "platform", "db")
 	if err := migrator.Run(sqldb, "sqlite", dir); err != nil {
 		t.Fatal(err)
 	}
-	return db
+	return gdb
 }
 
 func moduleRoot(t *testing.T) string {

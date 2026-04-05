@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -12,9 +11,10 @@ import (
 
 	"github.com/bwmarrin/snowflake"
 	"github.com/go-chi/chi/v5"
-	"github.com/jmoiron/sqlx"
+	glsqlite "github.com/glebarez/sqlite"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
+	"gorm.io/gorm"
 
 	appauth "github.com/lpxxn/blink/application/auth"
 	appidp "github.com/lpxxn/blink/application/idp"
@@ -25,22 +25,24 @@ import (
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 	httpidp "github.com/lpxxn/blink/infrastructure/interface/http/idp"
 	httpoauth "github.com/lpxxn/blink/infrastructure/interface/http/oauth"
-	sqlrepo "github.com/lpxxn/blink/infrastructure/persistence/sql"
-
-	_ "modernc.org/sqlite"
+	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
 )
 
 func main() {
 	ctx := context.Background()
 
 	dsn := getenv("BLINK_DATABASE_DSN", "file:./data/blink.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
-	sqldb, err := sql.Open("sqlite", dsn)
+	gdb, err := gorm.Open(glsqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	sqldb, err := gdb.DB()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer sqldb.Close()
-	db := sqlx.NewDb(sqldb, "sqlite")
-	if err := db.Ping(); err != nil {
+	sqldb.SetMaxOpenConns(1)
+	if err := sqldb.Ping(); err != nil {
 		log.Fatal(err)
 	}
 	migDir := getenv("BLINK_MIGRATIONS_DIR", "platform/db")
@@ -63,8 +65,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	userRepo := &sqlrepo.UserRepository{DB: db}
-	oauthRepo := &sqlrepo.OAuthRepository{DB: db}
+	userRepo := &gormdb.UserRepository{DB: gdb}
+	oauthRepo := &gormdb.OAuthRepository{DB: gdb}
 	sessStore := &redisstore.SessionStore{Client: rdb}
 	stateStore := &redisstore.OAuthStateStore{Client: rdb}
 

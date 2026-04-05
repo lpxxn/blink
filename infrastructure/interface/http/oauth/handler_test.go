@@ -17,7 +17,7 @@ import (
 
 	appoauth "github.com/lpxxn/blink/application/oauth"
 	redisstore "github.com/lpxxn/blink/infrastructure/cache/redisstore"
-	sqlrepo "github.com/lpxxn/blink/infrastructure/persistence/sql"
+	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
 	"github.com/lpxxn/blink/internal/testutil"
 )
 
@@ -37,8 +37,8 @@ func TestHandler_OAuthCallback_SetsCookie(t *testing.T) {
 		info:     appoauth.UserInfo{Subject: "http-1", Email: "h@example.com", Name: "H"},
 	}
 	svc := &appoauth.LoginService{
-		Users:      &sqlrepo.UserRepository{DB: db},
-		Identities: &sqlrepo.OAuthRepository{DB: db},
+		Users:      &gormdb.UserRepository{DB: db},
+		Identities: &gormdb.OAuthRepository{DB: db},
 		Sessions:   &redisstore.SessionStore{Client: rdb},
 		States:     &redisstore.OAuthStateStore{Client: rdb},
 		Providers: map[string]appoauth.OAuth2Provider{

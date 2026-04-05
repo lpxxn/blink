@@ -12,7 +12,7 @@ import (
 
 	domainuser "github.com/lpxxn/blink/domain/user"
 	redisstore "github.com/lpxxn/blink/infrastructure/cache/redisstore"
-	sqlrepo "github.com/lpxxn/blink/infrastructure/persistence/sql"
+	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
 	"github.com/lpxxn/blink/internal/testutil"
 )
 
@@ -51,8 +51,8 @@ func TestLoginService_RegisterThenLogin(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := &LoginService{
-		Users:      &sqlrepo.UserRepository{DB: db},
-		Identities: &sqlrepo.OAuthRepository{DB: db},
+		Users:      &gormdb.UserRepository{DB: db},
+		Identities: &gormdb.OAuthRepository{DB: db},
 		Sessions:   &redisstore.SessionStore{Client: rdb},
 		States:     &redisstore.OAuthStateStore{Client: rdb},
 		Providers: map[string]OAuth2Provider{
@@ -132,8 +132,8 @@ func TestLoginService_UnknownProvider(t *testing.T) {
 	t.Cleanup(func() { _ = rdb.Close() })
 	node, _ := snowflake.NewNode(1)
 	svc := &LoginService{
-		Users:      &sqlrepo.UserRepository{DB: db},
-		Identities: &sqlrepo.OAuthRepository{DB: db},
+		Users:      &gormdb.UserRepository{DB: db},
+		Identities: &gormdb.OAuthRepository{DB: db},
 		Sessions:   &redisstore.SessionStore{Client: rdb},
 		States:     &redisstore.OAuthStateStore{Client: rdb},
 		Providers:  map[string]OAuth2Provider{},

@@ -9,7 +9,7 @@ import (
 	"github.com/bwmarrin/snowflake"
 
 	appauth "github.com/lpxxn/blink/application/auth"
-	sqlrepo "github.com/lpxxn/blink/infrastructure/persistence/sql"
+	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
 	"github.com/lpxxn/blink/internal/testutil"
 )
 
@@ -55,8 +55,8 @@ func (m *memStore) GetUserIDByAccessToken(_ context.Context, token string) (int6
 func TestService_LoginAndExchange(t *testing.T) {
 	db := testutil.OpenSQLiteMemory(t)
 	node, _ := snowflake.NewNode(1)
-	userRepo := &sqlrepo.UserRepository{DB: db}
-	oauthRepo := &sqlrepo.OAuthRepository{DB: db}
+	userRepo := &gormdb.UserRepository{DB: db}
+	oauthRepo := &gormdb.OAuthRepository{DB: db}
 	_, err := (&appauth.RegisterService{
 		Users:      userRepo,
 		Identities: oauthRepo,
