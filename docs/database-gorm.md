@@ -90,3 +90,5 @@ go get github.com/glebarez/sqlite@latest
 | `platform/db` | DDL 迁移脚本 |
 
 认证与注册流程见 [`docs/auth-login-registration.md`](auth-login-registration.md)。
+
+**事务**：`*gorm.DB` 既可表示根连接也可表示事务会话；仓储在事务内应使用 `{DB: tx}`。说明与示例见 [`docs/gorm-transactions.md`](gorm-transactions.md)。

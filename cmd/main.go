@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/snowflake"
-	"github.com/go-chi/chi/v5"
 	glsqlite "github.com/glebarez/sqlite"
+	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 	"gorm.io/gorm"
@@ -19,13 +19,13 @@ import (
 	appauth "github.com/lpxxn/blink/application/auth"
 	appidp "github.com/lpxxn/blink/application/idp"
 	appoauth "github.com/lpxxn/blink/application/oauth"
-	"github.com/lpxxn/blink/internal/migrator"
-	redisstore "github.com/lpxxn/blink/infrastructure/cache/redisstore"
 	oauthadapter "github.com/lpxxn/blink/infrastructure/adapter/oauth2"
+	redisstore "github.com/lpxxn/blink/infrastructure/cache/redisstore"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 	httpidp "github.com/lpxxn/blink/infrastructure/interface/http/idp"
 	httpoauth "github.com/lpxxn/blink/infrastructure/interface/http/oauth"
 	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
+	"github.com/lpxxn/blink/internal/migrator"
 )
 
 func main() {
@@ -132,6 +132,9 @@ func main() {
 			Users:      userRepo,
 			Identities: oauthRepo,
 			Node:       node,
+			Tx:         &gormdb.TxRunner{DB: gdb},
+			Sessions:   sessStore,
+			SessionTTL: 7 * 24 * time.Hour,
 		}}
 	}
 
