@@ -64,7 +64,8 @@ go get github.com/glebarez/sqlite@latest
 
 ## 测试
 
-- **`internal/testutil.OpenSQLiteMemory(t)`** 返回 **`*gorm.DB`**：内存 SQLite + 执行 `platform/db` 全量迁移，供 `application/*` 与 HTTP 测试注入仓储。
+- **`internal/testutil.OpenSQLiteMemory(t)`** 返回 **`*gorm.DB`**：内存 SQLite + 执行 `platform/db` 全量迁移；GORM 日志为 **Silent**，避免测试输出刷屏。供 `application/*`、HTTP 测试与 **`infrastructure/persistence/gormdb`** 使用。
+- **`infrastructure/persistence/gormdb/repository_test.go`**：对 `UserRepository` / `OAuthRepository` 的集成测试（创建、按邮箱/ID 查询、不存在、唯一约束、更新最近登录、软删后不可见、领域映射往返）。
 
 ---
 

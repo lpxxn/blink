@@ -7,6 +7,7 @@ import (
 
 	glsqlite "github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/lpxxn/blink/internal/migrator"
 )
@@ -14,7 +15,9 @@ import (
 // OpenSQLiteMemory runs platform migrations against an in-memory SQLite DB and returns *gorm.DB.
 func OpenSQLiteMemory(t *testing.T) *gorm.DB {
 	t.Helper()
-	gdb, err := gorm.Open(glsqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	gdb, err := gorm.Open(glsqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +31,7 @@ func OpenSQLiteMemory(t *testing.T) *gorm.DB {
 	if err := migrator.Run(sqldb, "sqlite", dir); err != nil {
 		t.Fatal(err)
 	}
-	return gdb
+	return gdb.Debug()
 }
 
 func moduleRoot(t *testing.T) string {
