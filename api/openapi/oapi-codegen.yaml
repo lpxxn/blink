@@ -1,7 +1,11 @@
 # oapi-codegen 配置；请在 api/gen 目录执行 go generate（见 api/gen/doc.go）。
+# 仅生成带标签 servergen 的操作，避免手写路由被迫实现整份 ServerInterface。
 package: apigen
 generate:
   gin-server: true
   models: true
   embedded-spec: true
 output: apigen.gen.go
+output-options:
+  include-tags:
+    - servergen

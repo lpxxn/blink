@@ -9,7 +9,7 @@
       "program": "${workspaceFolder}/cmd",
       "cwd": "${workspaceFolder}",
       "env": {
-        "BLINK_HTTP_ADDR": ":8080",
+        "BLINK_HTTP_ADDR": ":11110",
         "BLINK_DATABASE_DSN": "file:./data/blink.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)",
         "BLINK_REDIS_ADDR": "127.0.0.1:6379",
         "BLINK_MIGRATIONS_DIR": "platform/db",

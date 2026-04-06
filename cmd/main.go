@@ -10,16 +10,16 @@ import (
 	"time"
 
 	"github.com/bwmarrin/snowflake"
-	glsqlite "github.com/glebarez/sqlite"
 	"github.com/gin-gonic/gin"
+	glsqlite "github.com/glebarez/sqlite"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 	"gorm.io/gorm"
 
+	apigen "github.com/lpxxn/blink/api/gen"
 	appauth "github.com/lpxxn/blink/application/auth"
 	appidp "github.com/lpxxn/blink/application/idp"
 	appoauth "github.com/lpxxn/blink/application/oauth"
-	"github.com/lpxxn/blink/api/gen"
 	oauthadapter "github.com/lpxxn/blink/infrastructure/adapter/oauth2"
 	redisstore "github.com/lpxxn/blink/infrastructure/cache/redisstore"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
@@ -165,7 +165,7 @@ func main() {
 		r.POST("/auth/register", gin.WrapF(regHTTP.Register))
 	}
 
-	addr := getenv("BLINK_HTTP_ADDR", ":8080")
+	addr := getenv("BLINK_HTTP_ADDR", ":11110")
 	log.Printf("listening on %s (OAuth providers: %d, builtin IdP: %v)", addr, len(providers), idpHTTP != nil)
 	if err := r.Run(addr); err != nil {
 		log.Fatal(err)

@@ -2,21 +2,42 @@ openapi: 3.0.3
 info:
   title: Blink HTTP API
   description: |
-    OpenAPI 规范为本仓库 HTTP 接口的单一事实来源；Go 类型与路由骨架由 oapi-codegen 生成。
-    人类可读的 API 说明通过本文件（或基于本文件渲染的文档站点）提供。
+    本仓库 HTTP 接口的 OpenAPI 描述；与 `infrastructure/interface/http/` 及 `cmd/main.go` 中的路由一致。
+
+    **内置 IdP 与注册**：`/auth/idp/*`、`POST /auth/register` 仅在配置了 `BLINK_PUBLIC_BASE_URL`、`BLINK_OAUTH_CLIENT_SECRET` 等环境变量时挂载（见 `cmd/main.go`）。未配置时调用会返回 404。
+
+    **代码生成**：仅带标签 `servergen` 的操作会由 oapi-codegen 生成 Gin 注册代码与 `ServerInterface` 方法；其余路径为手写路由，此处仅作文档。
   version: 0.0.0
 servers:
+  - url: http://127.0.0.1:11110
+    description: 本地开发（默认 BLINK_HTTP_ADDR=:11110）
+  - url: http://localhost:11110
+    description: 本地开发（localhost）
+  - url: "http://127.0.0.1:{port}"
+    description: 本地其它端口（与当前 BLINK_HTTP_ADDR 一致，在 Swagger 里改 port）
+    variables:
+      port:
+        default: "11110"
   - url: /
-    description: 默认（相对当前服务根路径）
+    description: 与 Swagger UI 同源（把文档托管在本 API 上时用此项）
 tags:
   - name: system
     description: 运维与健康检查
+  - name: oauth
+    description: 第三方 / 内置 OAuth2 登录入口（`/auth/oauth`）
+  - name: idp
+    description: 内置 OAuth2 授权服务（Authorization Server）
+  - name: auth
+    description: 账号注册（依赖内置 IdP 配置）
+  - name: servergen
+    description: 参与 oapi-codegen Gin 生成的操作（勿删此标签于已生成路径上）
+
 paths:
   /health:
     get:
       operationId: getHealth
-      tags: [system]
-      summary: 健康检查
+      tags: [system, servergen]
+      summary: 健康检查（JSON）
       responses:
         "200":
           description: 服务可用
@@ -24,7 +45,313 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+
+  /healthz:
+    get:
+      operationId: getHealthz
+      tags: [system]
+      summary: 健康检查（纯文本，探活）
+      responses:
+        "200":
+          description: 正文为字面量 `ok`
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+
+  /auth/oauth/{provider}/login:
+    get:
+      operationId: oauthLoginRedirect
+      tags: [oauth]
+      summary: 发起 OAuth 登录
+      description: 重定向至对应 `provider` 的授权页；成功时为 302。
+      parameters:
+        - $ref: "#/components/parameters/OAuthProvider"
+        - name: next
+          in: query
+          required: false
+          description: 登录成功后回跳路径（由应用内状态保存，完成回调后重定向）
+          schema:
+            type: string
+      responses:
+        "302":
+          description: 重定向至 IdP 授权 URL
+          headers:
+            Location:
+              schema:
+                type: string
+        "400":
+          description: 未知 provider 或参数错误；正文为纯文本
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /auth/oauth/{provider}/callback:
+    get:
+      operationId: oauthCallback
+      tags: [oauth]
+      summary: OAuth 回调
+      description: |
+        用授权码换会话，设置 HttpOnly Cookie `blink_session`，再 302 到 `next`。
+      parameters:
+        - $ref: "#/components/parameters/OAuthProvider"
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: 重定向到登录前保存的 `next`
+          headers:
+            Location:
+              schema:
+                type: string
+            Set-Cookie:
+              description: HttpOnly `blink_session`
+              schema:
+                type: string
+        "400":
+          description: 缺少 code/state 或换票失败
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /auth/idp/authorize:
+    get:
+      operationId: idpAuthorizeGet
+      tags: [idp]
+      summary: 授权页（HTML）
+      description: OAuth2 授权端点；返回登录表单 HTML。
+      parameters:
+        - $ref: "#/components/parameters/OAuthClientId"
+        - $ref: "#/components/parameters/OAuthRedirectURI"
+        - $ref: "#/components/parameters/OAuthResponseType"
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 登录页 HTML
+          content:
+            text/html:
+              schema:
+                type: string
+        "400":
+          description: 参数不合法或缺少 state
+          content:
+            text/plain:
+              schema:
+                type: string
+    post:
+      operationId: idpAuthorizePost
+      tags: [idp]
+      summary: 提交登录表单
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - client_id
+                - redirect_uri
+                - state
+                - response_type
+                - email
+                - password
+              properties:
+                client_id:
+                  type: string
+                redirect_uri:
+                  type: string
+                state:
+                  type: string
+                response_type:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "302":
+          description: 登录成功，重定向回客户端 `redirect_uri`（带授权码）
+          headers:
+            Location:
+              schema:
+                type: string
+        "400":
+          description: 表单解析失败
+          content:
+            text/plain:
+              schema:
+                type: string
+        "401":
+          description: 邮箱或密码错误
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /auth/idp/token:
+    post:
+      operationId: idpToken
+      tags: [idp]
+      summary: OAuth2 Token 端点
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - grant_type
+                - code
+                - redirect_uri
+                - client_id
+                - client_secret
+              properties:
+                grant_type:
+                  type: string
+                  example: authorization_code
+                code:
+                  type: string
+                redirect_uri:
+                  type: string
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+      responses:
+        "200":
+          description: 访问令牌
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthTokenResponse"
+        "400":
+          description: 换票失败（如 `invalid_grant`）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthTokenError"
+        "405":
+          description: 非 POST
+
+  /auth/idp/userinfo:
+    get:
+      operationId: idpUserInfo
+      tags: [idp]
+      summary: OpenID 风格 UserInfo
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: 当前用户信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfoResponse"
+        "401":
+          description: 缺少或无效的 Bearer Token
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: 用户注册
+      description: |
+        成功时 `201`。若服务配置了会话存储，会设置 Cookie `blink_session`，且 JSON 含 `session_token`、`session_cookie` 字段。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: 注册成功
+          headers:
+            Set-Cookie:
+              description: 若启用会话则下发 HttpOnly `blink_session`
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          description: 请求体非法、密码过短或邮箱格式无效
+          content:
+            text/plain:
+              schema:
+                type: string
+        "405":
+          description: 非 POST
+        "409":
+          description: 邮箱已注册
+          content:
+            text/plain:
+              schema:
+                type: string
+        "500":
+          description: 服务器错误
+          content:
+            text/plain:
+              schema:
+                type: string
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: access_token
+
+  parameters:
+    OAuthProvider:
+      name: provider
+      in: path
+      required: true
+      description: 提供方标识，如 `google`、`builtin`、测试用 `test` 等
+      schema:
+        type: string
+    OAuthClientId:
+      name: client_id
+      in: query
+      required: true
+      schema:
+        type: string
+    OAuthRedirectURI:
+      name: redirect_uri
+      in: query
+      required: true
+      schema:
+        type: string
+    OAuthResponseType:
+      name: response_type
+      in: query
+      required: true
+      schema:
+        type: string
+        example: code
+
   schemas:
     HealthResponse:
       type: object
@@ -33,3 +360,61 @@ components:
         status:
           type: string
           example: ok
+
+    RegisterRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        name:
+          type: string
+
+    RegisterResponse:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        session_token:
+          type: string
+          description: 若启用会话注册则返回；同时通过 Set-Cookie 下发
+        session_cookie:
+          type: string
+          description: 固定为 `blink_session`，与 Cookie 名一致
+
+    OAuthTokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          description: 过期时间（秒）
+
+    OAuthTokenError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: invalid_grant
+
+    UserInfoResponse:
+      type: object
+      required: [sub, email, name]
+      properties:
+        sub:
+          type: string
+        email:
+          type: string
+        name:
+          type: string

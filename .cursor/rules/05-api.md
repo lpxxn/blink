@@ -12,7 +12,7 @@ HTTP 对外契约以 **OpenAPI 规范** 为单一事实来源，并与 **oapi-co
 ## OpenAPI 与 oapi-codegen（长期约定）
 
 - **规范位置**：`api/openapi/openapi.yaml`（入口文件；若后续拆分，仍应有一个明确的主入口或 bundler 步骤）。
-- **生成代码**：包 `apigen`，输出 `api/gen/apigen.gen.go`（**禁止手改**）。配置见 `api/openapi/oapi-codegen.yaml`。
+- **生成代码**：包 `apigen`，输出 `api/gen/apigen.gen.go`（**禁止手改**）。配置见 `api/openapi/oapi-codegen.yaml`；当前通过 `output-options.include-tags: [servergen]` **仅为带标签 `servergen` 的操作生成 Gin 注册代码**，其余路径写在同一份 `openapi.yaml` 中仅作文档，由手写 Gin 路由实现。
 - **重新生成**：在仓库根目录执行  
   `go generate ./api/gen/...`  
   或在 `api/gen` 下执行 `go generate .`  

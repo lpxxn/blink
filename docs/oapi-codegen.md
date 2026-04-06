@@ -6,10 +6,12 @@
 
 | 路径 | 作用 |
 |------|------|
-| `api/openapi/openapi.yaml` | OpenAPI 3.x 规范入口（单一事实来源） |
-| `api/openapi/oapi-codegen.yaml` | 生成器配置（包名、生成项、输出文件） |
+| `api/openapi/openapi.yaml` | OpenAPI 3.x 规范入口（单一事实来源；**全量 HTTP 文档**） |
+| `api/openapi/oapi-codegen.yaml` | 生成器配置；当前含 `output-options.include-tags: [servergen]`，只为带 **`servergen`** 标签的操作生成 Gin 代码 |
 | `api/gen/doc.go` | `go:generate` 指令，调用上述配置与规范 |
 | `api/gen/apigen.gen.go` | **生成物，禁止手改** |
+
+新增需 **参与代码生成** 的 operation 时，在 `openapi.yaml` 里为该 operation 增加标签 **`servergen`**（可与 `system` 等并存）。
 
 在仓库根目录执行：
 
@@ -121,6 +123,22 @@ go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.6.0 \
 ## 与 Gin 应用接线
 
 生成侧会提供 `ServerInterface` 与 `RegisterHandlers(router gin.IRouter, si ServerInterface)`。在应用中实现 `ServerInterface`（例如 `cmd/main.go` 里的 `openapiServer`），对根引擎或路由组调用 `RegisterHandlers` 即可。业务子路由（如 `/auth/oauth`）继续使用 `gin.RouterGroup` 挂载手写 handler，与生成路由并存。
+
+## 如何打开 / 浏览 OpenAPI 文档
+
+**规范本身（推荐）**是人读的 **`api/openapi/openapi.yaml`**：用任意编辑器打开即可；与生成代码是否重新跑过无关，它是单一事实来源。
+
+**图形化浏览**可以任选其一：
+
+- 在线 [Swagger Editor](https://editor.swagger.io)：菜单 **File → Import file**，选 `openapi.yaml`；或在编辑器里把文件内容粘贴进去。
+- VS Code / Cursor 安装 OpenAPI / Swagger 类扩展（如 Redocly、42Crunch），在仓库里打开 `openapi.yaml` 即可预览。
+- 本地起静态文档（需本机有 Node）：例如  
+  `npx --yes @redocly/cli@latest preview-docs api/openapi/openapi.yaml`  
+  会在本机起一个带 UI 的预览地址（终端会打印 URL）。
+
+**Swagger / Try it out 里的 Servers**：规范里 `servers` 已包含 `http://127.0.0.1:11110`、`http://localhost:11110`、可改端口的 `http://127.0.0.1:{port}`，以及同源 `/`。若实际端口不同，在 UI 顶栏 **Servers** 里选带 `{port}` 的一项并修改，或直接在列表中选匹配项。改完 `openapi.yaml` 后需重新 `go generate ./api/gen/...` 才会更新嵌入 spec。
+
+**生成代码里的「嵌入 spec」**（`apigen.GetSwagger()`）是给程序加载、校验或以后你自己挂 **`/openapi.json`** 等路由用的，**没有**自动在浏览器里打开；若希望「跑起服务就能点文档」，需要在 Gin 里增加路由（返回 YAML/JSON 或挂载 Swagger UI），这不是 oapi-codegen 默认行为。
 
 ## 延伸阅读
 
