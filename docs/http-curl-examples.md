@@ -6,6 +6,8 @@
 
 自建 IdP（`/auth/idp/*`、OAuth **`builtin`**）需已配置 **`BLINK_PUBLIC_BASE_URL`**、**`BLINK_OAUTH_CLIENT_SECRET`** 等，否则这些路径返回 **404**。
 
+OAuth **`next` / `state`** 含义与「只测 IdP」和「完整登录」的差别，见 [oauth-flow-and-params.md](oauth-flow-and-params.md)。
+
 ---
 
 ## 公共变量（按需 export）

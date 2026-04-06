@@ -4,6 +4,8 @@
 
 实现入口：`cmd/main.go`；OAuth 客户端编排：`application/oauth`；自建 IdP：`application/idp`、`infrastructure/interface/http/idp`；邮箱密码注册：`application/auth`。
 
+**流程与参数详解**（`next` / `state` / `code`、浏览器完整路径与 curl 差异）：见 [oauth-flow-and-params.md](oauth-flow-and-params.md)。
+
 ---
 
 ## 两种模式对比
