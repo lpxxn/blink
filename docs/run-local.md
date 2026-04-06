@@ -63,7 +63,7 @@ go run ./cmd/migrate
 
 ## 与 VS Code / Cursor 调试
 
-使用仓库内 [`.vscode/launch.json`](../.vscode/launch.json) 中的 **「Blink: API Server」** 配置即可在 IDE 中启动（`cwd` 已为仓库根目录，便于 `./data` 等相对路径生效）。
+使用仓库内 [`.vscode/launch.json`](../.vscode/launch.json) 中的 **「Blink: API Server」** 配置即可在 IDE 中启动（`cwd` 已为仓库根目录，便于 `./data` 等相对路径生效）。该配置已带 **`GIN_MODE=release`**（避免 Gin 默认 debug 刷屏），以及 **`BLINK_PUBLIC_BASE_URL` / `BLINK_OAUTH_CLIENT_SECRET`** 的本地占位值，便于直接启用 **自建 IdP** 与 **`builtin` 登录**；生产或共享仓库前请改为强随机密钥，勿使用默认字面量。
 
 ## 已在本环境验证过的命令
 

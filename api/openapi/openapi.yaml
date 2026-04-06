@@ -4,7 +4,9 @@ info:
   description: |
     本仓库 HTTP 接口的 OpenAPI 描述；与 `infrastructure/interface/http/` 及 `cmd/main.go` 中的路由一致。
 
-    **内置 IdP 与注册**：`/auth/idp/*`、`POST /auth/register` 仅在配置了 `BLINK_PUBLIC_BASE_URL`、`BLINK_OAUTH_CLIENT_SECRET` 等环境变量时挂载（见 `cmd/main.go`）。未配置时调用会返回 404。
+    **`POST /auth/register`**：始终挂载（见 `cmd/main.go`），用于邮箱密码注册并建立 `builtin` 身份绑定。
+
+    **内置 IdP**：`/auth/idp/*` 以及 OAuth 提供方 **`builtin`** 仅在配置了 `BLINK_PUBLIC_BASE_URL`、`BLINK_OAUTH_CLIENT_SECRET` 等环境变量时启用；未配置时上述路径返回 **404**，但不影响 `/auth/register`。
 
     **代码生成**：仅带标签 `servergen` 的操作会由 oapi-codegen 生成 Gin 注册代码与 `ServerInterface` 方法；其余路径为手写路由，此处仅作文档。
   version: 0.0.0
@@ -28,7 +30,7 @@ tags:
   - name: idp
     description: 内置 OAuth2 授权服务（Authorization Server）
   - name: auth
-    description: 账号注册（依赖内置 IdP 配置）
+    description: 账号注册（默认即挂载，不依赖自建 IdP）
   - name: servergen
     description: 参与 oapi-codegen Gin 生成的操作（勿删此标签于已生成路径上）
 
@@ -277,7 +279,7 @@ paths:
       tags: [auth]
       summary: 用户注册
       description: |
-        成功时 `201`。若服务配置了会话存储，会设置 Cookie `blink_session`，且 JSON 含 `session_token`、`session_cookie` 字段。
+        路由**始终挂载**。成功时 `201`；若进程内为 `RegisterService` 配置了事务与会话存储，会设置 Cookie `blink_session`，且 JSON 可含 `session_token`、`session_cookie` 字段。
       requestBody:
         required: true
         content:

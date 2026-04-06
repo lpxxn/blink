@@ -2,7 +2,9 @@
 
 下文默认服务地址为 **`http://127.0.0.1:11110`**（与默认 `BLINK_HTTP_ADDR=:11110` 一致）。若不同，请替换变量 **`$BASE`**。
 
-自建 IdP（`/auth/idp/*`、`builtin` 登录）需已配置 **`BLINK_PUBLIC_BASE_URL`**、**`BLINK_OAUTH_CLIENT_SECRET`** 等，否则对应路由未挂载，会得到 **404**。
+**`POST /auth/register`** 默认即挂载，无需额外环境变量。
+
+自建 IdP（`/auth/idp/*`、OAuth **`builtin`**）需已配置 **`BLINK_PUBLIC_BASE_URL`**、**`BLINK_OAUTH_CLIENT_SECRET`** 等，否则这些路径返回 **404**。
 
 ---
 

@@ -13,7 +13,7 @@
 | **第三方 IdP** | 例如 `google`：用户在 Google 登录，本服务用 code 换 token 再拉 userinfo。 |
 | **自建 IdP（`builtin`）** | 本进程提供 `/auth/idp/*`（authorize / token / userinfo），浏览器在 **本服务页面** 输入邮箱与密码；仍通过标准 OAuth2 回调到 `/auth/oauth/builtin/callback`，与第三方路径一致。 |
 
-启用 **自建 IdP** 需同时配置 `BLINK_PUBLIC_BASE_URL` 与 `BLINK_OAUTH_CLIENT_SECRET`（见下文）。未配置时不会注册 `builtin` 提供方，也不会挂载 IdP 与 `/auth/register`。
+启用 **自建 IdP**（`/auth/idp/*` 与 OAuth 提供方 **`builtin`**）需同时配置 `BLINK_PUBLIC_BASE_URL` 与 `BLINK_OAUTH_CLIENT_SECRET`（见下文）。未配置时这些路由不挂载；**`POST /auth/register` 始终可用**，用于先注册本地账号，待 IdP 启用后再走 `builtin` 登录。
 
 ---
 
@@ -61,7 +61,7 @@
    - `GET|POST /auth/idp/authorize`：授权页（GET 为登录表单，POST 提交邮箱、密码后签发 `code` 并重定向回 `redirect_uri`）。  
    - `POST /auth/idp/token`：用 `authorization_code` 换 `access_token`。  
    - `GET /auth/idp/userinfo`：`Bearer` 访问，返回 `sub` / `email` / `name`（与现有 `oauthadapter.Provider` 解析逻辑兼容）。  
-3. 挂载 **`POST /auth/register`**：JSON `email`、`password`（至少 8 位）、`name`，创建本地账号并建立 `builtin` 绑定。
+3. **`POST /auth/register`** 在进程内**始终挂载**（不依赖本节环境变量）；本节启用 IdP 后，用户可先注册再完成 `builtin` 授权码登录。IdP 启用时与注册共用同一套用户与 `oauth_identities` 存储。
 
 ### 推荐流程（完全自建）
 

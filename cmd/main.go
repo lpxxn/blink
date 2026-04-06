@@ -89,7 +89,15 @@ func main() {
 	}
 
 	var idpHTTP *httpidp.Handler
-	var regHTTP *httpauth.RegisterHandler
+
+	regHTTP := &httpauth.RegisterHandler{Svc: &appauth.RegisterService{
+		Users:      userRepo,
+		Identities: oauthRepo,
+		Node:       node,
+		Tx:         &gormdb.TxRunner{DB: gdb},
+		Sessions:   sessStore,
+		SessionTTL: 7 * 24 * time.Hour,
+	}}
 
 	publicBase := strings.TrimSpace(getenv("BLINK_PUBLIC_BASE_URL", ""))
 	publicBase = strings.TrimRight(publicBase, "/")
@@ -129,14 +137,6 @@ func main() {
 			AccessTTL:  time.Hour,
 		}
 		idpHTTP = &httpidp.Handler{Svc: idpSvc, FormAction: "/auth/idp/authorize"}
-		regHTTP = &httpauth.RegisterHandler{Svc: &appauth.RegisterService{
-			Users:      userRepo,
-			Identities: oauthRepo,
-			Node:       node,
-			Tx:         &gormdb.TxRunner{DB: gdb},
-			Sessions:   sessStore,
-			SessionTTL: 7 * 24 * time.Hour,
-		}}
 	}
 
 	svc := &appoauth.LoginService{
@@ -152,7 +152,7 @@ func main() {
 
 	h := &httpoauth.Handler{Svc: svc}
 
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.DebugMode)
 	r := gin.New()
 	apigen.RegisterHandlers(r, openapiServer{})
 	r.GET("/healthz", func(c *gin.Context) {
@@ -160,13 +160,13 @@ func main() {
 	})
 	oauthG := r.Group("/auth/oauth")
 	h.Mount(oauthG)
+	r.POST("/auth/register", gin.WrapF(regHTTP.Register))
 	if idpHTTP != nil {
 		idpHTTP.Mount(r.Group("/auth/idp"))
-		r.POST("/auth/register", gin.WrapF(regHTTP.Register))
 	}
 
 	addr := getenv("BLINK_HTTP_ADDR", ":11110")
-	log.Printf("listening on %s (OAuth providers: %d, builtin IdP: %v)", addr, len(providers), idpHTTP != nil)
+	log.Printf("listening on %s (OAuth providers: %d, builtin IdP: %v, POST /auth/register: on)", addr, len(providers), idpHTTP != nil)
 	if err := r.Run(addr); err != nil {
 		log.Fatal(err)
 	}
