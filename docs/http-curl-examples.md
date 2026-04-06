@@ -241,6 +241,17 @@ curl -sS -D /tmp/idp.hdr -o /dev/null -X POST "${BASE}/auth/idp/authorize" \
   --data-urlencode "email=demo@example.com" \
   --data-urlencode "password=password123"
 grep -i '^Location:' /tmp/idp.hdr
+
+# 或者直接输出在curl的请求结果里
+curl -sS -i -D -X POST "${BASE}/auth/idp/authorize" \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode "client_id=${CLIENT_ID}" \
+  --data-urlencode "redirect_uri=${REDIRECT_URI}" \
+  --data-urlencode "state=${STATE}" \
+  -d "response_type=code" \
+  --data-urlencode "email=demo@example.com" \
+  --data-urlencode "password=password123"
+
 # 假设从 Location 解析出 code 赋给 CODE
 export CODE='从Location复制的code'
 
