@@ -67,7 +67,6 @@ windows/flutter/ephemeral/
 *.iml
 *.ipr
 *.iws
-.vscode/
 .history/
 
 # OS
