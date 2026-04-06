@@ -4,10 +4,21 @@
 
 仓库已预留：
 
-- `infrastructure/interface/http/`
+- `infrastructure/interface/http/`（已有部分 HTTP handler）
 - `infrastructure/interface/grpc/`
 
-目前尚未看到实际 REST 或 GraphQL 实现。因此本规则描述的是后续 API 设计应遵循的统一约束。
+HTTP 对外契约以 **OpenAPI 规范** 为单一事实来源，并与 **oapi-codegen** 生成的 Go 代码对齐；本文件约束设计与协作方式。
+
+## OpenAPI 与 oapi-codegen（长期约定）
+
+- **规范位置**：`api/openapi/openapi.yaml`（入口文件；若后续拆分，仍应有一个明确的主入口或 bundler 步骤）。
+- **生成代码**：包 `apigen`，输出 `api/gen/apigen.gen.go`（**禁止手改**）。配置见 `api/openapi/oapi-codegen.yaml`。
+- **重新生成**：在仓库根目录执行  
+  `go generate ./api/gen/...`  
+  或在 `api/gen` 下执行 `go generate .`  
+  修改 YAML 后必须跑生成并使 `go build ./...` 通过后再提交。
+- **与实现的关系**：`ServerInterface` 由生成代码定义；具体业务在 `infrastructure/interface/http/` 等处的实现类型中完成，在 Gin 上通过 `apigen.RegisterHandlers` 等与生成路由对齐。
+- **API 文档（给人看）**：权威说明即 OpenAPI 本身；可在服务内托管嵌入的 spec（生成代码中的 embedded spec）并用 Swagger UI / Redoc 渲染，或在 CI 中产出静态文档站点。无论采用哪种方式，**以仓库中的 YAML 为准**，避免文档与实现漂移。
 
 ## 总体原则
 

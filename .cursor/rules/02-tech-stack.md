@@ -8,6 +8,7 @@
 - 启动方式：`cmd/main.go`
 - 前端目录：`front/`（当前预留，尚未见具体实现）
 - 协议目录：`infrastructure/interface/http/` 与 `infrastructure/interface/grpc/`
+- HTTP 路由：[Gin](https://github.com/gin-gonic/gin)；OpenAPI 代码生成见 `docs/oapi-codegen.md`
 
 ## 明确偏好
 

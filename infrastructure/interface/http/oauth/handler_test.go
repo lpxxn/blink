@@ -11,7 +11,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/bwmarrin/snowflake"
-	"github.com/go-chi/chi/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 
@@ -50,8 +50,9 @@ func TestHandler_OAuthCallback_SetsCookie(t *testing.T) {
 	}
 
 	h := &Handler{Svc: svc}
-	r := chi.NewRouter()
-	r.Mount("/auth/oauth", h.Routes())
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	h.Mount(r.Group("/auth/oauth"))
 
 	req := httptest.NewRequest(http.MethodGet, "/auth/oauth/test/login?next=/home", nil)
 	rr := httptest.NewRecorder()

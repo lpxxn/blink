@@ -1,12 +1,11 @@
 package httpidp
 
 import (
-	"encoding/json"
 	"html/template"
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gin-gonic/gin"
 
 	"github.com/lpxxn/blink/application/idp"
 )
@@ -17,23 +16,22 @@ type Handler struct {
 	FormAction string // e.g. /auth/idp/authorize
 }
 
-func (h *Handler) Routes() chi.Router {
-	r := chi.NewRouter()
-	r.Get("/authorize", h.Authorize)
-	r.Post("/authorize", h.Authorize)
-	r.Post("/token", h.Token)
-	r.Get("/userinfo", h.UserInfo)
-	return r
+// Mount registers routes under the given group (e.g. r.Group("/auth/idp")).
+func (h *Handler) Mount(rg *gin.RouterGroup) {
+	rg.GET("/authorize", h.Authorize)
+	rg.POST("/authorize", h.Authorize)
+	rg.POST("/token", h.Token)
+	rg.GET("/userinfo", h.UserInfo)
 }
 
-func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
+func (h *Handler) Authorize(c *gin.Context) {
+	switch c.Request.Method {
 	case http.MethodGet:
-		h.authorizeGet(w, r)
+		h.authorizeGet(c.Writer, c.Request)
 	case http.MethodPost:
-		h.authorizePost(w, r)
+		h.authorizePost(c.Writer, c.Request)
 	default:
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		c.String(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 	}
 }
 
@@ -79,13 +77,14 @@ func (h *Handler) authorizePost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, loc, http.StatusFound)
 }
 
-func (h *Handler) Token(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Token(c *gin.Context) {
+	r := c.Request
 	if r.Method != http.MethodPost {
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		c.String(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		c.String(http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 		return
 	}
 	grant := r.Form.Get("grant_type")
@@ -95,34 +94,31 @@ func (h *Handler) Token(w http.ResponseWriter, r *http.Request) {
 	sec := r.Form.Get("client_secret")
 	tok, exp, err := h.Svc.Exchange(r.Context(), grant, code, redir, cid, sec)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid_grant"})
+		c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid_grant"})
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	c.JSON(http.StatusOK, map[string]any{
 		"access_token": tok,
 		"token_type":   "Bearer",
 		"expires_in":   exp,
 	})
 }
 
-func (h *Handler) UserInfo(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UserInfo(c *gin.Context) {
+	r := c.Request
 	auth := r.Header.Get("Authorization")
 	parts := strings.SplitN(auth, " ", 2)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		c.String(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 		return
 	}
 	tok := strings.TrimSpace(parts[1])
 	sub, email, name, err := h.Svc.UserInfo(r.Context(), tok)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		c.String(http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
+	c.JSON(http.StatusOK, map[string]string{
 		"sub":   sub,
 		"email": email,
 		"name":  name,

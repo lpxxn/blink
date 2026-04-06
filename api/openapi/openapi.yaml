@@ -1,0 +1,35 @@
+openapi: 3.0.3
+info:
+  title: Blink HTTP API
+  description: |
+    OpenAPI 规范为本仓库 HTTP 接口的单一事实来源；Go 类型与路由骨架由 oapi-codegen 生成。
+    人类可读的 API 说明通过本文件（或基于本文件渲染的文档站点）提供。
+  version: 0.0.0
+servers:
+  - url: /
+    description: 默认（相对当前服务根路径）
+tags:
+  - name: system
+    description: 运维与健康检查
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [system]
+      summary: 健康检查
+      responses:
+        "200":
+          description: 服务可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok

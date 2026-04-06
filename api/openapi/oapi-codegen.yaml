@@ -1,0 +1,7 @@
+# oapi-codegen 配置；请在 api/gen 目录执行 go generate（见 api/gen/doc.go）。
+package: apigen
+generate:
+  gin-server: true
+  models: true
+  embedded-spec: true
+output: apigen.gen.go

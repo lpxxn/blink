@@ -11,7 +11,7 @@ import (
 
 	"github.com/bwmarrin/snowflake"
 	glsqlite "github.com/glebarez/sqlite"
-	"github.com/go-chi/chi/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/oauth2"
 	"gorm.io/gorm"
@@ -19,6 +19,7 @@ import (
 	appauth "github.com/lpxxn/blink/application/auth"
 	appidp "github.com/lpxxn/blink/application/idp"
 	appoauth "github.com/lpxxn/blink/application/oauth"
+	"github.com/lpxxn/blink/api/gen"
 	oauthadapter "github.com/lpxxn/blink/infrastructure/adapter/oauth2"
 	redisstore "github.com/lpxxn/blink/infrastructure/cache/redisstore"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
@@ -151,22 +152,31 @@ func main() {
 
 	h := &httpoauth.Handler{Svc: svc}
 
-	r := chi.NewRouter()
-	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	apigen.RegisterHandlers(r, openapiServer{})
+	r.GET("/healthz", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
 	})
-	r.Mount("/auth/oauth", h.Routes())
+	oauthG := r.Group("/auth/oauth")
+	h.Mount(oauthG)
 	if idpHTTP != nil {
-		r.Mount("/auth/idp", idpHTTP.Routes())
-		r.Post("/auth/register", regHTTP.Register)
+		idpHTTP.Mount(r.Group("/auth/idp"))
+		r.POST("/auth/register", gin.WrapF(regHTTP.Register))
 	}
 
 	addr := getenv("BLINK_HTTP_ADDR", ":8080")
 	log.Printf("listening on %s (OAuth providers: %d, builtin IdP: %v)", addr, len(providers), idpHTTP != nil)
-	if err := http.ListenAndServe(addr, r); err != nil {
+	if err := r.Run(addr); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// openapiServer implements generated OpenAPI routes (see api/openapi/openapi.yaml).
+type openapiServer struct{}
+
+func (openapiServer) GetHealth(c *gin.Context) {
+	c.JSON(http.StatusOK, apigen.HealthResponse{Status: "ok"})
 }
 
 func getenv(k, def string) string {
