@@ -4,6 +4,22 @@
 
 ---
 
+## 0. 为什么有 `/auth/idp/*` 还要 `/auth/oauth/.../callback`？
+
+很多人会先记住自建 IdP 的三条接口，觉得「登录」已经在那边完成了；**callback 不是重复登录，而是 OAuth 里「客户端收码、换票、发本站会话」的必经步骤。**
+
+| 你看到的 URL | 扮演角色 | 一句话 |
+|--------------|----------|--------|
+| `GET/POST /auth/idp/authorize` | **授权服务器（IdP）** | 浏览器里输入密码；成功后 **302 到 `redirect_uri`**，带上 **`code` + `state`** |
+| `POST /auth/idp/token` | **IdP** | 用 **`code` + client_secret** 换 **`access_token`**（通常由 **Blink 服务端**在 callback 里调，不是浏览器直接调） |
+| `GET /auth/idp/userinfo` | **IdP** | 用 Bearer token 返回 `sub` / `email` / `name` |
+| `GET /auth/oauth/{provider}/login` | **Blink = OAuth 客户端** | 生成 **`state`**、写 Redis、**302 到 authorize**（把用户送进 IdP） |
+| `GET /auth/oauth/{provider}/callback` | **Blink = OAuth 客户端** | 浏览器带着 **`code`** 落回本站；Blink **校验 state**、**调 token + userinfo**、写 **Redis 会话**、**`Set-Cookie: blink_session`**、再 **302 到 `next`** |
+
+**记忆法**：`/auth/idp/*` 回答「**谁在 IdP 侧证明身份**」；`/auth/oauth/*` 回答「**Blink 作为接入方，如何把这次授权变成本站已登录**」。没有 callback，浏览器地址栏里会有 `code`，但 **Blink 不会替你换票、也不会下发 `blink_session`**。
+
+---
+
 ## 1. 三个角色
 
 | 角色 | 在本项目中的体现 | 职责 |

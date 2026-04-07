@@ -1,0 +1,5 @@
+HTTP/1.1 302 Found
+Location: http://127.0.0.1:11110/auth/oauth/builtin/callback?code=2089c4d95f54f805e98dde01f9d93864&state=manual-test-state-123
+Date: Tue, 07 Apr 2026 14:07:45 GMT
+Content-Length: 0
+

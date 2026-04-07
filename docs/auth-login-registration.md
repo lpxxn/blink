@@ -4,7 +4,7 @@
 
 实现入口：`cmd/main.go`；OAuth 客户端编排：`application/oauth`；自建 IdP：`application/idp`、`infrastructure/interface/http/idp`；邮箱密码注册：`application/auth`。
 
-**流程与参数详解**（`next` / `state` / `code`、浏览器完整路径与 curl 差异）：见 [oauth-flow-and-params.md](oauth-flow-and-params.md)。
+**流程与参数详解**（`next` / `state` / `code`、浏览器完整路径与 curl 差异）：见 [oauth-flow-and-params.md](oauth-flow-and-params.md)。**若不理解「为何 IdP 已有 authorize/token/userinfo，还要 `/auth/oauth/builtin/callback`」**：前者是 **授权服务器协议端点**，后者是 **Blink 作为 OAuth 客户端的回调**，用于收 `code`、换票、建立本站 `blink_session`（见该文档第 0 节）。
 
 ---
 

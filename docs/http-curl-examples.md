@@ -8,6 +8,17 @@
 
 OAuth **`next` / `state`** 含义与「只测 IdP」和「完整登录」的差别，见 [oauth-flow-and-params.md](oauth-flow-and-params.md)。
 
+### IdP 三端点 与 `callback` 各干什么？
+
+| 路径 | 角色 | 典型调用方 |
+|------|------|------------|
+| `/auth/idp/authorize` | IdP：展示登录页、成功后重定向到 **`redirect_uri`** 并带 **`code`** | 浏览器 |
+| `/auth/idp/token` | IdP：用 **`code`** 换 **`access_token`** | **Blink 服务端**（在 callback 处理中，或你用手动 curl 联调） |
+| `/auth/idp/userinfo` | IdP：用 Bearer token 返回用户信息 | **Blink 服务端**（同上） |
+| `/auth/oauth/builtin/callback` | **Blink 客户端**：校验 **`state`**、内部调 token + userinfo、**下发 `blink_session`**、302 到 **`next`** | 浏览器（IdP 302 过来） |
+
+日常浏览器登录：**从** `GET /auth/oauth/builtin/login?next=...` **进入**，不要手写 callback URL；callback 上的 **`code`/`state`** 来自 authorize 成功后的 **`Location`**。仅联调 IdP 时可只走 authorize → token → userinfo，**不经过** callback（此时不会有本站会话 Cookie）。
+
 ---
 
 ## 公共变量（按需 export）
@@ -86,6 +97,8 @@ curl -sS -D - -o /dev/null "${BASE}/auth/oauth/builtin/login?next=/home"
 ---
 
 ## `GET /auth/oauth/{provider}/callback`
+
+**这不是「再登录一次」**：浏览器在 IdP 完成 authorize 后，**被 302 到这里**，query 上才有有效的 **`code`**。Blink 在本接口里完成：**消费 Redis 中的 `state`** → **POST `/auth/idp/token`** → **GET `/auth/idp/userinfo`** → 写会话 → **`Set-Cookie`** → 302 到登录前保存的 **`next`**。
 
 **Query（必填）**：
 
@@ -226,6 +239,7 @@ export BASE=http://127.0.0.1:11110
 export CLIENT_ID=blink
 export CLIENT_SECRET='你的密钥'
 export REDIRECT_URI="${BASE}/auth/oauth/builtin/callback"
+export CLIENT_SECRET='local-dev-only-change-me'
 
 # 1) 注册（若用户已存在可跳过）
 curl -sS -X POST "${BASE}/auth/register" \
@@ -256,7 +270,7 @@ curl -sS -i -D -X POST "${BASE}/auth/idp/authorize" \
 
 # 假设从 Location 解析出 code 赋给 CODE
 export CODE='从Location复制的code'
-
+export CODE='1efa935a81450037fef058e5b1f21090'
 # 3) token
 export ACCESS_TOKEN=$(curl -sS -X POST "${BASE}/auth/idp/token" \
   -H 'Content-Type: application/x-www-form-urlencoded' \
