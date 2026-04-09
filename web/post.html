@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>帖子 — Blink</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 1rem auto; padding: 0 1rem; }
+    .body { white-space: pre-wrap; margin: 1rem 0; }
+    .imgs img { max-width: 100%; margin: 0.5rem 0; border-radius: 6px; }
+    .reply { border-left: 3px solid #ddd; padding-left: 0.75rem; margin: 0.75rem 0; }
+    .meta { font-size: 0.85rem; color: #666; }
+    textarea { width: 100%; min-height: 80px; box-sizing: border-box; }
+    .err { color: #b00020; }
+    nav a { margin-right: 1rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/web/feed.html">返回流</a>
+    <a href="/web/compose.html">发帖</a>
+  </nav>
+  <h1>帖子</h1>
+  <p id="err" class="err"></p>
+  <div id="post"></div>
+  <h2>评论</h2>
+  <div id="replies"></div>
+  <h3>写评论</h3>
+  <textarea id="rbody" placeholder="内容"></textarea>
+  <p><button type="button" id="send">发送</button></p>
+  <script>
+    var API = '';
+    var params = new URLSearchParams(location.search);
+    var id = params.get('id');
+    if (!id) {
+      document.getElementById('err').textContent = '缺少 id';
+    }
+
+    function showPost(p) {
+      var root = document.getElementById('post');
+      root.innerHTML = '';
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = '#' + p.id + ' · 用户 ' + p.user_id + ' · 状态 ' + p.status;
+      root.appendChild(meta);
+      var b = document.createElement('div');
+      b.className = 'body';
+      b.textContent = p.body || '';
+      root.appendChild(b);
+      if (p.images && p.images.length) {
+        var im = document.createElement('div');
+        im.className = 'imgs';
+        p.images.forEach(function (u) {
+          var img = document.createElement('img');
+          img.src = u;
+          img.alt = '';
+          im.appendChild(img);
+        });
+        root.appendChild(im);
+      }
+    }
+
+    function loadPost() {
+      fetch(API + '/api/posts/' + encodeURIComponent(id), { credentials: 'include' })
+        .then(function (r) {
+          if (r.status === 404) throw new Error('帖子不存在或无权查看');
+          if (!r.ok) throw new Error('加载失败 ' + r.status);
+          return r.json();
+        })
+        .then(showPost)
+        .catch(function (e) {
+          document.getElementById('err').textContent = String(e);
+        });
+    }
+
+    function loadReplies() {
+      fetch(API + '/api/posts/' + encodeURIComponent(id) + '/replies?limit=100', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var box = document.getElementById('replies');
+          box.innerHTML = '';
+          (d.replies || []).forEach(function (x) {
+            var r = document.createElement('div');
+            r.className = 'reply';
+            r.appendChild(document.createTextNode(x.body));
+            var m = document.createElement('div');
+            m.className = 'meta';
+            m.textContent = '用户 ' + x.user_id + ' · #' + x.id;
+            r.appendChild(m);
+            box.appendChild(r);
+          });
+        });
+    }
+
+    document.getElementById('send').onclick = function () {
+      document.getElementById('err').textContent = '';
+      var body = document.getElementById('rbody').value.trim();
+      if (!body) return;
+      fetch(API + '/api/posts/' + encodeURIComponent(id) + '/replies', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: body })
+      })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) throw new Error('失败 ' + r.status);
+          document.getElementById('rbody').value = '';
+          loadReplies();
+        })
+        .catch(function (e) {
+          document.getElementById('err').textContent = String(e);
+        });
+    };
+
+    if (id) {
+      loadPost();
+      loadReplies();
+    }
+  </script>
+</body>
+</html>

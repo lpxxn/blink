@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blink</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    a { color: #0b57d0; }
+    ul { padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Blink</h1>
+  <p>轻量帖子与评论演示页（需先登录）。</p>
+  <ul>
+    <li><a href="/web/feed.html">帖子流</a></li>
+    <li><a href="/web/compose.html">发帖</a></li>
+    <li><a href="/web/admin.html">管理后台</a>（仅 super_admin）</li>
+  </ul>
+  <h2>登录</h2>
+  <p>使用已配置的 OAuth 提供方（需环境变量与回调 URL 正确）：</p>
+  <ul>
+    <li><a id="builtin" href="#">内置账号（builtin）</a></li>
+    <li><a id="google" href="#">Google</a></li>
+  </ul>
+  <p><a href="/auth/register">注册（邮箱密码）</a> 后，若已启用自建 IdP，可用 builtin 登录。</p>
+  <script>
+    function login(provider) {
+      var next = encodeURIComponent('/web/feed.html');
+      window.location.href = '/auth/oauth/' + provider + '/login?next=' + next;
+    }
+    document.getElementById('builtin').onclick = function (e) {
+      e.preventDefault();
+      login('builtin');
+    };
+    document.getElementById('google').onclick = function (e) {
+      e.preventDefault();
+      login('google');
+    };
+  </script>
+</body>
+</html>

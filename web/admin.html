@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>管理 — Blink</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 1rem auto; padding: 0 1rem; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+    th, td { border: 1px solid #ccc; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+    th { background: #f4f4f4; }
+    .err { color: #b00020; }
+    .ok { color: #0d6d3b; }
+    nav a { margin-right: 1rem; }
+    pre { background: #f8f8f8; padding: 0.75rem; overflow: auto; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/web/feed.html">流</a>
+    <a href="/web/index.html">首页</a>
+  </nav>
+  <h1>超级管理</h1>
+  <p id="err" class="err"></p>
+  <h2>概览</h2>
+  <pre id="overview">加载中…</pre>
+  <h2>用户（最近 50）</h2>
+  <div style="overflow-x:auto"><table id="users"><thead><tr><th>ID</th><th>邮箱</th><th>角色</th><th>状态</th><th>最近登录</th></tr></thead><tbody></tbody></table></div>
+  <h2>帖子（最近 20）</h2>
+  <div style="overflow-x:auto"><table id="posts"><thead><tr><th>ID</th><th>用户</th><th>审核</th><th>状态</th><th>摘要</th></tr></thead><tbody></tbody></table></div>
+  <script>
+    var API = '';
+
+    function loadAll() {
+      document.getElementById('err').textContent = '';
+      fetch(API + '/admin/api/overview', { credentials: 'include' })
+        .then(function (r) {
+          if (r.status === 403) throw new Error('需要 super_admin 登录');
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) throw new Error('overview ' + r.status);
+          return r.json();
+        })
+        .then(function (d) {
+          document.getElementById('overview').textContent = JSON.stringify(d, null, 2);
+        })
+        .catch(function (e) {
+          document.getElementById('err').textContent = String(e);
+          document.getElementById('overview').textContent = '';
+        });
+
+      fetch(API + '/admin/api/users?limit=50', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var tb = document.querySelector('#users tbody');
+          tb.innerHTML = '';
+          (d.users || []).forEach(function (u) {
+            var tr = document.createElement('tr');
+            [
+              String(u.id),
+              u.email || '',
+              u.role || '',
+              String(u.status),
+              u.last_login_at || '-'
+            ].forEach(function (cell) {
+              var td = document.createElement('td');
+              td.textContent = cell;
+              tr.appendChild(td);
+            });
+            tb.appendChild(tr);
+          });
+        });
+
+      fetch(API + '/admin/api/posts?limit=20', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var tb = document.querySelector('#posts tbody');
+          tb.innerHTML = '';
+          (d.posts || []).forEach(function (p) {
+            var tr = document.createElement('tr');
+            ['id', 'user_id', 'moderation_flag', 'status'].forEach(function (k) {
+              var td = document.createElement('td');
+              td.textContent = String(p[k] != null ? p[k] : '');
+              tr.appendChild(td);
+            });
+            var td5 = document.createElement('td');
+            td5.textContent = (p.body || '').slice(0, 60);
+            tr.appendChild(td5);
+            tb.appendChild(tr);
+          });
+        });
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>

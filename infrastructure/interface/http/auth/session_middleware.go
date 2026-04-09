@@ -81,3 +81,25 @@ func UserIDFromContext(c *gin.Context) (int64, bool) {
 	id, ok := v.(int64)
 	return id, ok
 }
+
+// OptionalSession sets ContextUserIDKey when a valid session is present; otherwise continues without user.
+func OptionalSession(store domainsession.Store) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if store == nil {
+			c.Next()
+			return
+		}
+		tok, ok := SessionTokenFromRequest(c.Request)
+		if !ok {
+			c.Next()
+			return
+		}
+		sess, err := store.Get(c.Request.Context(), tok)
+		if err != nil {
+			c.Next()
+			return
+		}
+		c.Set(ContextUserIDKey, sess.UserID)
+		c.Next()
+	}
+}

@@ -43,3 +43,59 @@ type OAuthIdentityModel struct {
 func (OAuthIdentityModel) TableName() string {
 	return "oauth_identities"
 }
+
+// CategoryModel maps categories (platform/db/0005_post_categories_moderation.sql).
+type CategoryModel struct {
+	ID        int64          `gorm:"column:id;primaryKey"`
+	Slug      string         `gorm:"column:slug;size:64;not null;uniqueIndex:idx_categories_slug"`
+	Name      string         `gorm:"column:name;size:128;not null"`
+	SortOrder int            `gorm:"column:sort_order;not null"`
+	CreatedAt time.Time      `gorm:"column:created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at"`
+}
+
+func (CategoryModel) TableName() string {
+	return "categories"
+}
+
+// PostModel maps posts (platform/db/0002 + 0005).
+type PostModel struct {
+	ID               int64          `gorm:"column:id;primaryKey"`
+	UserID           int64          `gorm:"column:user_id;not null;index:idx_posts_user_id"`
+	PostType         int            `gorm:"column:post_type;not null"`
+	ReplyToPostID    *int64         `gorm:"column:reply_to_post_id"`
+	ReferencedPostID *int64         `gorm:"column:referenced_post_id"`
+	Visibility       int            `gorm:"column:visibility;not null"`
+	AudienceListID   *int64         `gorm:"column:audience_list_id"`
+	CategoryID       *int64         `gorm:"column:category_id;index:idx_posts_category_id"`
+	Body             string         `gorm:"column:body;type:text;not null"`
+	Images           string         `gorm:"column:images;type:text;not null"`
+	Status           int            `gorm:"column:status;not null"`
+	ModerationFlag   int            `gorm:"column:moderation_flag;not null"`
+	ModerationNote   string         `gorm:"column:moderation_note;type:text;not null"`
+	CreatedAt        time.Time      `gorm:"column:created_at"`
+	UpdatedAt        time.Time      `gorm:"column:updated_at"`
+	DeletedAt        gorm.DeletedAt `gorm:"column:deleted_at"`
+}
+
+func (PostModel) TableName() string {
+	return "posts"
+}
+
+// PostReplyModel maps post_replies (platform/db/0003_post_replies.sql).
+type PostReplyModel struct {
+	ID            int64          `gorm:"column:id;primaryKey"`
+	PostID        int64          `gorm:"column:post_id;not null;index:idx_post_replies_post_id_created_at"`
+	UserID        int64          `gorm:"column:user_id;not null"`
+	ParentReplyID *int64         `gorm:"column:parent_reply_id"`
+	Body          string         `gorm:"column:body;type:text;not null"`
+	Status        int            `gorm:"column:status;not null"`
+	CreatedAt     time.Time      `gorm:"column:created_at"`
+	UpdatedAt     time.Time      `gorm:"column:updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"column:deleted_at"`
+}
+
+func (PostReplyModel) TableName() string {
+	return "post_replies"
+}

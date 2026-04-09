@@ -91,3 +91,55 @@ func nullStringPtr(s string) interface{} {
 	}
 	return s
 }
+
+func derefString(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+func (r *UserRepository) ListForAdmin(ctx context.Context, offset, limit int) ([]domainuser.AdminListEntry, error) {
+	var rows []UserModel
+	err := r.DB.WithContext(ctx).Model(&UserModel{}).Order("snowflake_id DESC").Offset(offset).Limit(limit).Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domainuser.AdminListEntry, 0, len(rows))
+	for i := range rows {
+		out = append(out, domainuser.AdminListEntry{
+			SnowflakeID:     rows[i].SnowflakeID,
+			Email:           rows[i].Email,
+			Name:            rows[i].Name,
+			Status:          rows[i].Status,
+			Role:            rows[i].Role,
+			LastLoginAt:     rows[i].LastLoginAt,
+			LastLoginIP:     derefString(rows[i].LastLoginIP),
+			LastLoginDevice: derefString(rows[i].LastLoginDevice),
+			CreatedAt:       rows[i].CreatedAt,
+		})
+	}
+	return out, nil
+}
+
+func (r *UserRepository) Count(ctx context.Context) (int64, error) {
+	var n int64
+	err := r.DB.WithContext(ctx).Model(&UserModel{}).Count(&n).Error
+	return n, err
+}
+
+func (r *UserRepository) UpdateStatusRole(ctx context.Context, id int64, status *int, role *string) error {
+	updates := map[string]interface{}{
+		"updated_at": time.Now().UTC(),
+	}
+	if status != nil {
+		updates["status"] = *status
+	}
+	if role != nil {
+		updates["role"] = *role
+	}
+	if len(updates) == 1 {
+		return nil
+	}
+	return r.DB.WithContext(ctx).Model(&UserModel{}).Where("snowflake_id = ?", id).Updates(updates).Error
+}

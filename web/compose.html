@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>发帖 — Blink</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 1rem auto; padding: 0 1rem; }
+    textarea { width: 100%; min-height: 120px; box-sizing: border-box; }
+    label { display: block; margin: 0.75rem 0 0.25rem; }
+    .err { color: #b00020; }
+    .ok { color: #0d6d3b; }
+    nav a { margin-right: 1rem; }
+    #thumbs img { max-height: 80px; margin: 0.25rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/web/feed.html">流</a>
+    <a href="/web/index.html">首页</a>
+  </nav>
+  <h1>发帖</h1>
+  <p id="msg" class="err"></p>
+  <label>分类</label>
+  <select id="cat"><option value="">（未分类）</option></select>
+  <label>正文</label>
+  <textarea id="body"></textarea>
+  <label>图片</label>
+  <input type="file" id="file" accept="image/*" />
+  <p><button type="button" id="upload">上传所选图片</button></p>
+  <div id="thumbs"></div>
+  <p>
+    <button type="button" id="pub">发布</button>
+    <button type="button" id="draft">保存草稿</button>
+  </p>
+  <script>
+    var API = '';
+    var images = [];
+
+    function loadCats() {
+      fetch(API + '/api/categories', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var s = document.getElementById('cat');
+          (d.categories || []).forEach(function (c) {
+            var o = document.createElement('option');
+            o.value = String(c.id);
+            o.textContent = c.name;
+            s.appendChild(o);
+          });
+        });
+    }
+
+    document.getElementById('upload').onclick = function () {
+      document.getElementById('msg').textContent = '';
+      var f = document.getElementById('file').files[0];
+      if (!f) return;
+      var fd = new FormData();
+      fd.append('file', f);
+      fetch(API + '/api/uploads', { method: 'POST', credentials: 'include', body: fd })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) throw new Error('上传失败 ' + r.status);
+          return r.json();
+        })
+        .then(function (d) {
+          images.push(d.url);
+          var img = document.createElement('img');
+          img.src = d.url;
+          document.getElementById('thumbs').appendChild(img);
+        })
+        .catch(function (e) {
+          document.getElementById('msg').textContent = String(e);
+        });
+    };
+
+    function submit(draft) {
+      document.getElementById('msg').textContent = '';
+      var cat = document.getElementById('cat').value;
+      var payload = {
+        body: document.getElementById('body').value,
+        images: images,
+        draft: draft
+      };
+      if (cat) payload.category_id = parseInt(cat, 10);
+      fetch(API + '/api/posts', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) {
+            return r.text().then(function (t) {
+              throw new Error(t || String(r.status));
+            });
+          }
+          return r.json();
+        })
+        .then(function (p) {
+          document.getElementById('msg').className = 'ok';
+          document.getElementById('msg').textContent = '已保存，跳转…';
+          location.href = '/web/post.html?id=' + encodeURIComponent(p.id);
+        })
+        .catch(function (e) {
+          document.getElementById('msg').className = 'err';
+          document.getElementById('msg').textContent = String(e);
+        });
+    }
+
+    document.getElementById('pub').onclick = function () { submit(false); };
+    document.getElementById('draft').onclick = function () { submit(true); };
+    loadCats();
+  </script>
+</body>
+</html>

@@ -85,3 +85,48 @@ func TestRequireSession_CookieFallback(t *testing.T) {
 	}
 }
 
+func TestOptionalSession_setsUserWhenTokenValid(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := &stubStore{
+		sessions: map[string]*domainsession.Session{
+			"ot": {ID: "ot", UserID: 100, ExpiresAt: time.Now().Add(time.Hour)},
+		},
+	}
+	r := gin.New()
+	r.GET("/", OptionalSession(store), func(c *gin.Context) {
+		uid, ok := UserIDFromContext(c)
+		if !ok {
+			c.JSON(http.StatusOK, gin.H{"user_id": nil})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"user_id": uid})
+	})
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer ot")
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status=%d", rr.Code)
+	}
+}
+
+func TestOptionalSession_noUserWhenNoToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := &stubStore{}
+	r := gin.New()
+	r.GET("/", OptionalSession(store), func(c *gin.Context) {
+		_, ok := UserIDFromContext(c)
+		if ok {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		c.Status(http.StatusNoContent)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("status=%d", rr.Code)
+	}
+}
+

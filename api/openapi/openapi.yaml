@@ -9,6 +9,8 @@ info:
     **内置 IdP**：`/auth/idp/*` 以及 OAuth 提供方 **`builtin`** 仅在配置了 `BLINK_PUBLIC_BASE_URL`、`BLINK_OAUTH_CLIENT_SECRET` 等环境变量时启用；未配置时上述路径返回 **404**，但不影响 `/auth/register`。
 
     **代码生成**：仅带标签 `servergen` 的操作会由 oapi-codegen 生成 Gin 注册代码与 `ServerInterface` 方法；其余路径为手写路由，此处仅作文档。
+
+    **社交与管理**：`/api/*` 帖子与评论、`/admin/api/*` 超级管理员接口为手写路由（见 `cmd/main.go`），OpenAPI 中 `social` / `admin` 标签描述之。
   version: 0.0.0
 servers:
   - url: http://127.0.0.1:11110
@@ -33,6 +35,10 @@ tags:
     description: 账号注册（默认即挂载，不依赖自建 IdP）
   - name: servergen
     description: 参与 oapi-codegen Gin 生成的操作（勿删此标签于已生成路径上）
+  - name: social
+    description: 帖子流、分类、评论、图片上传（手写路由，见 cmd/main.go）
+  - name: admin
+    description: 超级管理员 JSON API（需会话且 users.role=super_admin）
 
 paths:
   /health:
@@ -319,12 +325,329 @@ paths:
               schema:
                 type: string
 
+  /api/categories:
+    get:
+      operationId: listCategories
+      tags: [social]
+      summary: 分类列表
+      responses:
+        "200":
+          description: JSON `{ "categories": [...] }`
+
+  /api/posts:
+    get:
+      operationId: listPosts
+      tags: [social]
+      summary: 公开帖子流
+      description: Query `category_id`、`uncategorized=1`、`cursor`（上一页最后一条 id）、`limit`。
+      responses:
+        "200":
+          description: `{ "posts": [...], "next_cursor": int64|null }`
+    post:
+      operationId: createPost
+      tags: [social]
+      summary: 发帖（需登录）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                category_id:
+                  type: integer
+                  format: int64
+                  nullable: true
+                images:
+                  type: array
+                  items:
+                    type: string
+                draft:
+                  type: boolean
+      responses:
+        "201":
+          description: 帖子 JSON
+
+  /api/posts/{id}:
+    get:
+      operationId: getPost
+      tags: [social]
+      summary: 帖子详情（可选登录；作者可看草稿/非公开）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 帖子 JSON
+        "404":
+          description: 不存在或对当前访客不可见
+    patch:
+      operationId: patchPost
+      tags: [social]
+      summary: 修改自己的帖子
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                category_id:
+                  type: integer
+                  format: int64
+                clear_category:
+                  type: boolean
+                images:
+                  type: array
+                  items:
+                    type: string
+                status:
+                  type: integer
+      responses:
+        "200":
+          description: 更新后帖子
+    delete:
+      operationId: deletePost
+      tags: [social]
+      summary: 删除自己的帖子（软删）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+
+  /api/me/posts:
+    get:
+      operationId: listMyPosts
+      tags: [social]
+      summary: 我的帖子
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      description: Query `include_draft=1`、`cursor`、`limit`。
+      responses:
+        "200":
+          description: 同 listPosts
+
+  /api/posts/{id}/replies:
+    get:
+      operationId: listReplies
+      tags: [social]
+      summary: 评论列表（仅已发布且公开的根帖）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: `{ "replies": [...], "next_cursor" }`
+    post:
+      operationId: createReply
+      tags: [social]
+      summary: 发表评论
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                parent_reply_id:
+                  type: integer
+                  format: int64
+                  nullable: true
+      responses:
+        "201":
+          description: 评论 JSON
+
+  /api/replies/{id}:
+    delete:
+      operationId: deleteReply
+      tags: [social]
+      summary: 删除自己的评论
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+
+  /api/uploads:
+    post:
+      operationId: uploadImage
+      tags: [social]
+      summary: 上传图片（multipart 字段 `file`）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: `{ "url": "/uploads/{user_id}/{file}" }`
+
+  /admin/api/overview:
+    get:
+      operationId: adminOverview
+      tags: [admin]
+      summary: 概览统计
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: user_count, post_count, posts_today, category_count
+
+  /admin/api/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: 用户列表
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: `{ "users": [...] }`
+
+  /admin/api/users/{id}:
+    patch:
+      operationId: adminPatchUser
+      tags: [admin]
+      summary: 修改用户 status / role
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+                role:
+                  type: string
+      responses:
+        "204":
+          description: 成功
+
+  /admin/api/posts:
+    get:
+      operationId: adminListPosts
+      tags: [admin]
+      summary: 全站帖子筛选
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      description: Query `user_id`、`category_id`、`moderation_flag`、`include_deleted`、`offset`、`limit`。
+      responses:
+        "200":
+          description: `{ "posts": [...], "total" }`
+
+  /admin/api/posts/{id}:
+    patch:
+      operationId: adminPatchPost
+      tags: [admin]
+      summary: 审核字段与 status
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                moderation_flag:
+                  type: integer
+                moderation_note:
+                  type: string
+                status:
+                  type: integer
+      responses:
+        "200":
+          description: 帖子 JSON
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: access_token
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: blink_session
 
   parameters:
     OAuthProvider:

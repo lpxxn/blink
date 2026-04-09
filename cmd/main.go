@@ -17,11 +17,19 @@ import (
 	"gorm.io/gorm"
 
 	apigen "github.com/lpxxn/blink/api/gen"
+	appadmin "github.com/lpxxn/blink/application/admin"
 	appauth "github.com/lpxxn/blink/application/auth"
+	appbootstrap "github.com/lpxxn/blink/application/bootstrap"
+	appcategory "github.com/lpxxn/blink/application/category"
 	appidp "github.com/lpxxn/blink/application/idp"
 	appoauth "github.com/lpxxn/blink/application/oauth"
+	apppost "github.com/lpxxn/blink/application/post"
+	apppostreply "github.com/lpxxn/blink/application/postreply"
+	domainuser "github.com/lpxxn/blink/domain/user"
 	oauthadapter "github.com/lpxxn/blink/infrastructure/adapter/oauth2"
 	redisstore "github.com/lpxxn/blink/infrastructure/cache/redisstore"
+	httpadmin "github.com/lpxxn/blink/infrastructure/interface/http/admin"
+	httpapi "github.com/lpxxn/blink/infrastructure/interface/http/api"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 	httpidp "github.com/lpxxn/blink/infrastructure/interface/http/idp"
 	httpoauth "github.com/lpxxn/blink/infrastructure/interface/http/oauth"
@@ -68,8 +76,49 @@ func main() {
 
 	userRepo := &gormdb.UserRepository{DB: gdb}
 	oauthRepo := &gormdb.OAuthRepository{DB: gdb}
+	postRepo := &gormdb.PostRepository{DB: gdb}
+	replyRepo := &gormdb.PostReplyRepository{DB: gdb}
+	catRepo := &gormdb.CategoryRepository{DB: gdb}
 	sessStore := &redisstore.SessionStore{Client: rdb}
 	stateStore := &redisstore.OAuthStateStore{Client: rdb}
+
+	if err := appcategory.SeedDefaults(ctx, catRepo, func() int64 { return node.Generate().Int64() }); err != nil {
+		log.Fatalf("seed categories: %v", err)
+	}
+	if err := appbootstrap.PromoteSuperAdminFromEnv(ctx, userRepo, getenv("BLINK_BOOTSTRAP_SUPER_ADMIN_EMAIL", "")); err != nil {
+		log.Fatalf("bootstrap super admin: %v", err)
+	}
+
+	postSvc := &apppost.Service{
+		Posts:      postRepo,
+		Categories: catRepo,
+		NewID:      func() int64 { return node.Generate().Int64() },
+	}
+	replySvc := &apppostreply.Service{
+		Posts:   postSvc,
+		Replies: replyRepo,
+		NewID:   func() int64 { return node.Generate().Int64() },
+	}
+	adminSvc := &appadmin.Service{
+		Users: userRepo,
+		Posts: postRepo,
+	}
+
+	uploadRoot := getenv("BLINK_UPLOAD_DIR", "data/uploads")
+	if err := os.MkdirAll(uploadRoot, 0750); err != nil {
+		log.Fatalf("upload dir: %v", err)
+	}
+	apiSrv := &httpapi.Server{
+		Posts:         postSvc,
+		Replies:       replySvc,
+		Categories:    catRepo,
+		UploadRoot:    uploadRoot,
+		UploadURLPath: "/uploads",
+	}
+	adminSrv := &httpadmin.Server{
+		Admin:         adminSvc,
+		CategoryCount: catRepo.Count,
+	}
 
 	providers := map[string]appoauth.OAuth2Provider{}
 	if cid, secret, redir := os.Getenv("OAUTH_GOOGLE_CLIENT_ID"), os.Getenv("OAUTH_GOOGLE_CLIENT_SECRET"), os.Getenv("OAUTH_GOOGLE_REDIRECT_URL"); cid != "" && secret != "" && redir != "" {
@@ -164,6 +213,36 @@ func main() {
 	if idpHTTP != nil {
 		idpHTTP.Mount(r.Group("/auth/idp"))
 	}
+
+	r.Static("/uploads", uploadRoot)
+	r.Static("/web", "./web")
+
+	api := r.Group("/api")
+	api.GET("/categories", apiSrv.ListCategories)
+	api.GET("/posts", apiSrv.ListPosts)
+	api.GET("/posts/:id/replies", apiSrv.ListReplies)
+	opt := api.Group("")
+	opt.Use(httpauth.OptionalSession(sessStore))
+	opt.GET("/posts/:id", apiSrv.GetPost)
+
+	authed := api.Group("")
+	authed.Use(httpauth.RequireSession(sessStore))
+	authed.POST("/posts", apiSrv.CreatePost)
+	authed.PATCH("/posts/:id", apiSrv.PatchPost)
+	authed.DELETE("/posts/:id", apiSrv.DeletePost)
+	authed.GET("/me/posts", apiSrv.ListMyPosts)
+	authed.POST("/posts/:id/replies", apiSrv.CreateReply)
+	authed.POST("/uploads", apiSrv.UploadImage)
+	authed.DELETE("/replies/:id", apiSrv.DeleteReply)
+
+	adminG := r.Group("/admin/api")
+	adminG.Use(httpauth.RequireSession(sessStore))
+	adminG.Use(httpauth.RequireUserRole(userRepo, domainuser.RoleSuperAdmin))
+	adminG.GET("/overview", adminSrv.Overview)
+	adminG.GET("/users", adminSrv.ListUsers)
+	adminG.PATCH("/users/:id", adminSrv.PatchUser)
+	adminG.GET("/posts", adminSrv.ListPosts)
+	adminG.PATCH("/posts/:id", adminSrv.PatchPost)
 
 	addr := getenv("BLINK_HTTP_ADDR", ":11110")
 	log.Printf("listening on %s (OAuth providers: %d, builtin IdP: %v, POST /auth/register: on)", addr, len(providers), idpHTTP != nil)

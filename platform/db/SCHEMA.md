@@ -11,6 +11,7 @@ SQL 需同时兼容 **SQLite / MySQL / PostgreSQL**；业务访问请走 **repos
 | `0001_init.sql` | `users`、`sessions` |
 | `0002_create_post.sql` | `user_follows`、`friendships`、`user_lists`、`user_list_members`、`posts` |
 | `0003_post_replies.sql` | `post_replies`（帖子评论 / 楼中楼） |
+| `0005_post_categories_moderation.sql` | `categories`；`posts` 增加 `category_id`、`moderation_flag`、`moderation_note` |
 
 ### CLI：`cmd/migrate`
 
@@ -83,7 +84,7 @@ go run ./cmd/migrate
 
 ### users.role（建议）
 
-在应用内用常量约束，例如：`user`、`admin`。若需多角色，后续可拆 `user_roles` 关联表。
+在应用内用常量约束，例如：`user`、`admin`、`super_admin`（超级管理员，可访问 `/admin/api/*`）。若需多角色，后续可拆 `user_roles` 关联表。
 
 ---
 
@@ -165,6 +166,20 @@ go run ./cmd/migrate
 
 ---
 
+## categories
+
+帖子主题分类（Tab / 筛选）；ID 由应用 snowflake 生成，启动时可种子默认行。
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| id | BIGINT PK | 分类 ID，应用生成。 |
+| slug | VARCHAR(64) | URL/逻辑键，唯一。 |
+| name | VARCHAR(128) | 展示名称。 |
+| sort_order | INTEGER | 排序，越小越靠前。 |
+| created_at / updated_at / deleted_at | TIMESTAMP | 审计与软删。 |
+
+---
+
 ## posts
 
 | 列 | 类型 | 说明 |
@@ -176,10 +191,21 @@ go run ./cmd/migrate
 | referenced_post_id | BIGINT NULL | 被转发/被引用的**目标帖**。 |
 | visibility | INTEGER | 可见范围，见下表。 |
 | audience_list_id | BIGINT NULL | `visibility=list_only` 时指向 `user_lists.id`。 |
+| category_id | BIGINT NULL | 可选，引用 `categories.id`；NULL 表示未归类。 |
 | body | TEXT | 正文。 |
 | images | TEXT | JSON 数组字符串，元素为 URL 或对象存储 key。 |
 | status | INTEGER | 发布状态，见下表。 |
+| moderation_flag | INTEGER | 审核标记，见下表。 |
+| moderation_note | TEXT | 管理员备注（违规原因等）。 |
 | created_at / updated_at / deleted_at | TIMESTAMP | 审计与软删。 |
+
+### posts.moderation_flag（建议）
+
+| 值 | 含义 |
+|----|------|
+| 0 | 正常展示 |
+| 1 | 标记违规（可对访客隐藏，由应用层与 `status` 配合） |
+| 2 | 管理下架（建议同时 `status=2` 隐藏） |
 
 ### posts.post_type（建议）
 
@@ -264,6 +290,9 @@ go run ./cmd/migrate
 | idx_posts_referenced_post_id | posts | 反查转发/引用 |
 | idx_posts_visibility | posts | 按可见性筛选 |
 | idx_posts_audience_list_id | posts | 名单可见帖 |
+| idx_posts_category_id | posts | 按分类筛选 Feed |
+| idx_categories_slug | categories | slug 唯一 |
+| idx_categories_sort_order | categories | 分类列表排序 |
 | idx_post_replies_post_id_created_at | post_replies | 按帖查评论、时间排序与分页 |
 | idx_post_replies_parent_reply_id | post_replies | 子回复列表 |
 | idx_post_replies_user_id | post_replies | 用户回复记录 |
