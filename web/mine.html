@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>我的帖子 — Blink</title>
+  <link rel="stylesheet" href="/web/common.css" />
+</head>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <nav class="top-nav">
+      <a class="brand" href="/web/index.html">Blink</a>
+      <a href="/web/index.html">首页</a>
+      <a href="/web/register.html">注册</a>
+      <a href="/web/feed.html">帖子流</a>
+      <a href="/web/compose.html">发帖</a>
+      <a href="/web/mine.html" class="nav-active">我的</a>
+      <a href="/web/admin.html">管理</a>
+    </nav>
+
+    <h1 class="page-title">我的帖子</h1>
+    <p class="page-lead">含草稿与已隐藏；可编辑正文、分类、图片与状态，或删除帖子。</p>
+    <p id="err" class="err" role="alert"></p>
+
+    <div class="card" style="padding:0.5rem 1.25rem 1rem">
+      <div id="list"></div>
+      <p style="margin-top:0.75rem;margin-bottom:0">
+        <button type="button" class="btn btn-secondary" id="more" hidden>加载更多</button>
+      </p>
+    </div>
+  </div>
+  <script>
+    var API = '';
+    var cursor = null;
+
+    function sid(v) {
+      return v != null ? String(v) : '';
+    }
+
+    function statusLabel(s) {
+      if (s === 0) return '草稿';
+      if (s === 1) return '已发布';
+      if (s === 2) return '已隐藏';
+      return '状态 ' + s;
+    }
+
+    function loadPage(reset) {
+      document.getElementById('err').textContent = '';
+      var q = 'include_draft=1&limit=15';
+      if (cursor != null && !reset) q += '&cursor=' + encodeURIComponent(cursor);
+      if (reset) cursor = null;
+      fetch(API + '/api/me/posts?' + q, { credentials: 'include' })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) throw new Error('加载失败 ' + r.status);
+          return r.json();
+        })
+        .then(function (d) {
+          var list = document.getElementById('list');
+          if (reset) list.innerHTML = '';
+          (d.posts || []).forEach(function (p) {
+            var row = document.createElement('div');
+            row.className = 'mine-row';
+            var h = document.createElement('p');
+            h.className = 'mine-snippet';
+            var viewA = document.createElement('a');
+            viewA.href = '/web/post.html?id=' + encodeURIComponent(sid(p.id));
+            viewA.textContent = (p.body || '').trim().slice(0, 100) + ((p.body || '').length > 100 ? '…' : '') || '（无正文）';
+            h.appendChild(viewA);
+            row.appendChild(h);
+            var meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.textContent = '#' + sid(p.id) + ' · ' + statusLabel(p.status);
+            row.appendChild(meta);
+            var act = document.createElement('div');
+            act.className = 'mine-actions';
+            var editB = document.createElement('a');
+            editB.className = 'btn btn-secondary btn-sm';
+            editB.href = '/web/edit-post.html?id=' + encodeURIComponent(sid(p.id));
+            editB.textContent = '编辑';
+            act.appendChild(editB);
+            var delB = document.createElement('button');
+            delB.type = 'button';
+            delB.className = 'btn btn-secondary btn-sm';
+            delB.textContent = '删除';
+            delB.onclick = function () {
+              if (!confirm('确定删除该帖子？不可恢复。')) return;
+              fetch(API + '/api/posts/' + encodeURIComponent(sid(p.id)), {
+                method: 'DELETE',
+                credentials: 'include'
+              })
+                .then(function (r) {
+                  if (r.status === 401) throw new Error('请先登录');
+                  if (r.status === 404) throw new Error('帖子不存在');
+                  if (!r.ok) throw new Error('删除失败 ' + r.status);
+                  row.remove();
+                })
+                .catch(function (e) {
+                  document.getElementById('err').textContent = String(e);
+                });
+            };
+            act.appendChild(delB);
+            row.appendChild(act);
+            list.appendChild(row);
+          });
+          cursor = d.next_cursor;
+          document.getElementById('more').hidden = !cursor || (d.posts || []).length === 0;
+        })
+        .catch(function (e) {
+          document.getElementById('err').textContent = String(e);
+        });
+    }
+
+    document.getElementById('more').onclick = function () {
+      loadPage(false);
+    };
+
+    loadPage(true);
+  </script>
+</body>
+</html>

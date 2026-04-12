@@ -229,6 +229,7 @@ func main() {
 
 	authed := api.Group("")
 	authed.Use(httpauth.RequireSession(sessStore))
+	authed.GET("/me", apiSrv.GetMe)
 	authed.POST("/posts", apiSrv.CreatePost)
 	authed.PATCH("/posts/:id", apiSrv.PatchPost)
 	authed.DELETE("/posts/:id", apiSrv.DeletePost)

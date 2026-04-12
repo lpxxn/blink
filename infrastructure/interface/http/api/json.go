@@ -92,6 +92,11 @@ func ReplyToJSON(r *domainpostreply.Reply) ReplyJSON {
 	}
 }
 
+// MeJSON is GET /api/me — current session user (snowflake id as JSON string).
+type MeJSON struct {
+	UserID int64 `json:"user_id,string"`
+}
+
 // PostsPageJSON is the list response for GET /api/posts and GET /api/me/posts.
 type PostsPageJSON struct {
 	Posts      []PostJSON `json:"posts"`

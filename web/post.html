@@ -14,6 +14,7 @@
       <a href="/web/register.html">注册</a>
       <a href="/web/feed.html">帖子流</a>
       <a href="/web/compose.html">发帖</a>
+      <a href="/web/mine.html">我的</a>
     </nav>
 
     <h1 class="page-title">帖子</h1>
@@ -28,6 +29,10 @@
 
     <h3 class="section-title" style="font-size:1rem">写评论</h3>
     <div class="card">
+      <p id="reply-hint" class="reply-target-hint" hidden></p>
+      <p style="margin:0 0 0.5rem">
+        <button type="button" class="btn btn-ghost btn-sm" id="cancel-reply" hidden>取消回复</button>
+      </p>
       <div class="field" style="margin-bottom:0.75rem">
         <textarea id="rbody" placeholder="内容"></textarea>
       </div>
@@ -38,14 +43,35 @@
     var API = '';
     var params = new URLSearchParams(location.search);
     var id = params.get('id');
+    var myUserId = null;
+    var parentReplyId = null;
+
     if (!id) {
       document.getElementById('err').textContent = '缺少 id';
+    }
+
+    function sid(v) {
+      return v != null ? String(v) : '';
     }
 
     function authorLabel(obj) {
       var n = obj && obj.user_name != null ? String(obj.user_name).trim() : '';
       if (n) return n;
-      return '用户 ' + obj.user_id;
+      return '用户 ' + sid(obj.user_id);
+    }
+
+    function loadMe() {
+      return fetch(API + '/api/me', { credentials: 'include' })
+        .then(function (r) {
+          if (!r.ok) return null;
+          return r.json();
+        })
+        .then(function (d) {
+          if (d && d.user_id != null) myUserId = sid(d.user_id);
+        })
+        .catch(function () {
+          myUserId = null;
+        });
     }
 
     function showPost(p) {
@@ -53,7 +79,7 @@
       root.innerHTML = '';
       var meta = document.createElement('div');
       meta.className = 'meta';
-      meta.textContent = '#' + p.id + ' · ' + authorLabel(p) + ' · 状态 ' + p.status;
+      meta.textContent = '#' + sid(p.id) + ' · ' + authorLabel(p) + ' · 状态 ' + sid(p.status);
       root.appendChild(meta);
       var b = document.createElement('div');
       b.className = 'body-text';
@@ -70,6 +96,30 @@
         });
         root.appendChild(im);
       }
+      if (myUserId && sid(p.user_id) === myUserId) {
+        var act = document.createElement('div');
+        act.className = 'post-author-actions';
+        var ed = document.createElement('a');
+        ed.className = 'btn btn-secondary btn-sm';
+        ed.href = '/web/edit-post.html?id=' + encodeURIComponent(sid(p.id));
+        ed.textContent = '编辑此帖';
+        act.appendChild(ed);
+        root.appendChild(act);
+      }
+    }
+
+    function replyDepth(x, byId) {
+      var d = 0;
+      var pid = x.parent_reply_id;
+      var guard = {};
+      while (pid != null && pid !== '' && byId[sid(pid)]) {
+        if (guard[sid(pid)]) break;
+        guard[sid(pid)] = 1;
+        d++;
+        pid = byId[sid(pid)].parent_reply_id;
+        if (d > 40) break;
+      }
+      return d;
     }
 
     function loadPost() {
@@ -85,20 +135,79 @@
         });
     }
 
+    function clearReplyTarget() {
+      parentReplyId = null;
+      document.getElementById('reply-hint').hidden = true;
+      document.getElementById('reply-hint').innerHTML = '';
+      document.getElementById('cancel-reply').hidden = true;
+    }
+
+    document.getElementById('cancel-reply').onclick = clearReplyTarget;
+
     function loadReplies() {
       fetch(API + '/api/posts/' + encodeURIComponent(id) + '/replies?limit=100', { credentials: 'include' })
         .then(function (r) { return r.json(); })
         .then(function (d) {
+          var list = d.replies || [];
+          var byId = {};
+          list.forEach(function (x) {
+            byId[sid(x.id)] = x;
+          });
           var box = document.getElementById('replies');
           box.innerHTML = '';
-          (d.replies || []).forEach(function (x) {
+          list.forEach(function (x) {
+            var depth = replyDepth(x, byId);
             var r = document.createElement('div');
-            r.className = 'reply';
+            r.className = 'reply' + (depth > 0 ? ' reply-nested' : '');
+            r.style.marginLeft = (depth * 14) + 'px';
             r.appendChild(document.createTextNode(x.body));
             var m = document.createElement('div');
             m.className = 'meta';
-            m.textContent = authorLabel(x) + ' · #' + x.id;
+            var line = authorLabel(x) + ' · #' + sid(x.id);
+            if (x.parent_reply_id != null && x.parent_reply_id !== '') {
+              var par = byId[sid(x.parent_reply_id)];
+              line = '↪ 回复 ' + (par ? authorLabel(par) : '#' + sid(x.parent_reply_id)) + ' · ' + line;
+            }
+            m.textContent = line;
             r.appendChild(m);
+            var actions = document.createElement('div');
+            actions.className = 'reply-actions';
+            var rb = document.createElement('button');
+            rb.type = 'button';
+            rb.className = 'btn btn-secondary btn-sm';
+            rb.textContent = '回复';
+            rb.onclick = function () {
+              parentReplyId = sid(x.id);
+              document.getElementById('reply-hint').innerHTML =
+                '正在回复 <strong>#' + parentReplyId + '</strong>（' + authorLabel(x) + '）';
+              document.getElementById('reply-hint').hidden = false;
+              document.getElementById('cancel-reply').hidden = false;
+              document.getElementById('rbody').focus();
+            };
+            actions.appendChild(rb);
+            if (myUserId && sid(x.user_id) === myUserId) {
+              var db = document.createElement('button');
+              db.type = 'button';
+              db.className = 'btn btn-secondary btn-sm';
+              db.textContent = '删除';
+              db.onclick = function () {
+                if (!confirm('删除这条评论？')) return;
+                fetch(API + '/api/replies/' + encodeURIComponent(sid(x.id)), {
+                  method: 'DELETE',
+                  credentials: 'include'
+                })
+                  .then(function (res) {
+                    if (res.status === 401) throw new Error('请先登录');
+                    if (!res.ok) throw new Error('删除失败 ' + res.status);
+                    loadReplies();
+                  })
+                  .catch(function (e) {
+                    document.getElementById('err').textContent = String(e);
+                  });
+              };
+              actions.appendChild(db);
+            }
+            r.appendChild(actions);
             box.appendChild(r);
           });
         });
@@ -108,16 +217,23 @@
       document.getElementById('err').textContent = '';
       var body = document.getElementById('rbody').value.trim();
       if (!body) return;
+      var payload = { body: body };
+      if (parentReplyId) payload.parent_reply_id = parentReplyId;
       fetch(API + '/api/posts/' + encodeURIComponent(id) + '/replies', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: body })
+        body: JSON.stringify(payload)
       })
         .then(function (r) {
           if (r.status === 401) throw new Error('请先登录');
-          if (!r.ok) throw new Error('失败 ' + r.status);
+          if (!r.ok) {
+            return r.text().then(function (t) {
+              throw new Error(t || '失败 ' + r.status);
+            });
+          }
           document.getElementById('rbody').value = '';
+          clearReplyTarget();
           loadReplies();
         })
         .catch(function (e) {
@@ -126,8 +242,10 @@
     };
 
     if (id) {
-      loadPost();
-      loadReplies();
+      loadMe().then(function () {
+        loadPost();
+        loadReplies();
+      });
     }
   </script>
 </body>

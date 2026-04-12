@@ -342,6 +342,70 @@ article.feed-item a:hover {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
+.reply.reply-nested {
+  border-left-color: #94a3b8;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  margin-top: 0.45rem;
+  align-items: center;
+}
+
+.btn-sm {
+  font-size: 0.78rem;
+  padding: 0.28rem 0.65rem;
+  font-weight: 600;
+}
+
+.reply-target-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.reply-target-hint strong {
+  color: var(--text);
+}
+
+.post-author-actions {
+  margin-top: 0.65rem;
+}
+
+.mine-row {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mine-row:last-child {
+  border-bottom: none;
+}
+
+.mine-row .mine-snippet {
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  line-height: 1.4;
+}
+
+.mine-row .mine-snippet a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.mine-row .mine-snippet a:hover {
+  text-decoration: underline;
+}
+
+.mine-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
 .section-title {
   font-size: 1.1rem;
   font-weight: 700;

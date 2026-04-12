@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>编辑帖子 — Blink</title>
+  <link rel="stylesheet" href="/web/common.css" />
+</head>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <nav class="top-nav">
+      <a class="brand" href="/web/index.html">Blink</a>
+      <a href="/web/index.html">首页</a>
+      <a href="/web/feed.html">帖子流</a>
+      <a href="/web/compose.html">发帖</a>
+      <a href="/web/mine.html" class="nav-active">我的</a>
+    </nav>
+
+    <h1 class="page-title">编辑帖子</h1>
+    <p id="msg" class="err" role="alert"></p>
+
+    <div class="card" id="form-card" hidden>
+      <div class="field">
+        <label for="cat">分类</label>
+        <select id="cat"><option value="">（未分类）</option></select>
+      </div>
+      <div class="field">
+        <label for="status">状态</label>
+        <select id="status">
+          <option value="0">草稿</option>
+          <option value="1">已发布</option>
+          <option value="2">已隐藏</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="body">正文</label>
+        <textarea id="body" placeholder="正文"></textarea>
+      </div>
+      <div class="field">
+        <label for="file">追加图片</label>
+        <input type="file" id="file" accept="image/*" />
+        <div class="btn-row" style="margin-top:0.5rem">
+          <button type="button" class="btn btn-secondary" id="upload">上传所选图片</button>
+        </div>
+        <div id="thumbs"></div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="save">保存</button>
+        <button type="button" class="btn btn-secondary" id="del">删除帖子</button>
+        <a class="btn btn-ghost" id="view-link" href="#">查看帖子</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    var API = '';
+    var params = new URLSearchParams(location.search);
+    var id = params.get('id');
+    var images = [];
+
+    function sid(v) {
+      return v != null ? String(v) : '';
+    }
+
+    function showErr(t) {
+      var m = document.getElementById('msg');
+      m.className = 'err';
+      m.textContent = t || '';
+    }
+
+    function showOk(t) {
+      var m = document.getElementById('msg');
+      m.className = 'ok';
+      m.textContent = t || '';
+    }
+
+    if (!id) {
+      showErr('缺少 id');
+    } else {
+      document.getElementById('view-link').href = '/web/post.html?id=' + encodeURIComponent(id);
+    }
+
+    function loadCats(thenSelect) {
+      fetch(API + '/api/categories', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var s = document.getElementById('cat');
+          while (s.options.length > 1) s.remove(1);
+          (d.categories || []).forEach(function (c) {
+            var o = document.createElement('option');
+            o.value = sid(c.id);
+            o.textContent = c.name;
+            s.appendChild(o);
+          });
+          if (thenSelect) thenSelect();
+        });
+    }
+
+    function loadPost() {
+      fetch(API + '/api/posts/' + encodeURIComponent(id), { credentials: 'include' })
+        .then(function (r) {
+          if (r.status === 404) throw new Error('帖子不存在或无权编辑');
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) throw new Error('加载失败 ' + r.status);
+          return r.json();
+        })
+        .then(function (p) {
+          document.getElementById('body').value = p.body || '';
+          document.getElementById('status').value = String(p.status != null ? p.status : 1);
+          images = (p.images && p.images.slice) ? p.images.slice() : [];
+          var thumbs = document.getElementById('thumbs');
+          thumbs.innerHTML = '';
+          images.forEach(function (url) {
+            var img = document.createElement('img');
+            img.src = url;
+            img.alt = '';
+            thumbs.appendChild(img);
+          });
+          loadCats(function () {
+            var s = document.getElementById('cat');
+            if (p.category_id != null && p.category_id !== '') {
+              s.value = sid(p.category_id);
+            } else {
+              s.value = '';
+            }
+          });
+          document.getElementById('form-card').hidden = false;
+        })
+        .catch(function (e) {
+          showErr(String(e));
+        });
+    }
+
+    document.getElementById('upload').onclick = function () {
+      showErr('');
+      var f = document.getElementById('file').files[0];
+      if (!f) return;
+      var fd = new FormData();
+      fd.append('file', f);
+      fetch(API + '/api/uploads', { method: 'POST', credentials: 'include', body: fd })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) throw new Error('上传失败 ' + r.status);
+          return r.json();
+        })
+        .then(function (d) {
+          images.push(d.url);
+          var img = document.createElement('img');
+          img.src = d.url;
+          document.getElementById('thumbs').appendChild(img);
+        })
+        .catch(function (e) {
+          showErr(String(e));
+        });
+    };
+
+    function buildPatch() {
+      var body = document.getElementById('body').value;
+      var st = parseInt(document.getElementById('status').value, 10);
+      if (isNaN(st)) st = 1;
+      var cat = document.getElementById('cat').value;
+      var patch = {
+        body: body,
+        images: images,
+        status: st
+      };
+      if (cat) {
+        patch.category_id = cat;
+      } else {
+        patch.clear_category = true;
+      }
+      return patch;
+    }
+
+    document.getElementById('save').onclick = function () {
+      showErr('');
+      fetch(API + '/api/posts/' + encodeURIComponent(id), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPatch())
+      })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (r.status === 403) throw new Error('无权编辑');
+          if (!r.ok) {
+            return r.text().then(function (t) {
+              throw new Error(t || String(r.status));
+            });
+          }
+          return r.json();
+        })
+        .then(function () {
+          showOk('已保存');
+        })
+        .catch(function (e) {
+          showErr(String(e));
+        });
+    };
+
+    document.getElementById('del').onclick = function () {
+      if (!confirm('确定删除该帖子？不可恢复。')) return;
+      showErr('');
+      fetch(API + '/api/posts/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) throw new Error('删除失败 ' + r.status);
+          window.location.href = '/web/mine.html';
+        })
+        .catch(function (e) {
+          showErr(String(e));
+        });
+    };
+
+    if (id) {
+      loadPost();
+    }
+  </script>
+</body>
+</html>
