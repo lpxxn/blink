@@ -333,6 +333,7 @@ article.feed-item a:hover {
   word-wrap: break-word;
   overflow-wrap: break-word;
   margin: 1rem 0;
+  min-width: 0; /* allow shrink inside flex/grid so images respect max-width */
 }
 
 .markdown-body > :first-child {
@@ -424,6 +425,16 @@ article.feed-item a:hover {
   margin: 1rem 0;
 }
 
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.65em 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
 .markdown-body table {
   border-collapse: collapse;
   width: 100%;
@@ -447,6 +458,8 @@ article.feed-item a:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: #fafbfc;
+  min-width: 0;
+  overflow-x: auto; /* wide tables; images should fit via .markdown-body img */
 }
 
 .md-preview-wrap .markdown-body {
