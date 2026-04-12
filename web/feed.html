@@ -121,6 +121,24 @@
             var meta = el('div', '帖子 #' + p.id + ' · ' + authorLabel(p));
             meta.className = 'meta';
             art.appendChild(meta);
+            if (p.images && p.images.length) {
+              var postHref = '/web/post.html?id=' + encodeURIComponent(p.id);
+              var thumbs = document.createElement('div');
+              thumbs.className = 'feed-thumbs';
+              p.images.forEach(function (url) {
+                if (!url) return;
+                var a = document.createElement('a');
+                a.className = 'feed-thumb-link';
+                a.href = postHref;
+                var img = document.createElement('img');
+                img.src = url;
+                img.alt = '';
+                img.loading = 'lazy';
+                a.appendChild(img);
+                thumbs.appendChild(a);
+              });
+              if (thumbs.childNodes.length) art.appendChild(thumbs);
+            }
             list.appendChild(art);
           });
           cursor = d.next_cursor;

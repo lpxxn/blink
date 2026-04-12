@@ -285,6 +285,37 @@ article.feed-item a:hover {
   text-decoration: underline;
 }
 
+/* Feed list: post image strip (same URLs as detail page) */
+.feed-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  align-items: center;
+}
+
+.feed-thumbs a.feed-thumb-link {
+  display: block;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  line-height: 0;
+  text-decoration: none;
+}
+
+.feed-thumbs a.feed-thumb-link:hover {
+  text-decoration: none;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.1);
+}
+
+.feed-thumbs img {
+  width: 4.75rem;
+  height: 4.75rem;
+  object-fit: cover;
+  display: block;
+}
+
 .meta {
   font-size: 0.8rem;
   color: var(--text-muted);
