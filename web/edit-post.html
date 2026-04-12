@@ -27,10 +27,11 @@
       <div class="field">
         <label for="status">状态</label>
         <select id="status">
-          <option value="0">草稿</option>
-          <option value="1">已发布</option>
+          <option value="0">草稿（仅自己可见，不出现在帖子流）</option>
+          <option value="1">已发布（公开流可见）</option>
           <option value="2">已隐藏</option>
         </select>
+        <p class="field-hint">从草稿发出：点下方「发布」一键设为已发布；或把这里改成「已发布」再点「保存」。</p>
       </div>
       <div class="field">
         <label for="body">正文（Markdown）</label>
@@ -53,7 +54,8 @@
         <div id="thumbs"></div>
       </div>
       <div class="btn-row">
-        <button type="button" class="btn btn-primary" id="save">保存</button>
+        <button type="button" class="btn btn-primary" id="publish">发布</button>
+        <button type="button" class="btn btn-secondary" id="save">保存</button>
         <button type="button" class="btn btn-secondary" id="del">删除帖子</button>
         <a class="btn btn-ghost" id="view-link" href="#">查看帖子</a>
       </div>
@@ -165,9 +167,9 @@
         });
     };
 
-    function buildPatch() {
+    function buildPatch(statusOverride) {
       var body = document.getElementById('body').value;
-      var st = parseInt(document.getElementById('status').value, 10);
+      var st = statusOverride != null ? statusOverride : parseInt(document.getElementById('status').value, 10);
       if (isNaN(st)) st = 1;
       var cat = document.getElementById('cat').value;
       var patch = {
@@ -183,13 +185,13 @@
       return patch;
     }
 
-    document.getElementById('save').onclick = function () {
+    function doPatch(patch, okMsg) {
       showErr('');
-      fetch(API + '/api/posts/' + encodeURIComponent(id), {
+      return fetch(API + '/api/posts/' + encodeURIComponent(id), {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPatch())
+        body: JSON.stringify(patch)
       })
         .then(function (r) {
           if (r.status === 401) throw new Error('请先登录');
@@ -201,12 +203,24 @@
           }
           return r.json();
         })
-        .then(function () {
-          showOk('已保存');
+        .then(function (p) {
+          if (p && p.status != null) {
+            document.getElementById('status').value = String(p.status);
+          }
+          showOk(okMsg || '已保存');
         })
         .catch(function (e) {
           showErr(String(e));
         });
+    }
+
+    document.getElementById('publish').onclick = function () {
+      document.getElementById('status').value = '1';
+      doPatch(buildPatch(1), '已发布，帖子流可见');
+    };
+
+    document.getElementById('save').onclick = function () {
+      doPatch(buildPatch(), '已保存');
     };
 
     document.getElementById('del').onclick = function () {

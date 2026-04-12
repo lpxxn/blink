@@ -19,7 +19,7 @@
     </nav>
 
     <h1 class="page-title">我的帖子</h1>
-    <p class="page-lead">含草稿与已隐藏；可编辑正文、分类、图片与状态，或删除帖子。</p>
+    <p class="page-lead">草稿可点「发布」直接公开，或进编辑页改状态。已发布、已隐藏也可在编辑里改回草稿。</p>
     <p id="err" class="err" role="alert"></p>
 
     <div class="card" style="padding:0.5rem 1.25rem 1rem">
@@ -77,6 +77,30 @@
             row.appendChild(meta);
             var act = document.createElement('div');
             act.className = 'mine-actions';
+            if (p.status === 0) {
+              var pubB = document.createElement('button');
+              pubB.type = 'button';
+              pubB.className = 'btn btn-primary btn-sm';
+              pubB.textContent = '发布';
+              pubB.onclick = function () {
+                fetch(API + '/api/posts/' + encodeURIComponent(sid(p.id)), {
+                  method: 'PATCH',
+                  credentials: 'include',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: 1 })
+                })
+                  .then(function (r) {
+                    if (r.status === 401) throw new Error('请先登录');
+                    if (!r.ok) throw new Error('发布失败 ' + r.status);
+                    meta.textContent = '#' + sid(p.id) + ' · ' + statusLabel(1);
+                    pubB.remove();
+                  })
+                  .catch(function (e) {
+                    document.getElementById('err').textContent = String(e);
+                  });
+              };
+              act.appendChild(pubB);
+            }
             var editB = document.createElement('a');
             editB.className = 'btn btn-secondary btn-sm';
             editB.href = '/web/edit-post.html?id=' + encodeURIComponent(sid(p.id));
