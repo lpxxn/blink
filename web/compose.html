@@ -82,7 +82,7 @@
         images: images,
         draft: draft
       };
-      if (cat) payload.category_id = parseInt(cat, 10);
+      if (cat) payload.category_id = cat;
       fetch(API + '/api/posts', {
         method: 'POST',
         credentials: 'include',
