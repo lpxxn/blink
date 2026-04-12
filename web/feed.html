@@ -29,6 +29,9 @@
       </p>
     </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+  <script src="/web/md.js"></script>
   <script>
     var API = '';
     var cursor = null;
@@ -115,7 +118,7 @@
             var art = document.createElement('article');
             art.className = 'feed-item';
             var h = el('h2');
-            var link = el('a', (p.body || '').slice(0, 80) + ((p.body || '').length > 80 ? '…' : ''));
+            var link = el('a', BlinkMD.plainSnippet(p.body, 80));
             link.href = '/web/post.html?id=' + encodeURIComponent(p.id);
             h.appendChild(link);
             art.appendChild(h);

@@ -29,6 +29,9 @@
       </p>
     </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+  <script src="/web/md.js"></script>
   <script>
     var API = '';
     var cursor = null;
@@ -65,7 +68,7 @@
             h.className = 'mine-snippet';
             var viewA = document.createElement('a');
             viewA.href = '/web/post.html?id=' + encodeURIComponent(sid(p.id));
-            viewA.textContent = (p.body || '').trim().slice(0, 100) + ((p.body || '').length > 100 ? '…' : '') || '（无正文）';
+            viewA.textContent = BlinkMD.plainSnippet(p.body, 100);
             h.appendChild(viewA);
             row.appendChild(h);
             var meta = document.createElement('div');

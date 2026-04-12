@@ -25,11 +25,19 @@
         <select id="cat"><option value="">（未分类）</option></select>
       </div>
       <div class="field">
-        <label for="body">正文</label>
-        <textarea id="body" placeholder="写点什么…"></textarea>
+        <label for="body">正文（Markdown）</label>
+        <textarea id="body" placeholder="支持标题、列表、**粗体**、`代码`、[链接](https://example.com)…"></textarea>
+        <p class="field-hint">保存为 Markdown 原文。图片：上传成功后会自动插入 <code>![图片](地址)</code>；也可手写 <code>![说明](/uploads/…)</code>。下方可预览。</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-sm" id="md-preview-btn">预览渲染</button>
+        </div>
+        <div id="md-preview-wrap" class="md-preview-wrap" hidden>
+          <div class="field-hint" style="margin-top:0">预览</div>
+          <div id="md-preview" class="markdown-body"></div>
+        </div>
       </div>
       <div class="field">
-        <label for="file">图片</label>
+        <label for="file">图片（上传后写入正文 Markdown）</label>
         <input type="file" id="file" accept="image/*" />
         <div class="btn-row" style="margin-top:0.5rem">
           <button type="button" class="btn btn-secondary" id="upload">上传所选图片</button>
@@ -42,6 +50,9 @@
       </div>
     </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+  <script src="/web/md.js"></script>
   <script>
     var API = '';
     var images = [];
@@ -78,6 +89,7 @@
           var img = document.createElement('img');
           img.src = d.url;
           document.getElementById('thumbs').appendChild(img);
+          BlinkMD.insertImageMarkdown(document.getElementById('body'), d.url);
         })
         .catch(function (e) {
           document.getElementById('msg').textContent = String(e);
@@ -119,6 +131,12 @@
           document.getElementById('msg').textContent = String(e);
         });
     }
+
+    document.getElementById('md-preview-btn').onclick = function () {
+      var w = document.getElementById('md-preview-wrap');
+      w.hidden = false;
+      document.getElementById('md-preview').innerHTML = BlinkMD.parse(document.getElementById('body').value);
+    };
 
     document.getElementById('pub').onclick = function () { submit(false); };
     document.getElementById('draft').onclick = function () { submit(true); };

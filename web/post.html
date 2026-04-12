@@ -39,6 +39,9 @@
       <button type="button" class="btn btn-primary" id="send">发送</button>
     </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+  <script src="/web/md.js"></script>
   <script>
     var API = '';
     var params = new URLSearchParams(location.search);
@@ -82,8 +85,8 @@
       meta.textContent = '#' + sid(p.id) + ' · ' + authorLabel(p) + ' · 状态 ' + sid(p.status);
       root.appendChild(meta);
       var b = document.createElement('div');
-      b.className = 'body-text';
-      b.textContent = p.body || '';
+      b.className = 'markdown-body';
+      b.innerHTML = BlinkMD.parse(p.body || '');
       root.appendChild(b);
       if (p.images && p.images.length) {
         var im = document.createElement('div');

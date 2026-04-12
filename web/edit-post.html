@@ -33,11 +33,19 @@
         </select>
       </div>
       <div class="field">
-        <label for="body">正文</label>
+        <label for="body">正文（Markdown）</label>
         <textarea id="body" placeholder="正文"></textarea>
+        <p class="field-hint">支持 Markdown。上传图片成功后会自动插入 <code>![图片](地址)</code>；也可手写图片语法。预览与详情页一致。</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-sm" id="md-preview-btn">预览渲染</button>
+        </div>
+        <div id="md-preview-wrap" class="md-preview-wrap" hidden>
+          <div class="field-hint" style="margin-top:0">预览</div>
+          <div id="md-preview" class="markdown-body"></div>
+        </div>
       </div>
       <div class="field">
-        <label for="file">追加图片</label>
+        <label for="file">追加图片（上传后写入正文 Markdown）</label>
         <input type="file" id="file" accept="image/*" />
         <div class="btn-row" style="margin-top:0.5rem">
           <button type="button" class="btn btn-secondary" id="upload">上传所选图片</button>
@@ -51,6 +59,9 @@
       </div>
     </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+  <script src="/web/md.js"></script>
   <script>
     var API = '';
     var params = new URLSearchParams(location.search);
@@ -147,6 +158,7 @@
           var img = document.createElement('img');
           img.src = d.url;
           document.getElementById('thumbs').appendChild(img);
+          BlinkMD.insertImageMarkdown(document.getElementById('body'), d.url);
         })
         .catch(function (e) {
           showErr(String(e));
@@ -209,6 +221,12 @@
         .catch(function (e) {
           showErr(String(e));
         });
+    };
+
+    document.getElementById('md-preview-btn').onclick = function () {
+      var w = document.getElementById('md-preview-wrap');
+      w.hidden = false;
+      document.getElementById('md-preview').innerHTML = BlinkMD.parse(document.getElementById('body').value);
     };
 
     if (id) {
