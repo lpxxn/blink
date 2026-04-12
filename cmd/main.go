@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
 	"github.com/bwmarrin/snowflake"
 	"github.com/gin-gonic/gin"
 	glsqlite "github.com/glebarez/sqlite"
@@ -19,10 +22,10 @@ import (
 	apigen "github.com/lpxxn/blink/api/gen"
 	appadmin "github.com/lpxxn/blink/application/admin"
 	appauth "github.com/lpxxn/blink/application/auth"
-	appnotification "github.com/lpxxn/blink/application/notification"
 	appbootstrap "github.com/lpxxn/blink/application/bootstrap"
 	appcategory "github.com/lpxxn/blink/application/category"
 	appidp "github.com/lpxxn/blink/application/idp"
+	appnotification "github.com/lpxxn/blink/application/notification"
 	appoauth "github.com/lpxxn/blink/application/oauth"
 	apppost "github.com/lpxxn/blink/application/post"
 	apppostreply "github.com/lpxxn/blink/application/postreply"
@@ -34,6 +37,7 @@ import (
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 	httpidp "github.com/lpxxn/blink/infrastructure/interface/http/idp"
 	httpoauth "github.com/lpxxn/blink/infrastructure/interface/http/oauth"
+	"github.com/lpxxn/blink/infrastructure/messaging"
 	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
 	"github.com/lpxxn/blink/internal/migrator"
 )
@@ -105,10 +109,47 @@ func main() {
 		Repo:  notifRepo,
 		NewID: func() int64 { return node.Generate().Int64() },
 	}
+
+	wmLogger := watermill.NewStdLogger(false, false)
+	wmPublisher, err := redisstream.NewPublisher(redisstream.PublisherConfig{
+		Client:     rdb,
+		Marshaller: redisstream.DefaultMarshallerUnmarshaller{},
+	}, wmLogger)
+	if err != nil {
+		log.Fatalf("watermill redis publisher: %v", err)
+	}
+	defer func() { _ = wmPublisher.Close() }()
+	notifyEventBus := messaging.NewNotificationWatermillPublisher(wmPublisher)
+
+	if strings.TrimSpace(getenv("BLINK_DISABLE_NOTIFICATION_CONSUMER", "")) == "" {
+		consumer := strings.TrimSpace(getenv("BLINK_WATERMILL_CONSUMER", ""))
+		if consumer == "" {
+			h, _ := os.Hostname()
+			consumer = fmt.Sprintf("%s-%d", h, os.Getpid())
+		}
+		wmSubscriber, err := redisstream.NewSubscriber(redisstream.SubscriberConfig{
+			Client:                        rdb,
+			Unmarshaller:                  redisstream.DefaultMarshallerUnmarshaller{},
+			ConsumerGroup:                 getenv("BLINK_WATERMILL_CONSUMER_GROUP", "blink-notify"),
+			Consumer:                      consumer,
+			OldestId:                      getenv("BLINK_NOTIFICATION_STREAM_FROM", "$"),
+			DisableIndefiniteInitialBlock: true,
+		}, wmLogger)
+		if err != nil {
+			log.Fatalf("watermill redis subscriber: %v", err)
+		}
+		defer func() { _ = wmSubscriber.Close() }()
+		wmRouter, err := messaging.RunNotificationWatermillRouter(context.Background(), wmSubscriber, notifSvc, wmLogger)
+		if err != nil {
+			log.Fatalf("watermill notification router: %v", err)
+		}
+		defer func() { _ = wmRouter.Close() }()
+	}
+
 	adminSvc := &appadmin.Service{
-		Users:  userRepo,
-		Posts:  postRepo,
-		Notify: notifSvc,
+		Users:        userRepo,
+		Posts:        postRepo,
+		NotifyEvents: notifyEventBus,
 	}
 
 	uploadRoot := getenv("BLINK_UPLOAD_DIR", "data/uploads")
@@ -119,6 +160,7 @@ func main() {
 		Posts:         postSvc,
 		Replies:       replySvc,
 		Notifications: notifSvc,
+		NotifyEvents:  notifyEventBus,
 		Categories:    catRepo,
 		Users:         userRepo,
 		Sessions:      sessStore,

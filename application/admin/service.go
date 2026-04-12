@@ -6,24 +6,24 @@ import (
 	"strings"
 	"time"
 
+	appeventing "github.com/lpxxn/blink/application/eventing"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
-	appnotification "github.com/lpxxn/blink/application/notification"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainuser "github.com/lpxxn/blink/domain/user"
 )
 
 var (
-	ErrCannotDemoteSelf   = errors.New("admin: cannot remove own super_admin role")
-	ErrInvalidRole        = errors.New("admin: invalid role")
-	ErrInvalidModeration  = errors.New("admin: invalid moderation flag")
-	ErrInvalidPostStatus  = errors.New("admin: invalid post status")
-	ErrNoPendingAppeal    = errors.New("admin: no pending appeal")
+	ErrCannotDemoteSelf  = errors.New("admin: cannot remove own super_admin role")
+	ErrInvalidRole       = errors.New("admin: invalid role")
+	ErrInvalidModeration = errors.New("admin: invalid moderation flag")
+	ErrInvalidPostStatus = errors.New("admin: invalid post status")
+	ErrNoPendingAppeal   = errors.New("admin: no pending appeal")
 )
 
 type Service struct {
-	Users  domainuser.Repository
-	Posts  domainpost.Repository
-	Notify *appnotification.Service // optional
+	Users        domainuser.Repository
+	Posts        domainpost.Repository
+	NotifyEvents appeventing.NotificationPublisher // optional; e.g. Watermill → Redis Stream
 }
 
 type Overview struct {
@@ -126,8 +126,8 @@ func (s *Service) PatchPost(ctx context.Context, postID int64, moderationFlag *i
 	if err := s.Posts.Update(ctx, p); err != nil {
 		return nil, err
 	}
-	if s.Notify != nil && moderationFlag != nil && *moderationFlag == domainpost.ModerationRemoved && oldMod != domainpost.ModerationRemoved {
-		_ = s.Notify.OnPostRemoved(ctx, p.UserID, p.ID, p.ModerationNote)
+	if s.NotifyEvents != nil && moderationFlag != nil && *moderationFlag == domainpost.ModerationRemoved && oldMod != domainpost.ModerationRemoved {
+		_ = s.NotifyEvents.PublishPostRemoved(ctx, p.UserID, p.ID, p.ModerationNote)
 	}
 	return p, nil
 }
@@ -158,8 +158,8 @@ func (s *Service) ResolveAppeal(ctx context.Context, postID int64, approve bool,
 	if err := s.Posts.Update(ctx, p); err != nil {
 		return nil, err
 	}
-	if s.Notify != nil {
-		_ = s.Notify.OnAppealResolved(ctx, p.UserID, p.ID, approve, adminNote)
+	if s.NotifyEvents != nil {
+		_ = s.NotifyEvents.PublishAppealResolved(ctx, p.UserID, p.ID, approve, adminNote)
 	}
 	return p, nil
 }

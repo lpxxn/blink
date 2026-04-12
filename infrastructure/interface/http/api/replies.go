@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	apppost "github.com/lpxxn/blink/application/post"
 	apppostreply "github.com/lpxxn/blink/application/postreply"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
-	"github.com/gin-gonic/gin"
 )
 
 func (s *Server) ListReplies(c *gin.Context) {
@@ -90,18 +90,17 @@ func (s *Server) CreateReply(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if s.Notifications != nil && s.Posts != nil {
+	if s.NotifyEvents != nil && s.Posts != nil {
 		post, perr := s.Posts.GetByID(c.Request.Context(), postID)
 		if perr == nil && post != nil {
 			if post.UserID != uid {
-				_ = s.Notifications.OnNewReply(c.Request.Context(), post.UserID, postID, rep.ID, rep.Body)
+				_ = s.NotifyEvents.PublishReplyToPost(c.Request.Context(), post.UserID, postID, rep.ID, rep.Body)
 			}
 			if body.ParentReplyID != nil && s.Replies != nil {
 				parent, err := s.Replies.GetByID(c.Request.Context(), *body.ParentReplyID)
 				if err == nil && parent != nil && parent.UserID != uid {
-					// 被回复的评论作者：若与楼主是同一人且已收到「帖子有新评论」，则不再重复发
 					if parent.UserID != post.UserID {
-						_ = s.Notifications.OnReplyToYourComment(c.Request.Context(), parent.UserID, postID, rep.ID, rep.Body)
+						_ = s.NotifyEvents.PublishReplyToComment(c.Request.Context(), parent.UserID, postID, rep.ID, rep.Body)
 					}
 				}
 			}
