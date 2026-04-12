@@ -36,12 +36,18 @@
       document.getElementById('err').textContent = '缺少 id';
     }
 
+    function authorLabel(obj) {
+      var n = obj && obj.user_name != null ? String(obj.user_name).trim() : '';
+      if (n) return n;
+      return '用户 ' + obj.user_id;
+    }
+
     function showPost(p) {
       var root = document.getElementById('post');
       root.innerHTML = '';
       var meta = document.createElement('div');
       meta.className = 'meta';
-      meta.textContent = '#' + p.id + ' · 用户 ' + p.user_id + ' · 状态 ' + p.status;
+      meta.textContent = '#' + p.id + ' · ' + authorLabel(p) + ' · 状态 ' + p.status;
       root.appendChild(meta);
       var b = document.createElement('div');
       b.className = 'body';
@@ -85,7 +91,7 @@
             r.appendChild(document.createTextNode(x.body));
             var m = document.createElement('div');
             m.className = 'meta';
-            m.textContent = '用户 ' + x.user_id + ' · #' + x.id;
+            m.textContent = authorLabel(x) + ' · #' + x.id;
             r.appendChild(m);
             box.appendChild(r);
           });

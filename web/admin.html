@@ -27,7 +27,7 @@
   <h2>用户（最近 50）</h2>
   <div style="overflow-x:auto"><table id="users"><thead><tr><th>ID</th><th>邮箱</th><th>角色</th><th>状态</th><th>最近登录</th></tr></thead><tbody></tbody></table></div>
   <h2>帖子（最近 20）</h2>
-  <div style="overflow-x:auto"><table id="posts"><thead><tr><th>ID</th><th>用户</th><th>审核</th><th>状态</th><th>摘要</th></tr></thead><tbody></tbody></table></div>
+  <div style="overflow-x:auto"><table id="posts"><thead><tr><th>ID</th><th>用户</th><th>用户ID</th><th>审核</th><th>状态</th><th>摘要</th></tr></thead><tbody></tbody></table></div>
   <script>
     var API = '';
 
@@ -77,14 +77,24 @@
           tb.innerHTML = '';
           (d.posts || []).forEach(function (p) {
             var tr = document.createElement('tr');
-            ['id', 'user_id', 'moderation_flag', 'status'].forEach(function (k) {
+            var tdId = document.createElement('td');
+            tdId.textContent = String(p.id != null ? p.id : '');
+            tr.appendChild(tdId);
+            var nameTd = document.createElement('td');
+            var disp = p.user_name != null && String(p.user_name).trim() !== '' ? String(p.user_name).trim() : '—';
+            nameTd.textContent = disp;
+            tr.appendChild(nameTd);
+            var uidTd = document.createElement('td');
+            uidTd.textContent = String(p.user_id != null ? p.user_id : '');
+            tr.appendChild(uidTd);
+            ['moderation_flag', 'status'].forEach(function (k) {
               var td = document.createElement('td');
               td.textContent = String(p[k] != null ? p[k] : '');
               tr.appendChild(td);
             });
-            var td5 = document.createElement('td');
-            td5.textContent = (p.body || '').slice(0, 60);
-            tr.appendChild(td5);
+            var tdSum = document.createElement('td');
+            tdSum.textContent = (p.body || '').slice(0, 60);
+            tr.appendChild(tdSum);
             tb.appendChild(tr);
           });
         });

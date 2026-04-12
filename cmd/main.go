@@ -112,12 +112,14 @@ func main() {
 		Posts:         postSvc,
 		Replies:       replySvc,
 		Categories:    catRepo,
+		Users:         userRepo,
 		UploadRoot:    uploadRoot,
 		UploadURLPath: "/uploads",
 	}
 	adminSrv := &httpadmin.Server{
 		Admin:         adminSvc,
 		CategoryCount: catRepo.Count,
+		Users:         userRepo,
 	}
 
 	providers := map[string]appoauth.OAuth2Provider{}

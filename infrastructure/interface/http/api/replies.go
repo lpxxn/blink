@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -39,10 +40,7 @@ func (s *Server) ListReplies(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	out := make([]ReplyJSON, 0, len(list))
-	for _, rep := range list {
-		out = append(out, ReplyToJSON(rep))
-	}
+	out := s.repliesToJSON(c.Request.Context(), list)
 	var next *string
 	if len(list) > 0 {
 		next = NextCursorString(list[len(list)-1].ID)
@@ -92,7 +90,39 @@ func (s *Server) CreateReply(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, ReplyToJSON(rep))
+	c.JSON(http.StatusCreated, s.replyToJSON(c.Request.Context(), rep))
+}
+
+func (s *Server) repliesToJSON(ctx context.Context, list []*domainpostreply.Reply) []ReplyJSON {
+	if len(list) == 0 {
+		return []ReplyJSON{}
+	}
+	ids := make([]int64, len(list))
+	for i, r := range list {
+		ids[i] = r.UserID
+	}
+	names := ResolveUserNames(ctx, s.Users, ids)
+	out := make([]ReplyJSON, 0, len(list))
+	for _, r := range list {
+		j := ReplyToJSON(r)
+		if names != nil {
+			j.UserName = names[r.UserID]
+		}
+		out = append(out, j)
+	}
+	return out
+}
+
+func (s *Server) replyToJSON(ctx context.Context, r *domainpostreply.Reply) ReplyJSON {
+	j := ReplyToJSON(r)
+	if s.Users == nil {
+		return j
+	}
+	names := ResolveUserNames(ctx, s.Users, []int64{r.UserID})
+	if names != nil {
+		j.UserName = names[r.UserID]
+	}
+	return j
 }
 
 func (s *Server) DeleteReply(c *gin.Context) {

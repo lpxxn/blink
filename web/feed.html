@@ -41,6 +41,12 @@
       return e;
     }
 
+    function authorLabel(obj) {
+      var n = obj && obj.user_name != null ? String(obj.user_name).trim() : '';
+      if (n) return n;
+      return '用户 ' + obj.user_id;
+    }
+
     function loadCategories() {
       fetch(API + '/api/categories', { credentials: 'include' })
         .then(function (r) { return r.json(); })
@@ -112,7 +118,7 @@
             link.href = '/web/post.html?id=' + encodeURIComponent(p.id);
             h.appendChild(link);
             art.appendChild(h);
-            var meta = el('div', '帖子 #' + p.id + ' · 用户 ' + p.user_id);
+            var meta = el('div', '帖子 #' + p.id + ' · ' + authorLabel(p));
             meta.className = 'meta';
             art.appendChild(meta);
             list.appendChild(art);

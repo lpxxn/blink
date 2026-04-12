@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -38,10 +39,7 @@ func (s *Server) ListPosts(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	out := make([]PostJSON, 0, len(list))
-	for _, p := range list {
-		out = append(out, PostToJSON(p))
-	}
+	out := s.postsToJSON(c.Request.Context(), list)
 	var next *string
 	if len(list) > 0 {
 		next = NextCursorString(list[len(list)-1].ID)
@@ -72,7 +70,7 @@ func (s *Server) GetPost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, PostToJSON(p))
+	c.JSON(http.StatusOK, s.postToJSON(c.Request.Context(), p))
 }
 
 type createPostBody struct {
@@ -109,7 +107,7 @@ func (s *Server) CreatePost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, PostToJSON(p))
+	c.JSON(http.StatusCreated, s.postToJSON(c.Request.Context(), p))
 }
 
 type patchPostBody struct {
@@ -160,7 +158,7 @@ func (s *Server) PatchPost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, PostToJSON(p))
+	c.JSON(http.StatusOK, s.postToJSON(c.Request.Context(), p))
 }
 
 func (s *Server) DeletePost(c *gin.Context) {
@@ -212,13 +210,42 @@ func (s *Server) ListMyPosts(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	out := make([]PostJSON, 0, len(list))
-	for _, p := range list {
-		out = append(out, PostToJSON(p))
-	}
+	out := s.postsToJSON(c.Request.Context(), list)
 	var next *string
 	if len(list) > 0 {
 		next = NextCursorString(list[len(list)-1].ID)
 	}
 	c.JSON(http.StatusOK, PostsPageJSON{Posts: out, NextCursor: next})
+}
+
+func (s *Server) postsToJSON(ctx context.Context, list []*domainpost.Post) []PostJSON {
+	if len(list) == 0 {
+		return []PostJSON{}
+	}
+	ids := make([]int64, len(list))
+	for i, p := range list {
+		ids[i] = p.UserID
+	}
+	names := ResolveUserNames(ctx, s.Users, ids)
+	out := make([]PostJSON, 0, len(list))
+	for _, p := range list {
+		j := PostToJSON(p)
+		if names != nil {
+			j.UserName = names[p.UserID]
+		}
+		out = append(out, j)
+	}
+	return out
+}
+
+func (s *Server) postToJSON(ctx context.Context, p *domainpost.Post) PostJSON {
+	j := PostToJSON(p)
+	if s.Users == nil {
+		return j
+	}
+	names := ResolveUserNames(ctx, s.Users, []int64{p.UserID})
+	if names != nil {
+		j.UserName = names[p.UserID]
+	}
+	return j
 }

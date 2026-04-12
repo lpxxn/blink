@@ -8,6 +8,7 @@ import (
 
 	appadmin "github.com/lpxxn/blink/application/admin"
 	domainpost "github.com/lpxxn/blink/domain/post"
+	domainuser "github.com/lpxxn/blink/domain/user"
 	httpapi "github.com/lpxxn/blink/infrastructure/interface/http/api"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ import (
 type Server struct {
 	Admin         *appadmin.Service
 	CategoryCount func(context.Context) (int64, error)
+	Users         domainuser.Repository
 }
 
 func (s *Server) Overview(c *gin.Context) {
@@ -128,8 +130,15 @@ func (s *Server) ListPosts(c *gin.Context) {
 		return
 	}
 	out := make([]httpapi.AdminPostJSON, 0, len(list))
+	ids := make([]int64, 0, len(list))
 	for _, p := range list {
 		out = append(out, httpapi.AdminPostToJSON(p))
+		ids = append(ids, p.UserID)
+	}
+	if names := httpapi.ResolveUserNames(c.Request.Context(), s.Users, ids); names != nil {
+		for i := range out {
+			out[i].UserName = names[out[i].UserID]
+		}
 	}
 	c.JSON(http.StatusOK, httpapi.AdminPostsPageJSON{Posts: out, Total: total})
 }
@@ -164,5 +173,9 @@ func (s *Server) PatchPost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, httpapi.AdminPostToJSON(p))
+	adm := httpapi.AdminPostToJSON(p)
+	if names := httpapi.ResolveUserNames(c.Request.Context(), s.Users, []int64{p.UserID}); names != nil {
+		adm.UserName = names[p.UserID]
+	}
+	c.JSON(http.StatusOK, adm)
 }

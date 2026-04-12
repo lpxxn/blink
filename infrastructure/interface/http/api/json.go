@@ -13,6 +13,7 @@ import (
 type PostJSON struct {
 	ID              int64   `json:"id,string"`
 	UserID          int64   `json:"user_id,string"`
+	UserName        string  `json:"user_name"`
 	PostType        int     `json:"post_type"`
 	Visibility      int     `json:"visibility"`
 	Body            string  `json:"body"`
@@ -71,6 +72,7 @@ type ReplyJSON struct {
 	ID            int64  `json:"id,string"`
 	PostID        int64  `json:"post_id,string"`
 	UserID        int64  `json:"user_id,string"`
+	UserName      string `json:"user_name"`
 	Body          string `json:"body"`
 	Status        int    `json:"status"`
 	CreatedAt     string `json:"created_at"`
