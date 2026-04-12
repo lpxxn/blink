@@ -4,38 +4,52 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Blink</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
-    a { color: #0b57d0; }
-    ul { padding-left: 1.2rem; }
-  </style>
+  <link rel="stylesheet" href="/web/common.css" />
 </head>
-<body>
-  <h1>Blink</h1>
-  <p>轻量帖子与评论演示页（需先登录）。</p>
-  <ul>
-    <li><a href="/web/feed.html">帖子流</a></li>
-    <li><a href="/web/compose.html">发帖</a></li>
-    <li><a href="/web/admin.html">管理后台</a>（仅 super_admin）</li>
-  </ul>
-  <h2>登录</h2>
-  <p>使用已配置的 OAuth 提供方（需环境变量与回调 URL 正确）：</p>
-  <ul>
-    <li><a id="builtin" href="#">内置账号（builtin）</a></li>
-    <li><a id="google" href="#">Google</a></li>
-  </ul>
-  <p><a href="/auth/register">注册（邮箱密码）</a> 后，若已启用自建 IdP，可用 builtin 登录。</p>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <nav class="top-nav">
+      <a class="brand" href="/web/index.html">Blink</a>
+      <a href="/web/index.html" class="nav-active">首页</a>
+      <a href="/web/register.html">注册</a>
+      <a href="/web/feed.html">帖子流</a>
+      <a href="/web/compose.html">发帖</a>
+      <a href="/web/admin.html">管理</a>
+    </nav>
+
+    <h1 class="page-title">轻量帖子与评论</h1>
+    <p class="page-lead">演示站点：浏览动态、发帖与评论。部分操作需先登录。</p>
+
+    <div class="card">
+      <h2 class="section-title" style="margin-top:0">逛逛</h2>
+      <ul class="home-actions">
+        <li><a href="/web/feed.html">帖子流</a> — 按分类浏览</li>
+        <li><a href="/web/compose.html">发帖</a> — 图文与草稿</li>
+        <li><a href="/web/admin.html">管理后台</a> — 需 super_admin</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      <h2 class="section-title" style="margin-top:0">登录</h2>
+      <p class="page-lead" style="margin-bottom:0.75rem">使用已配置的 OAuth（需环境变量与回调 URL 正确）。邮箱注册用户请选「内置账号」。</p>
+      <ul class="oauth-list">
+        <li><button type="button" class="btn btn-primary" id="builtin">内置账号（builtin）</button></li>
+        <li><button type="button" class="btn btn-secondary" id="google">Google</button></li>
+      </ul>
+      <p class="field-hint" style="margin-top:1rem;margin-bottom:0">
+        还没有账号？<a href="/web/register.html" style="color:var(--accent);font-weight:600;text-decoration:none">注册邮箱密码</a> 后，可用内置账号登录。
+      </p>
+    </div>
+  </div>
   <script>
     function login(provider) {
       var next = encodeURIComponent('/web/feed.html');
       window.location.href = '/auth/oauth/' + provider + '/login?next=' + next;
     }
-    document.getElementById('builtin').onclick = function (e) {
-      e.preventDefault();
+    document.getElementById('builtin').onclick = function () {
       login('builtin');
     };
-    document.getElementById('google').onclick = function (e) {
-      e.preventDefault();
+    document.getElementById('google').onclick = function () {
       login('google');
     };
   </script>

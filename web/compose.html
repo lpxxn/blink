@@ -4,35 +4,43 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>发帖 — Blink</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 1rem auto; padding: 0 1rem; }
-    textarea { width: 100%; min-height: 120px; box-sizing: border-box; }
-    label { display: block; margin: 0.75rem 0 0.25rem; }
-    .err { color: #b00020; }
-    .ok { color: #0d6d3b; }
-    nav a { margin-right: 1rem; }
-    #thumbs img { max-height: 80px; margin: 0.25rem; border-radius: 4px; }
-  </style>
+  <link rel="stylesheet" href="/web/common.css" />
 </head>
-<body>
-  <nav>
-    <a href="/web/feed.html">流</a>
-    <a href="/web/index.html">首页</a>
-  </nav>
-  <h1>发帖</h1>
-  <p id="msg" class="err"></p>
-  <label>分类</label>
-  <select id="cat"><option value="">（未分类）</option></select>
-  <label>正文</label>
-  <textarea id="body"></textarea>
-  <label>图片</label>
-  <input type="file" id="file" accept="image/*" />
-  <p><button type="button" id="upload">上传所选图片</button></p>
-  <div id="thumbs"></div>
-  <p>
-    <button type="button" id="pub">发布</button>
-    <button type="button" id="draft">保存草稿</button>
-  </p>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <nav class="top-nav">
+      <a class="brand" href="/web/index.html">Blink</a>
+      <a href="/web/index.html">首页</a>
+      <a href="/web/register.html">注册</a>
+      <a href="/web/feed.html">帖子流</a>
+      <a href="/web/compose.html" class="nav-active">发帖</a>
+    </nav>
+
+    <h1 class="page-title">发帖</h1>
+    <div class="card">
+      <p id="msg" class="err" role="alert"></p>
+      <div class="field">
+        <label for="cat">分类</label>
+        <select id="cat"><option value="">（未分类）</option></select>
+      </div>
+      <div class="field">
+        <label for="body">正文</label>
+        <textarea id="body" placeholder="写点什么…"></textarea>
+      </div>
+      <div class="field">
+        <label for="file">图片</label>
+        <input type="file" id="file" accept="image/*" />
+        <div class="btn-row" style="margin-top:0.5rem">
+          <button type="button" class="btn btn-secondary" id="upload">上传所选图片</button>
+        </div>
+        <div id="thumbs"></div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="pub">发布</button>
+        <button type="button" class="btn btn-secondary" id="draft">保存草稿</button>
+      </div>
+    </div>
+  </div>
   <script>
     var API = '';
     var images = [];
@@ -53,6 +61,7 @@
 
     document.getElementById('upload').onclick = function () {
       document.getElementById('msg').textContent = '';
+      document.getElementById('msg').className = 'err';
       var f = document.getElementById('file').files[0];
       if (!f) return;
       var fd = new FormData();
@@ -76,6 +85,7 @@
 
     function submit(draft) {
       document.getElementById('msg').textContent = '';
+      document.getElementById('msg').className = 'err';
       var cat = document.getElementById('cat').value;
       var payload = {
         body: document.getElementById('body').value,

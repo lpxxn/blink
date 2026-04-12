@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>注册 — Blink</title>
+  <link rel="stylesheet" href="/web/common.css" />
+</head>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <nav class="top-nav">
+      <a class="brand" href="/web/index.html">Blink</a>
+      <a href="/web/index.html">首页</a>
+      <a href="/web/register.html" class="nav-active">注册</a>
+      <a href="/web/feed.html">帖子流</a>
+    </nav>
+
+    <main class="card auth-card">
+      <h1 class="page-title" style="font-size:1.35rem;margin-top:0">创建账号</h1>
+      <p class="page-lead" style="margin-bottom:1rem">邮箱 + 密码注册后，可使用「内置账号」登录发帖。</p>
+      <p id="msg" class="err" role="alert"></p>
+      <form id="reg" novalidate>
+        <div class="field">
+          <label for="email">邮箱</label>
+          <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="至少 8 位" />
+          <p class="field-hint">至少 8 个字符。</p>
+        </div>
+        <div class="field">
+          <label for="name">昵称</label>
+          <input id="name" name="name" type="text" autocomplete="nickname" placeholder="展示名称（可空，将使用邮箱前缀）" />
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary">注册并进入</button>
+        </div>
+      </form>
+      <p class="auth-footer">已有账号？<a href="/web/index.html">返回首页登录</a></p>
+    </main>
+  </div>
+  <script>
+    function mapRegisterError(status, body) {
+      var t = (body || '').trim();
+      if (status === 409 || t.indexOf('email already') !== -1) return '该邮箱已被注册';
+      if (status === 400 && t.indexOf('password too short') !== -1) return '密码至少 8 位';
+      if (status === 400 && t.indexOf('invalid email') !== -1) return '邮箱格式无效';
+      if (t) return t;
+      return '注册失败（' + status + '）';
+    }
+
+    document.getElementById('reg').onsubmit = function (e) {
+      e.preventDefault();
+      var msg = document.getElementById('msg');
+      msg.textContent = '';
+      msg.className = 'err';
+      var email = document.getElementById('email').value.trim();
+      var password = document.getElementById('password').value;
+      var name = document.getElementById('name').value.trim();
+      if (!email || !password) {
+        msg.textContent = '请填写邮箱和密码';
+        return;
+      }
+      if (password.length < 8) {
+        msg.textContent = '密码至少 8 位';
+        return;
+      }
+      fetch('/auth/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password, name: name })
+      })
+        .then(function (r) {
+          return r.text().then(function (t) {
+            if (!r.ok) throw new Error(mapRegisterError(r.status, t));
+          });
+        })
+        .then(function () {
+          msg.className = 'ok';
+          msg.textContent = '注册成功，正在跳转…';
+          window.location.href = '/web/feed.html';
+        })
+        .catch(function (err) {
+          msg.className = 'err';
+          msg.textContent = err.message || String(err);
+        });
+    };
+  </script>
+</body>
+</html>
