@@ -12,4 +12,9 @@ const (
 	ModerationNormal  = 0
 	ModerationFlagged = 1
 	ModerationRemoved = 2
+
+	// AppealStatus — 管理员下架后作者的申诉 / 复核申请
+	AppealNone    = 0
+	AppealPending = 1
+	AppealRejected = 3
 )

@@ -3,8 +3,11 @@ package admin
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
+	appmoderation "github.com/lpxxn/blink/application/moderation"
+	appnotification "github.com/lpxxn/blink/application/notification"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainuser "github.com/lpxxn/blink/domain/user"
 )
@@ -13,18 +16,21 @@ var (
 	ErrCannotDemoteSelf   = errors.New("admin: cannot remove own super_admin role")
 	ErrInvalidRole        = errors.New("admin: invalid role")
 	ErrInvalidModeration  = errors.New("admin: invalid moderation flag")
+	ErrInvalidPostStatus  = errors.New("admin: invalid post status")
+	ErrNoPendingAppeal    = errors.New("admin: no pending appeal")
 )
 
 type Service struct {
-	Users domainuser.Repository
-	Posts domainpost.Repository
+	Users  domainuser.Repository
+	Posts  domainpost.Repository
+	Notify *appnotification.Service // optional
 }
 
 type Overview struct {
-	UserCount      int64
-	PostCount      int64
-	PostsToday     int64
-	CategoryCount  int64 // optional, set from handler if needed
+	UserCount     int64
+	PostCount     int64
+	PostsToday    int64
+	CategoryCount int64
 }
 
 func (s *Service) Overview(ctx context.Context) (*Overview, error) {
@@ -94,10 +100,14 @@ func (s *Service) PatchPost(ctx context.Context, postID int64, moderationFlag *i
 	if err != nil {
 		return nil, err
 	}
+	oldMod := p.ModerationFlag
 	if moderationFlag != nil {
 		switch *moderationFlag {
 		case domainpost.ModerationNormal, domainpost.ModerationFlagged, domainpost.ModerationRemoved:
 			p.ModerationFlag = *moderationFlag
+			if *moderationFlag == domainpost.ModerationRemoved {
+				p.Status = domainpost.StatusHidden
+			}
 		default:
 			return nil, ErrInvalidModeration
 		}
@@ -110,11 +120,46 @@ func (s *Service) PatchPost(ctx context.Context, postID int64, moderationFlag *i
 		case domainpost.StatusDraft, domainpost.StatusPublished, domainpost.StatusHidden:
 			p.Status = *status
 		default:
-			return nil, errors.New("admin: invalid post status")
+			return nil, ErrInvalidPostStatus
 		}
 	}
 	if err := s.Posts.Update(ctx, p); err != nil {
 		return nil, err
+	}
+	if s.Notify != nil && moderationFlag != nil && *moderationFlag == domainpost.ModerationRemoved && oldMod != domainpost.ModerationRemoved {
+		_ = s.Notify.OnPostRemoved(ctx, p.UserID, p.ID, p.ModerationNote)
+	}
+	return p, nil
+}
+
+// ResolveAppeal approves or rejects author moderation request (appeal / resubmit).
+func (s *Service) ResolveAppeal(ctx context.Context, postID int64, approve bool, adminNote string) (*domainpost.Post, error) {
+	p, err := s.Posts.GetByID(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	if p.AppealStatus != domainpost.AppealPending {
+		return nil, ErrNoPendingAppeal
+	}
+	adminNote = strings.TrimSpace(adminNote)
+	if approve {
+		w := appmoderation.SensitiveWords()
+		h := appmoderation.FindSensitiveHits(p.Body, w)
+		p.ModerationFlag, p.ModerationNote = appmoderation.PostModerationFromHits(h)
+		p.Status = domainpost.StatusPublished
+		p.AppealStatus = domainpost.AppealNone
+		p.AppealBody = ""
+	} else {
+		p.AppealStatus = domainpost.AppealRejected
+		if adminNote != "" {
+			p.ModerationNote = strings.TrimSpace(p.ModerationNote + "\n[驳回说明] " + adminNote)
+		}
+	}
+	if err := s.Posts.Update(ctx, p); err != nil {
+		return nil, err
+	}
+	if s.Notify != nil {
+		_ = s.Notify.OnAppealResolved(ctx, p.UserID, p.ID, approve, adminNote)
 	}
 	return p, nil
 }

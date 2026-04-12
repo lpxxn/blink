@@ -10,6 +10,7 @@ type AdminListFilters struct {
 	UserID         *int64
 	CategoryID     *int64
 	ModerationFlag *int
+	AppealPending  bool // true → appeal_status = AppealPending（待处理申诉/复核）
 	IncludeDeleted bool
 }
 

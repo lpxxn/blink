@@ -90,6 +90,23 @@ func (s *Server) CreateReply(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if s.Notifications != nil && s.Posts != nil {
+		post, perr := s.Posts.GetByID(c.Request.Context(), postID)
+		if perr == nil && post != nil {
+			if post.UserID != uid {
+				_ = s.Notifications.OnNewReply(c.Request.Context(), post.UserID, postID, rep.ID, rep.Body)
+			}
+			if body.ParentReplyID != nil && s.Replies != nil {
+				parent, err := s.Replies.GetByID(c.Request.Context(), *body.ParentReplyID)
+				if err == nil && parent != nil && parent.UserID != uid {
+					// 被回复的评论作者：若与楼主是同一人且已收到「帖子有新评论」，则不再重复发
+					if parent.UserID != post.UserID {
+						_ = s.Notifications.OnReplyToYourComment(c.Request.Context(), parent.UserID, postID, rep.ID, rep.Body)
+					}
+				}
+			}
+		}
+	}
 	c.JSON(http.StatusCreated, s.replyToJSON(c.Request.Context(), rep))
 }
 

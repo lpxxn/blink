@@ -16,6 +16,8 @@ type Post struct {
 	Status           int
 	ModerationFlag   int
 	ModerationNote   string
+	AppealBody       string
+	AppealStatus     int
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	DeletedAt        *time.Time // non-nil when soft-deleted (Unscoped loads)

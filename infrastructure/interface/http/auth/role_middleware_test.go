@@ -31,6 +31,7 @@ func (roleStubUsers) Count(context.Context) (int64, error) { panic("unimplemente
 func (roleStubUsers) UpdateStatusRole(context.Context, int64, *int, *string) error {
 	panic("unimplemented")
 }
+func (roleStubUsers) UpdateName(context.Context, int64, string) error { panic("unimplemented") }
 
 func (r roleStubUsers) GetByID(_ context.Context, id int64) (*domainuser.User, error) {
 	return &domainuser.User{SnowflakeID: id, Role: r.role}, nil

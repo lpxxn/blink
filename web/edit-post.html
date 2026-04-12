@@ -14,10 +14,28 @@
       <a href="/web/feed.html">帖子流</a>
       <a href="/web/compose.html">发帖</a>
       <a href="/web/mine.html" class="nav-active">我的</a>
+      <a href="/web/messages.html">消息</a>
     </nav>
 
     <h1 class="page-title">编辑帖子</h1>
     <p id="msg" class="err" role="alert"></p>
+
+    <div id="removed-banner" class="banner-warn" hidden>
+      <strong>该帖已被管理员下架</strong>
+      <p class="field-hint" style="margin:0.35rem 0 0">原因</p>
+      <pre id="mod-reason" style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:0.9rem"></pre>
+      <p id="appeal-pending" class="ok" style="margin:0.75rem 0 0" hidden>你的申诉或复核申请正在等待管理员处理。</p>
+      <div id="appeal-actions" hidden>
+        <div class="field" style="margin-bottom:0.75rem">
+          <label for="appeal-msg">申诉说明（选填；提交「申诉」时必填）</label>
+          <textarea id="appeal-msg" rows="3" placeholder="若仅申请复核，可留空或简要说明修改点。"></textarea>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="btn-appeal">提交申诉</button>
+          <button type="button" class="btn btn-secondary" id="btn-resubmit">修改后申请复核</button>
+        </div>
+      </div>
+    </div>
 
     <div class="card" id="form-card" hidden>
       <div class="field">
@@ -86,6 +104,57 @@
       m.textContent = t || '';
     }
 
+    function updateRemovalUI(p) {
+      var ban = document.getElementById('removed-banner');
+      if (!ban) return;
+      if (p.moderation_flag !== 2) {
+        ban.hidden = true;
+        return;
+      }
+      ban.hidden = false;
+      document.getElementById('mod-reason').textContent = (p.moderation_note && String(p.moderation_note).trim()) ? p.moderation_note : '（未填写）';
+      var pending = document.getElementById('appeal-pending');
+      var actions = document.getElementById('appeal-actions');
+      if (p.appeal_status === 1) {
+        pending.hidden = false;
+        actions.hidden = true;
+      } else {
+        pending.hidden = true;
+        actions.hidden = false;
+      }
+    }
+
+    function submitModReq(kind) {
+      showErr('');
+      var msg = document.getElementById('appeal-msg').value.trim();
+      if (kind === 'appeal' && !msg) {
+        showErr('提交申诉时请填写说明');
+        return;
+      }
+      fetch(API + '/api/posts/' + encodeURIComponent(id) + '/moderation_request', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: kind, message: msg })
+      })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (r.status === 409) return r.json().then(function (d) { throw new Error(d.error || '已有待处理申请'); });
+          if (!r.ok) return r.text().then(function (t) { throw new Error(t || String(r.status)); });
+          return r.json();
+        })
+        .then(function (p) {
+          showOk(kind === 'appeal' ? '申诉已提交' : '已申请复核');
+          updateRemovalUI(p);
+        })
+        .catch(function (e) {
+          showErr(String(e));
+        });
+    }
+
+    document.getElementById('btn-appeal').onclick = function () { submitModReq('appeal'); };
+    document.getElementById('btn-resubmit').onclick = function () { submitModReq('resubmit'); };
+
     if (!id) {
       showErr('缺少 id');
     } else {
@@ -137,6 +206,7 @@
             }
           });
           document.getElementById('form-card').hidden = false;
+          updateRemovalUI(p);
         })
         .catch(function (e) {
           showErr(String(e));

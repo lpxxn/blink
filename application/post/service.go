@@ -17,10 +17,15 @@ const (
 )
 
 var (
-	ErrForbidden      = errors.New("post: forbidden")
-	ErrInvalidInput   = errors.New("post: invalid input")
-	ErrNotVisible     = errors.New("post: not visible to viewer")
+	ErrForbidden           = errors.New("post: forbidden")
+	ErrInvalidInput        = errors.New("post: invalid input")
+	ErrNotVisible          = errors.New("post: not visible to viewer")
+	ErrCannotPublishRemoved = errors.New("post: cannot set published while removed; use moderation request")
+	ErrAppealNotAllowed    = errors.New("post: appeal only when post is admin-removed")
+	ErrAppealPending       = errors.New("post: moderation request already pending")
 )
+
+const maxAppealMessageLen = 4000
 
 type Service struct {
 	Posts      domainpost.Repository
@@ -86,6 +91,11 @@ func (s *Service) Create(ctx context.Context, authorID int64, body string, categ
 	return p, nil
 }
 
+// GetByID loads a post by id (any state); for notifications / internal use.
+func (s *Service) GetByID(ctx context.Context, id int64) (*domainpost.Post, error) {
+	return s.Posts.GetByID(ctx, id)
+}
+
 // Patch updates the author's post.
 type Patch struct {
 	Body          *string
@@ -106,6 +116,8 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 	if p.DeletedAt != nil {
 		return nil, domainpost.ErrNotFound
 	}
+	wasRemoved := p.ModerationFlag == domainpost.ModerationRemoved
+	adminTakedownNote := p.ModerationNote
 	if patch.Body != nil {
 		b := strings.TrimSpace(*patch.Body)
 		if err := s.validateBodyImages(b, p.Images); err != nil {
@@ -130,15 +142,22 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 	if patch.Status != nil {
 		switch *patch.Status {
 		case domainpost.StatusDraft, domainpost.StatusPublished, domainpost.StatusHidden:
+			if wasRemoved && *patch.Status == domainpost.StatusPublished {
+				return nil, ErrCannotPublishRemoved
+			}
 			p.Status = *patch.Status
 		default:
 			return nil, ErrInvalidInput
 		}
 	}
-	// Re-evaluate sensitive-word moderation when body or images may have changed.
-	w := appmoderation.SensitiveWords()
-	h := appmoderation.FindSensitiveHits(p.Body, w)
-	p.ModerationFlag, p.ModerationNote = appmoderation.PostModerationFromHits(h)
+	if wasRemoved {
+		p.ModerationFlag = domainpost.ModerationRemoved
+		p.ModerationNote = adminTakedownNote
+	} else {
+		w := appmoderation.SensitiveWords()
+		h := appmoderation.FindSensitiveHits(p.Body, w)
+		p.ModerationFlag, p.ModerationNote = appmoderation.PostModerationFromHits(h)
+	}
 	if err := s.Posts.Update(ctx, p); err != nil {
 		return nil, err
 	}
@@ -228,4 +247,45 @@ func (s *Service) ListMine(ctx context.Context, userID int64, includeDraft bool,
 		limit = 20
 	}
 	return s.Posts.ListByUserID(ctx, userID, includeDraft, beforeID, limit)
+}
+
+// SubmitModerationRequest: author asks for review after admin removal (appeal or resubmit after edit).
+// kind is "appeal" (requires non-empty message) or "resubmit" (message optional).
+func (s *Service) SubmitModerationRequest(ctx context.Context, authorID, postID int64, kind, message string) (*domainpost.Post, error) {
+	kind = strings.TrimSpace(strings.ToLower(kind))
+	message = strings.TrimSpace(message)
+	if len(message) > maxAppealMessageLen {
+		return nil, ErrInvalidInput
+	}
+	if kind != "appeal" && kind != "resubmit" {
+		return nil, ErrInvalidInput
+	}
+	if kind == "appeal" && message == "" {
+		return nil, ErrInvalidInput
+	}
+	if kind == "resubmit" && message == "" {
+		message = "（已修改内容，申请复核上架）"
+	}
+	p, err := s.Posts.GetByID(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	if p.DeletedAt != nil {
+		return nil, domainpost.ErrNotFound
+	}
+	if p.UserID != authorID {
+		return nil, ErrForbidden
+	}
+	if p.ModerationFlag != domainpost.ModerationRemoved {
+		return nil, ErrAppealNotAllowed
+	}
+	if p.AppealStatus == domainpost.AppealPending {
+		return nil, ErrAppealPending
+	}
+	p.AppealBody = message
+	p.AppealStatus = domainpost.AppealPending
+	if err := s.Posts.Update(ctx, p); err != nil {
+		return nil, err
+	}
+	return p, nil
 }

@@ -226,6 +226,37 @@ textarea {
   font-size: 0.9rem;
 }
 
+.banner-warn {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  margin-bottom: 1rem;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.notif-item {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item.unread {
+  padding-left: 0.5rem;
+  margin-left: -0.5rem;
+  border-left: 3px solid var(--accent);
+}
+
+.notif-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;

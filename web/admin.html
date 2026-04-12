@@ -14,6 +14,7 @@
       <a href="/web/register.html">注册</a>
       <a href="/web/feed.html">帖子流</a>
       <a href="/web/mine.html">我的</a>
+      <a href="/web/messages.html">消息</a>
       <a href="/web/admin.html" class="nav-active">管理</a>
     </nav>
 
@@ -35,6 +36,18 @@
     <div class="data-table-wrap">
       <table class="data-table" id="posts">
         <thead><tr><th>ID</th><th>用户</th><th>用户ID</th><th>审核</th><th>状态</th><th>摘要</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h2 class="section-title">待处理申诉 / 复核</h2>
+    <p class="page-lead" style="margin-top:0">作者在下架后提交的申诉或修改复核申请。</p>
+    <div class="btn-row" style="margin-bottom:0.75rem">
+      <button type="button" class="btn btn-secondary btn-sm" id="load-appeals">刷新列表</button>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table" id="appeals">
+        <thead><tr><th>ID</th><th>用户</th><th>申诉/说明</th><th>操作</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -111,7 +124,77 @@
         });
     }
 
+    function resolveAppeal(postId, approve) {
+      var note = '';
+      if (!approve) {
+        note = window.prompt('驳回说明（可选，会记入帖子备注）', '') || '';
+      }
+      return fetch(API + '/admin/api/posts/' + encodeURIComponent(String(postId)) + '/resolve_appeal', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approve: approve, note: note })
+      })
+        .then(function (r) {
+          if (r.status === 403) throw new Error('需要 super_admin');
+          if (r.status === 401) throw new Error('请先登录');
+          if (!r.ok) return r.text().then(function (t) { throw new Error(t || String(r.status)); });
+        });
+    }
+
+    function loadAppeals() {
+      fetch(API + '/admin/api/posts?appeal_pending=1&limit=50', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var tb = document.querySelector('#appeals tbody');
+          tb.innerHTML = '';
+          (d.posts || []).forEach(function (p) {
+            var tr = document.createElement('tr');
+            var tdId = document.createElement('td');
+            tdId.textContent = String(p.id != null ? p.id : '');
+            tr.appendChild(tdId);
+            var nameTd = document.createElement('td');
+            var disp = p.user_name != null && String(p.user_name).trim() !== '' ? String(p.user_name).trim() : '—';
+            nameTd.textContent = disp;
+            tr.appendChild(nameTd);
+            var bodyTd = document.createElement('td');
+            bodyTd.textContent = (p.appeal_body || '').slice(0, 200);
+            tr.appendChild(bodyTd);
+            var actTd = document.createElement('td');
+            var okBtn = document.createElement('button');
+            okBtn.type = 'button';
+            okBtn.className = 'btn btn-primary btn-sm';
+            okBtn.textContent = '通过';
+            okBtn.onclick = function () {
+              resolveAppeal(p.id, true).then(function () { loadAppeals(); loadAll(); }).catch(function (e) {
+                document.getElementById('err').textContent = String(e);
+              });
+            };
+            var noBtn = document.createElement('button');
+            noBtn.type = 'button';
+            noBtn.className = 'btn btn-secondary btn-sm';
+            noBtn.style.marginLeft = '0.35rem';
+            noBtn.textContent = '驳回';
+            noBtn.onclick = function () {
+              resolveAppeal(p.id, false).then(function () { loadAppeals(); loadAll(); }).catch(function (e) {
+                document.getElementById('err').textContent = String(e);
+              });
+            };
+            actTd.appendChild(okBtn);
+            actTd.appendChild(noBtn);
+            tr.appendChild(actTd);
+            tb.appendChild(tr);
+          });
+        })
+        .catch(function (e) {
+          document.getElementById('err').textContent = String(e);
+        });
+    }
+
+    document.getElementById('load-appeals').onclick = function () { loadAppeals(); };
+
     loadAll();
+    loadAppeals();
   </script>
 </body>
 </html>

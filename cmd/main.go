@@ -19,6 +19,7 @@ import (
 	apigen "github.com/lpxxn/blink/api/gen"
 	appadmin "github.com/lpxxn/blink/application/admin"
 	appauth "github.com/lpxxn/blink/application/auth"
+	appnotification "github.com/lpxxn/blink/application/notification"
 	appbootstrap "github.com/lpxxn/blink/application/bootstrap"
 	appcategory "github.com/lpxxn/blink/application/category"
 	appidp "github.com/lpxxn/blink/application/idp"
@@ -78,6 +79,7 @@ func main() {
 	oauthRepo := &gormdb.OAuthRepository{DB: gdb}
 	postRepo := &gormdb.PostRepository{DB: gdb}
 	replyRepo := &gormdb.PostReplyRepository{DB: gdb}
+	notifRepo := &gormdb.NotificationRepository{DB: gdb}
 	catRepo := &gormdb.CategoryRepository{DB: gdb}
 	sessStore := &redisstore.SessionStore{Client: rdb}
 	stateStore := &redisstore.OAuthStateStore{Client: rdb}
@@ -99,9 +101,14 @@ func main() {
 		Replies: replyRepo,
 		NewID:   func() int64 { return node.Generate().Int64() },
 	}
+	notifSvc := &appnotification.Service{
+		Repo:  notifRepo,
+		NewID: func() int64 { return node.Generate().Int64() },
+	}
 	adminSvc := &appadmin.Service{
-		Users: userRepo,
-		Posts: postRepo,
+		Users:  userRepo,
+		Posts:  postRepo,
+		Notify: notifSvc,
 	}
 
 	uploadRoot := getenv("BLINK_UPLOAD_DIR", "data/uploads")
@@ -111,8 +118,10 @@ func main() {
 	apiSrv := &httpapi.Server{
 		Posts:         postSvc,
 		Replies:       replySvc,
+		Notifications: notifSvc,
 		Categories:    catRepo,
 		Users:         userRepo,
+		Sessions:      sessStore,
 		UploadRoot:    uploadRoot,
 		UploadURLPath: "/uploads",
 	}
@@ -223,6 +232,7 @@ func main() {
 	api.GET("/categories", apiSrv.ListCategories)
 	api.GET("/posts", apiSrv.ListPosts)
 	api.GET("/posts/:id/replies", apiSrv.ListReplies)
+	api.POST("/logout", apiSrv.Logout)
 	opt := api.Group("")
 	opt.Use(httpauth.OptionalSession(sessStore))
 	opt.GET("/posts/:id", apiSrv.GetPost)
@@ -230,10 +240,16 @@ func main() {
 	authed := api.Group("")
 	authed.Use(httpauth.RequireSession(sessStore))
 	authed.GET("/me", apiSrv.GetMe)
+	authed.PATCH("/me", apiSrv.PatchMe)
 	authed.POST("/posts", apiSrv.CreatePost)
 	authed.PATCH("/posts/:id", apiSrv.PatchPost)
 	authed.DELETE("/posts/:id", apiSrv.DeletePost)
+	authed.POST("/posts/:id/moderation_request", apiSrv.SubmitModerationRequest)
 	authed.GET("/me/posts", apiSrv.ListMyPosts)
+	authed.GET("/me/notifications", apiSrv.ListNotifications)
+	authed.GET("/me/notifications/unread_count", apiSrv.UnreadNotificationCount)
+	authed.POST("/me/notifications/:id/read", apiSrv.MarkNotificationRead)
+	authed.POST("/me/notifications/read_all", apiSrv.MarkAllNotificationsRead)
 	authed.POST("/posts/:id/replies", apiSrv.CreateReply)
 	authed.POST("/uploads", apiSrv.UploadImage)
 	authed.DELETE("/replies/:id", apiSrv.DeleteReply)
@@ -246,6 +262,7 @@ func main() {
 	adminG.PATCH("/users/:id", adminSrv.PatchUser)
 	adminG.GET("/posts", adminSrv.ListPosts)
 	adminG.PATCH("/posts/:id", adminSrv.PatchPost)
+	adminG.POST("/posts/:id/resolve_appeal", adminSrv.ResolveAppeal)
 
 	addr := getenv("BLINK_HTTP_ADDR", ":11110")
 	log.Printf("listening on %s (OAuth providers: %d, builtin IdP: %v, POST /auth/register: on)", addr, len(providers), idpHTTP != nil)

@@ -37,6 +37,8 @@ func postModelToDomain(m *PostModel) (*domainpost.Post, error) {
 		Status:           m.Status,
 		ModerationFlag:   m.ModerationFlag,
 		ModerationNote:   m.ModerationNote,
+		AppealBody:       m.AppealBody,
+		AppealStatus:     m.AppealStatus,
 		CreatedAt:        m.CreatedAt,
 		UpdatedAt:        m.UpdatedAt,
 		DeletedAt:        deleted,
@@ -62,6 +64,8 @@ func domainToPostModel(p *domainpost.Post) (*PostModel, error) {
 		Status:           p.Status,
 		ModerationFlag:   p.ModerationFlag,
 		ModerationNote:   p.ModerationNote,
+		AppealBody:       p.AppealBody,
+		AppealStatus:     p.AppealStatus,
 		CreatedAt:        p.CreatedAt,
 		UpdatedAt:        p.UpdatedAt,
 	}, nil
@@ -101,6 +105,8 @@ func (r *PostRepository) Update(ctx context.Context, p *domainpost.Post) error {
 		"status":             m.Status,
 		"moderation_flag":    m.ModerationFlag,
 		"moderation_note":    m.ModerationNote,
+		"appeal_body":        m.AppealBody,
+		"appeal_status":      m.AppealStatus,
 		"updated_at":         m.UpdatedAt,
 	}).Error
 }
@@ -186,6 +192,9 @@ func (r *PostRepository) adminBaseQuery(ctx context.Context, f domainpost.AdminL
 	}
 	if f.ModerationFlag != nil {
 		q = q.Where("moderation_flag = ?", *f.ModerationFlag)
+	}
+	if f.AppealPending {
+		q = q.Where("appeal_status = ?", domainpost.AppealPending)
 	}
 	return q
 }

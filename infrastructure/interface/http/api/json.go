@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	domaincategory "github.com/lpxxn/blink/domain/category"
+	domainnotification "github.com/lpxxn/blink/domain/notification"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
 	domainuser "github.com/lpxxn/blink/domain/user"
@@ -21,6 +22,8 @@ type PostJSON struct {
 	Status          int     `json:"status"`
 	ModerationFlag  int     `json:"moderation_flag"`
 	ModerationNote  string  `json:"moderation_note"`
+	AppealBody      string  `json:"appeal_body"`
+	AppealStatus    int     `json:"appeal_status"`
 	CreatedAt       string `json:"created_at"`
 	UpdatedAt       string `json:"updated_at"`
 	CategoryID      *int64 `json:"category_id,string"`
@@ -38,6 +41,8 @@ func PostToJSON(p *domainpost.Post) PostJSON {
 		Status:         p.Status,
 		ModerationFlag: p.ModerationFlag,
 		ModerationNote: p.ModerationNote,
+		AppealBody:     p.AppealBody,
+		AppealStatus:   p.AppealStatus,
 		CreatedAt:      p.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:      p.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 		CategoryID:     p.CategoryID,
@@ -94,7 +99,11 @@ func ReplyToJSON(r *domainpostreply.Reply) ReplyJSON {
 
 // MeJSON is GET /api/me — current session user (snowflake id as JSON string).
 type MeJSON struct {
-	UserID int64 `json:"user_id,string"`
+	UserID int64  `json:"user_id,string"`
+	Email  string `json:"email,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Role   string `json:"role,omitempty"`
+	Status int    `json:"status,omitempty"`
 }
 
 // PostsPageJSON is the list response for GET /api/posts and GET /api/me/posts.
@@ -181,4 +190,37 @@ type OverviewJSON struct {
 // AdminUsersResponse is GET /admin/api/users.
 type AdminUsersResponse struct {
 	Users []AdminUserJSON `json:"users"`
+}
+
+// NotificationJSON is GET /api/me/notifications.
+type NotificationJSON struct {
+	ID         int64   `json:"id,string"`
+	Type       string  `json:"type"`
+	Title      string  `json:"title"`
+	Body       string  `json:"body"`
+	RefPostID  *int64  `json:"ref_post_id,string,omitempty"`
+	RefReplyID *int64  `json:"ref_reply_id,string,omitempty"`
+	Read       bool    `json:"read"`
+	CreatedAt  string  `json:"created_at"`
+}
+
+// NotificationsPageJSON lists notifications.
+type NotificationsPageJSON struct {
+	Notifications []NotificationJSON `json:"notifications"`
+	NextCursor    *string            `json:"next_cursor,omitempty"`
+}
+
+// NotificationToJSON maps domain notification.
+func NotificationToJSON(n *domainnotification.Notification) NotificationJSON {
+	j := NotificationJSON{
+		ID:        n.ID,
+		Type:      n.Type,
+		Title:     n.Title,
+		Body:      n.Body,
+		RefPostID: n.RefPostID,
+		RefReplyID: n.RefReplyID,
+		Read:      n.ReadAt != nil,
+		CreatedAt: n.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+	}
+	return j
 }

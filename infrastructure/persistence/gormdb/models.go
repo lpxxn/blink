@@ -74,6 +74,8 @@ type PostModel struct {
 	Status           int            `gorm:"column:status;not null"`
 	ModerationFlag   int            `gorm:"column:moderation_flag;not null"`
 	ModerationNote   string         `gorm:"column:moderation_note;type:text;not null"`
+	AppealBody       string         `gorm:"column:appeal_body;type:text;not null"`
+	AppealStatus     int            `gorm:"column:appeal_status;not null"`
 	CreatedAt        time.Time      `gorm:"column:created_at"`
 	UpdatedAt        time.Time      `gorm:"column:updated_at"`
 	DeletedAt        gorm.DeletedAt `gorm:"column:deleted_at"`
@@ -81,6 +83,23 @@ type PostModel struct {
 
 func (PostModel) TableName() string {
 	return "posts"
+}
+
+// NotificationModel maps notifications (platform/db/0006).
+type NotificationModel struct {
+	ID         int64      `gorm:"column:id;primaryKey"`
+	UserID     int64      `gorm:"column:user_id;not null;index:idx_notifications_user_created"`
+	Type       string     `gorm:"column:type;type:varchar(32);not null"`
+	Title      string     `gorm:"column:title;type:varchar(512);not null"`
+	Body       string     `gorm:"column:body;type:text;not null"`
+	RefPostID  *int64     `gorm:"column:ref_post_id"`
+	RefReplyID *int64     `gorm:"column:ref_reply_id"`
+	ReadAt     *time.Time `gorm:"column:read_at"`
+	CreatedAt  time.Time  `gorm:"column:created_at"`
+}
+
+func (NotificationModel) TableName() string {
+	return "notifications"
 }
 
 // PostReplyModel maps post_replies (platform/db/0003_post_replies.sql).

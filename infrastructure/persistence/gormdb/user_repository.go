@@ -143,3 +143,11 @@ func (r *UserRepository) UpdateStatusRole(ctx context.Context, id int64, status 
 	}
 	return r.DB.WithContext(ctx).Model(&UserModel{}).Where("snowflake_id = ?", id).Updates(updates).Error
 }
+
+func (r *UserRepository) UpdateName(ctx context.Context, id int64, name string) error {
+	now := time.Now().UTC()
+	return r.DB.WithContext(ctx).Model(&UserModel{}).Where("snowflake_id = ?", id).Updates(map[string]interface{}{
+		"name":       name,
+		"updated_at": now,
+	}).Error
+}

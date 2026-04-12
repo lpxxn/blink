@@ -122,6 +122,9 @@ func (s *Server) ListPosts(c *gin.Context) {
 	if c.Query("include_deleted") == "1" || c.Query("include_deleted") == "true" {
 		f.IncludeDeleted = true
 	}
+	if c.Query("appeal_pending") == "1" || c.Query("appeal_pending") == "true" {
+		f.AppealPending = true
+	}
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	list, total, err := s.Admin.ListPosts(c.Request.Context(), f, offset, limit)
@@ -166,8 +169,48 @@ func (s *Server) PatchPost(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
+		if errors.Is(err, appadmin.ErrInvalidPostStatus) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		if errors.Is(err, appadmin.ErrInvalidModeration) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	adm := httpapi.AdminPostToJSON(p)
+	if names := httpapi.ResolveUserNames(c.Request.Context(), s.Users, []int64{p.UserID}); names != nil {
+		adm.UserName = names[p.UserID]
+	}
+	c.JSON(http.StatusOK, adm)
+}
+
+type resolveAppealBody struct {
+	Approve bool   `json:"approve"`
+	Note    string `json:"note"`
+}
+
+func (s *Server) ResolveAppeal(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
+		return
+	}
+	var body resolveAppealBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	p, err := s.Admin.ResolveAppeal(c.Request.Context(), id, body.Approve, body.Note)
+	if err != nil {
+		if errors.Is(err, domainpost.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, appadmin.ErrNoPendingAppeal) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -151,6 +151,10 @@ func (s *Server) PatchPost(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			return
 		}
+		if errors.Is(err, apppost.ErrCannotPublishRemoved) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "帖子已被管理员下架，无法直接设为已发布；请先修改内容后「申请复核」或提交申诉。"})
+			return
+		}
 		if errors.Is(err, apppost.ErrInvalidInput) || errors.Is(err, appcategory.ErrInvalidCategory) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

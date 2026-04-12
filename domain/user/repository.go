@@ -10,4 +10,6 @@ type Repository interface {
 	ListForAdmin(ctx context.Context, offset, limit int) ([]AdminListEntry, error)
 	Count(ctx context.Context) (int64, error)
 	UpdateStatusRole(ctx context.Context, id int64, status *int, role *string) error
+	// UpdateName sets display name (trimmed); used by profile settings.
+	UpdateName(ctx context.Context, id int64, name string) error
 }

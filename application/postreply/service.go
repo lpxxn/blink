@@ -67,6 +67,11 @@ func (s *Service) Add(ctx context.Context, userID, postID int64, body string, pa
 	return rep, nil
 }
 
+// GetByID loads a reply by id (for notifications / internal use).
+func (s *Service) GetByID(ctx context.Context, replyID int64) (*domainpostreply.Reply, error) {
+	return s.Replies.GetByID(ctx, replyID)
+}
+
 func (s *Service) DeleteOwn(ctx context.Context, userID, replyID int64) error {
 	rep, err := s.Replies.GetByID(ctx, replyID)
 	if err != nil {
