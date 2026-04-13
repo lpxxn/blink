@@ -27,15 +27,28 @@
     <h2 class="section-title">用户（最近 50）</h2>
     <div class="data-table-wrap">
       <table class="data-table" id="users">
-        <thead><tr><th>ID</th><th>邮箱</th><th>角色</th><th>状态</th><th>最近登录</th></tr></thead>
+        <thead><tr><th>ID</th><th>邮箱</th><th>名称</th><th>角色</th><th>状态</th><th>最近登录</th><th>操作</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
 
-    <h2 class="section-title">帖子（最近 20）</h2>
+    <h2 class="section-title">帖子（每页 20）</h2>
+    <div class="btn-row" style="margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem; align-items:center">
+      <label>审核筛选
+        <select id="posts-mod-filter">
+          <option value="">全部</option>
+          <option value="0">正常</option>
+          <option value="1">违规</option>
+          <option value="2">下架</option>
+        </select>
+      </label>
+      <span id="posts-page-meta" class="page-lead" style="margin:0"></span>
+      <button type="button" class="btn btn-secondary btn-sm" id="posts-prev">上一页</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="posts-next">下一页</button>
+    </div>
     <div class="data-table-wrap">
       <table class="data-table" id="posts">
-        <thead><tr><th>ID</th><th>用户</th><th>用户ID</th><th>审核</th><th>状态</th><th>摘要</th></tr></thead>
+        <thead><tr><th>ID</th><th>用户</th><th>用户ID</th><th>审核</th><th>状态</th><th>摘要</th><th>操作</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -54,74 +67,242 @@
   </div>
   <script>
     var API = '';
+    var postsOffset = 0;
+    var postsLimit = 20;
+    var postsTotal = 0;
+
+    function sid(v) {
+      if (v == null) return '';
+      return String(v);
+    }
+
+    function modLabel(m) {
+      if (m === 0) return '正常';
+      if (m === 1) return '违规';
+      if (m === 2) return '下架';
+      return sid(m);
+    }
+
+    function postStatusLabel(s) {
+      if (s === 0) return '草稿';
+      if (s === 1) return '已发布';
+      if (s === 2) return '隐藏';
+      return sid(s);
+    }
+
+    function userStatusLabel(s) {
+      if (s === 0) return '未激活';
+      if (s === 1) return '正常';
+      if (s === 2) return '封禁';
+      return sid(s);
+    }
+
+    function ensureAdminJson(r, label) {
+      if (r.status === 403) return Promise.reject(new Error('需要 super_admin 登录'));
+      if (r.status === 401) return Promise.reject(new Error('请先登录'));
+      if (!r.ok) {
+        return r.text().then(function (t) {
+          throw new Error(label + ' ' + r.status + (t ? ': ' + t : ''));
+        });
+      }
+      return r.json();
+    }
+
+    function patchPost(postId, body) {
+      return fetch(API + '/admin/api/posts/' + encodeURIComponent(sid(postId)), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function (r) {
+        if (r.status === 403) throw new Error('需要 super_admin');
+        if (r.status === 401) throw new Error('请先登录');
+        if (!r.ok) {
+          return r.text().then(function (t) { throw new Error(t || String(r.status)); });
+        }
+        return r.json();
+      });
+    }
+
+    function patchUser(userId, body) {
+      return fetch(API + '/admin/api/users/' + encodeURIComponent(sid(userId)), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function (r) {
+        if (r.status === 403) throw new Error('需要 super_admin');
+        if (r.status === 401) throw new Error('请先登录');
+        if (r.status === 204) return;
+        return r.text().then(function (t) { throw new Error(t || String(r.status)); });
+      });
+    }
+
+    function appendSmallBtn(row, label, className, onClick) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn ' + className + ' btn-sm';
+      b.textContent = label;
+      b.onclick = onClick;
+      row.appendChild(b);
+    }
+
+    function renderUsers(d) {
+      var tb = document.querySelector('#users tbody');
+      tb.innerHTML = '';
+      (d.users || []).forEach(function (u) {
+        var tr = document.createElement('tr');
+        var uid = u.id;
+        [
+          sid(uid),
+          u.email || '',
+          u.name || '—',
+          u.role || '',
+          userStatusLabel(u.status) + ' (' + sid(u.status) + ')',
+          u.last_login_at || '-'
+        ].forEach(function (cell) {
+          var td = document.createElement('td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        var actTd = document.createElement('td');
+        var btnRow = document.createElement('div');
+        btnRow.style.display = 'flex';
+        btnRow.style.flexWrap = 'wrap';
+        btnRow.style.gap = '0.35rem';
+        appendSmallBtn(btnRow, '正常', 'btn-secondary', function () {
+          patchUser(uid, { status: 1 }).then(function () { loadAll(); }).catch(function (e) {
+            document.getElementById('err').textContent = String(e);
+          });
+        });
+        appendSmallBtn(btnRow, '封禁', 'btn-secondary', function () {
+          if (!window.confirm('将用户设为封禁状态？')) return;
+          patchUser(uid, { status: 2 }).then(function () { loadAll(); }).catch(function (e) {
+            document.getElementById('err').textContent = String(e);
+          });
+        });
+        appendSmallBtn(btnRow, '改角色', 'btn-secondary', function () {
+          var r = window.prompt('角色：user / admin / super_admin', u.role || 'user');
+          if (r == null) return;
+          r = String(r).trim();
+          if (!r) return;
+          patchUser(uid, { role: r }).then(function () { loadAll(); }).catch(function (e) {
+            document.getElementById('err').textContent = String(e);
+          });
+        });
+        actTd.appendChild(btnRow);
+        tr.appendChild(actTd);
+        tb.appendChild(tr);
+      });
+    }
+
+    function renderPosts(d) {
+      postsTotal = typeof d.total === 'number' ? d.total : 0;
+      var end = Math.min(postsOffset + postsLimit, postsTotal);
+      var meta = document.getElementById('posts-page-meta');
+      meta.textContent = '共 ' + postsTotal + ' 条 · 显示 ' + (postsTotal ? postsOffset + 1 :0) + '–' + end;
+
+      var tb = document.querySelector('#posts tbody');
+      tb.innerHTML = '';
+      (d.posts || []).forEach(function (p) {
+        var tr = document.createElement('tr');
+        var pid = p.id;
+        var tdId = document.createElement('td');
+        tdId.textContent = sid(pid);
+        tr.appendChild(tdId);
+        var nameTd = document.createElement('td');
+        var disp = p.user_name != null && String(p.user_name).trim() !== '' ? String(p.user_name).trim() : '—';
+        nameTd.textContent = disp;
+        tr.appendChild(nameTd);
+        var uidTd = document.createElement('td');
+        uidTd.textContent = sid(p.user_id);
+        tr.appendChild(uidTd);
+        var modTd = document.createElement('td');
+        var mf = p.moderation_flag != null ? p.moderation_flag : 0;
+        modTd.textContent = modLabel(mf) + ' (' + mf + ')';
+        tr.appendChild(modTd);
+        var stTd = document.createElement('td');
+        var st = p.status != null ? p.status : 0;
+        stTd.textContent = postStatusLabel(st) + ' (' + st + ')';
+        tr.appendChild(stTd);
+        var tdSum = document.createElement('td');
+        var sumText = (p.body || '').slice(0, 60);
+        tdSum.appendChild(document.createTextNode(sumText + (sumText.length >= 60 ? '…' : '') + ' '));
+        var viewA = document.createElement('a');
+        viewA.href = '/web/post.html?id=' + encodeURIComponent(sid(pid));
+        viewA.textContent = '查看';
+        tdSum.appendChild(viewA);
+        tr.appendChild(tdSum);
+
+        var actTd = document.createElement('td');
+        var btnWrap = document.createElement('div');
+        btnWrap.style.display = 'flex';
+        btnWrap.style.flexWrap = 'wrap';
+        btnWrap.style.gap = '0.35rem';
+
+        if (mf !== 2) {
+          appendSmallBtn(btnWrap, '下架', 'btn-secondary', function () {
+            var note = window.prompt('下架理由（会通知作者并记入备注）', '') || '';
+            patchPost(pid, { moderation_flag: 2, moderation_note: note })
+              .then(function () { return loadPostsOnly(); })
+              .then(function () { return loadAppeals(); })
+              .catch(function (e) {
+                document.getElementById('err').textContent = String(e);
+              });
+          });
+        }
+        if (mf !== 1 && mf !== 2) {
+          appendSmallBtn(btnWrap, '标违规', 'btn-secondary', function () {
+            var note = window.prompt('违规说明（可选）', '') || '';
+            patchPost(pid, { moderation_flag: 1, moderation_note: note || undefined })
+              .then(function () { return loadPostsOnly(); })
+              .catch(function (e) {
+                document.getElementById('err').textContent = String(e);
+              });
+          });
+        }
+        if (mf !== 0 || st !== 1) {
+          appendSmallBtn(btnWrap, '恢复公开', 'btn-primary', function () {
+            if (!window.confirm('将帖子设为审核正常且已发布？')) return;
+            patchPost(pid, { moderation_flag: 0, status: 1 })
+              .then(function () { return loadPostsOnly(); })
+              .catch(function (e) {
+                document.getElementById('err').textContent = String(e);
+              });
+          });
+        }
+
+        actTd.appendChild(btnWrap);
+        tr.appendChild(actTd);
+        tb.appendChild(tr);
+      });
+    }
+
+    function loadPostsOnly() {
+      var modEl = document.getElementById('posts-mod-filter');
+      var mf = modEl && modEl.value !== '' ? '&moderation_flag=' + encodeURIComponent(modEl.value) : '';
+      var url = API + '/admin/api/posts?limit=' + postsLimit + '&offset=' + postsOffset + mf;
+      return fetch(url, { credentials: 'include' })
+        .then(function (r) { return ensureAdminJson(r, 'posts'); })
+        .then(function (d) { renderPosts(d); });
+    }
 
     function loadAll() {
       document.getElementById('err').textContent = '';
-      fetch(API + '/admin/api/overview', { credentials: 'include' })
-        .then(function (r) {
-          if (r.status === 403) throw new Error('需要 super_admin 登录');
-          if (r.status === 401) throw new Error('请先登录');
-          if (!r.ok) throw new Error('overview ' + r.status);
-          return r.json();
-        })
-        .then(function (d) {
-          document.getElementById('overview').textContent = JSON.stringify(d, null, 2);
-        })
-        .catch(function (e) {
-          document.getElementById('err').textContent = String(e);
-          document.getElementById('overview').textContent = '';
-        });
-
-      fetch(API + '/admin/api/users?limit=50', { credentials: 'include' })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var tb = document.querySelector('#users tbody');
-          tb.innerHTML = '';
-          (d.users || []).forEach(function (u) {
-            var tr = document.createElement('tr');
-            [
-              String(u.id),
-              u.email || '',
-              u.role || '',
-              String(u.status),
-              u.last_login_at || '-'
-            ].forEach(function (cell) {
-              var td = document.createElement('td');
-              td.textContent = cell;
-              tr.appendChild(td);
-            });
-            tb.appendChild(tr);
-          });
-        });
-
-      fetch(API + '/admin/api/posts?limit=20', { credentials: 'include' })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var tb = document.querySelector('#posts tbody');
-          tb.innerHTML = '';
-          (d.posts || []).forEach(function (p) {
-            var tr = document.createElement('tr');
-            var tdId = document.createElement('td');
-            tdId.textContent = String(p.id != null ? p.id : '');
-            tr.appendChild(tdId);
-            var nameTd = document.createElement('td');
-            var disp = p.user_name != null && String(p.user_name).trim() !== '' ? String(p.user_name).trim() : '—';
-            nameTd.textContent = disp;
-            tr.appendChild(nameTd);
-            var uidTd = document.createElement('td');
-            uidTd.textContent = String(p.user_id != null ? p.user_id : '');
-            tr.appendChild(uidTd);
-            ['moderation_flag', 'status'].forEach(function (k) {
-              var td = document.createElement('td');
-              td.textContent = String(p[k] != null ? p[k] : '');
-              tr.appendChild(td);
-            });
-            var tdSum = document.createElement('td');
-            tdSum.textContent = (p.body || '').slice(0, 60);
-            tr.appendChild(tdSum);
-            tb.appendChild(tr);
-          });
-        });
+      Promise.all([
+        fetch(API + '/admin/api/overview', { credentials: 'include' })
+          .then(function (r) { return ensureAdminJson(r, 'overview'); })
+          .then(function (d) {
+            document.getElementById('overview').textContent = JSON.stringify(d, null, 2);
+          }),
+        fetch(API + '/admin/api/users?limit=50', { credentials: 'include' })
+          .then(function (r) { return ensureAdminJson(r, 'users'); })
+          .then(function (d) { renderUsers(d); }),
+        loadPostsOnly()
+      ]).catch(function (e) {
+        document.getElementById('err').textContent = String(e);
+        document.getElementById('overview').textContent = '';
+      });
     }
 
     function resolveAppeal(postId, approve) {
@@ -129,7 +310,7 @@
       if (!approve) {
         note = window.prompt('驳回说明（可选，会记入帖子备注）', '') || '';
       }
-      return fetch(API + '/admin/api/posts/' + encodeURIComponent(String(postId)) + '/resolve_appeal', {
+      return fetch(API + '/admin/api/posts/' + encodeURIComponent(sid(postId)) + '/resolve_appeal', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -143,15 +324,15 @@
     }
 
     function loadAppeals() {
-      fetch(API + '/admin/api/posts?appeal_pending=1&limit=50', { credentials: 'include' })
-        .then(function (r) { return r.json(); })
+      return fetch(API + '/admin/api/posts?appeal_pending=1&limit=50', { credentials: 'include' })
+        .then(function (r) { return ensureAdminJson(r, 'appeals'); })
         .then(function (d) {
           var tb = document.querySelector('#appeals tbody');
           tb.innerHTML = '';
           (d.posts || []).forEach(function (p) {
             var tr = document.createElement('tr');
             var tdId = document.createElement('td');
-            tdId.textContent = String(p.id != null ? p.id : '');
+            tdId.textContent = sid(p.id);
             tr.appendChild(tdId);
             var nameTd = document.createElement('td');
             var disp = p.user_name != null && String(p.user_name).trim() !== '' ? String(p.user_name).trim() : '—';
@@ -190,6 +371,27 @@
           document.getElementById('err').textContent = String(e);
         });
     }
+
+    document.getElementById('posts-mod-filter').onchange = function () {
+      postsOffset = 0;
+      loadPostsOnly().catch(function (e) {
+        document.getElementById('err').textContent = String(e);
+      });
+    };
+    document.getElementById('posts-prev').onclick = function () {
+      postsOffset = Math.max(0, postsOffset - postsLimit);
+      loadPostsOnly().catch(function (e) {
+        document.getElementById('err').textContent = String(e);
+      });
+    };
+    document.getElementById('posts-next').onclick = function () {
+      if (postsOffset + postsLimit < postsTotal) {
+        postsOffset += postsLimit;
+        loadPostsOnly().catch(function (e) {
+          document.getElementById('err').textContent = String(e);
+        });
+      }
+    };
 
     document.getElementById('load-appeals').onclick = function () { loadAppeals(); };
 
