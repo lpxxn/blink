@@ -1,5 +1,7 @@
 # DDD 架构规则
 
+图示与模块关系见仓库内 [`docs/architecture.md`](../../docs/architecture.md)（Mermaid：分层依赖、HTTP 与通知数据流）。
+
 - All post logic must follow DDD structure
 - Domain must not depend on infrastructure
 - Repository must be defined in domain
@@ -7,7 +9,7 @@
 
 ## 分层目标
 
-本仓库采用以 DDD 为核心的分层组织方式。即使当前实现尚少，新增代码也必须遵循以下边界：
+本仓库采用以 DDD 为核心的分层组织方式。新增代码必须遵循以下边界：
 
 - `domain/`：表达核心业务语义，不依赖传输协议、数据库细节或框架细节。
 - `application/`：编排用例，连接领域对象与外部能力。
@@ -38,7 +40,7 @@
 - 聚合根（Aggregates）
 - 领域服务（Domain Services）
 - 仓储接口（Repository Interfaces）
-- 领域事件（Event）
+- 领域事件（Event）：事件**名称**与**载荷形状**（可与 JSON / 消息协议对齐）
 
 禁止放入：
 
@@ -56,6 +58,7 @@
 - 应用服务
 - 事务边界协调
 - 权限校验编排
+- 对「出站异步能力」的**端口接口**（例如 `application/eventing.NotificationPublisher`），由基础设施实现具体消息中间件
 
 要求：
 
@@ -87,6 +90,18 @@
 - 接口分离：在核心层定义抽象，在基础设施层实现。
 - 数据转换显式化：DTO、领域对象、持久化模型之间必须有明确转换。
 
+## 领域事件与异步通知（已实现路径）
+
+站内通知等**副作用**通过「领域层约定 + 应用层端口 + 基础设施适配」完成，避免 Handler 直接依赖 Redis/Watermill：
+
+- **领域层** `domain/event/`：
+  - `notification.go`：当前 **Redis Stream / Watermill** 消息体里 JSON 字段 `type` 的取值常量（如 `reply_to_post`、`post_removed`），与发布端、消费端 `switch` 路由一致。
+  - `events.go`：同一业务语义的**点分式事件名**（如 `reply.posted`）及对应 **Payload** 结构体，注释为将来与其它消费者或统一 envelope 预留；**改协议时**须与 `notification.go`、Publisher、Consumer 一并核对，避免两套约定长期漂移。
+- **应用层** `application/eventing.NotificationPublisher`：用例成功后调用（评论、管理员下架、申诉裁决等），接口方法表达业务意图，不暴露 Stream 名或序列化细节。
+- **基础设施层** `infrastructure/messaging/notification_watermill_*.go`：实现 Publisher/Subscriber、JSON 序列化与消费者路由，详细行为见 `docs/watermill-notifications.md`。
+
+新增一类「业务成功后发通知」时，建议顺序：在 `domain/event` 明确 `type`（及如需则补 Payload）→ 扩展 `NotificationPublisher` 与 Watermill 实现 → 在 `dispatchNotificationEvent` 中分支调用 `application/notification.Service`（或等价用例）→ 更新 `docs/watermill-notifications.md` 中的协议表。
+
 ## 命名建议
 
 - Use case 以动作命名，如 `CreatePost`, `PublishBlink`, `GetTimeline`。
@@ -102,6 +117,7 @@
 3. 需要哪些仓储/外部接口？
 4. HTTP/gRPC/API 层如何映射？
 5. 数据库存储如何建模？
+6. 是否需要异步出站事件（通知、审计等）？若需要，领域命名与 `eventing` 端口是否已补齐？
 
 ## 反模式
 

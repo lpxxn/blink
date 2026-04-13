@@ -4,6 +4,8 @@ applyTo: "**/*.go"
 
 # DDD 架构规则
 
+分层与数据流图示：`docs/architecture.md`（Mermaid）。
+
 ## 分层目标
 
 采用以 DDD 为核心的分层组织方式，新增代码必须遵循以下边界：
@@ -30,13 +32,13 @@ cmd -> infrastructure -> application -> domain
 
 ### `domain/`
 
-承载：实体（Entities）、值对象（Value Objects）、聚合根（Aggregates）、领域服务（Domain Services）、仓储接口（Repository Interfaces）、领域事件（Event）
+承载：实体（Entities）、值对象（Value Objects）、聚合根（Aggregates）、领域服务（Domain Services）、仓储接口（Repository Interfaces）、领域事件（Event；如 `domain/event/notification.go` 的 JSON `type` 常量与 `events.go` 的点分名/Payload 约定）
 
 禁止放入：HTTP 请求/响应结构、ORM 模型、SQL 语句、日志框架直接调用
 
 ### `application/`
 
-承载：Use Case / Command / Query Handler、DTO、应用服务、事务边界协调、权限校验编排
+承载：Use Case / Command / Query Handler、DTO、应用服务、事务边界协调、权限校验编排；对出站异步能力的端口接口（如 `application/eventing.NotificationPublisher`）
 
 要求：面向领域模型和仓储接口编程，不重新实现领域规则。
 
@@ -56,6 +58,11 @@ cmd -> infrastructure -> application -> domain
 - 接口分离：在核心层定义抽象，在基础设施层实现。
 - 数据转换显式化：DTO、领域对象、持久化模型之间必须有明确转换。
 
+## 领域事件与异步通知
+
+- 站内通知：用例经 `NotificationPublisher` 发消息，Watermill + Redis Stream 实现见 `infrastructure/messaging/notification_watermill_*.go`，协议与运维见 `docs/watermill-notifications.md`。
+- 新增通知类事件：先定 `domain/event` 中 `type` 与载荷，再扩展 `NotificationPublisher`、Publisher/Consumer 与文档。
+
 ## 命名建议
 
 - Use case 以动作命名，如 `CreatePost`, `PublishBlink`, `GetTimeline`。
@@ -69,6 +76,7 @@ cmd -> infrastructure -> application -> domain
 3. 需要哪些仓储/外部接口？
 4. HTTP/gRPC/API 层如何映射？
 5. 数据库存储如何建模？
+6. 是否需要异步出站事件（`eventing` 端口与 `domain/event` 约定）？
 
 ## 反模式
 
