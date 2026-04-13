@@ -23,8 +23,8 @@ type Service struct {
 	NewID   func() int64
 }
 
-func (s *Service) List(ctx context.Context, postID int64, afterID *int64, limit int) ([]*domainpostreply.Reply, error) {
-	if _, err := s.Posts.GetPublic(ctx, postID); err != nil {
+func (s *Service) List(ctx context.Context, postID int64, afterID *int64, limit int, viewerID *int64, viewerIsSuperAdmin bool) ([]*domainpostreply.Reply, error) {
+	if _, err := s.Posts.GetForViewer(ctx, postID, viewerID, viewerIsSuperAdmin); err != nil {
 		return nil, err
 	}
 	if limit <= 0 || limit > 100 {

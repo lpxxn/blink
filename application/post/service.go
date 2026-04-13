@@ -198,15 +198,18 @@ func (s *Service) GetPublic(ctx context.Context, postID int64) (*domainpost.Post
 	return p, nil
 }
 
-// GetForViewer returns a post for the optional viewer: authors always see their own non-deleted post;
-// others only see public published normal posts.
-func (s *Service) GetForViewer(ctx context.Context, postID int64, viewerID *int64) (*domainpost.Post, error) {
+// GetForViewer returns a post for the optional viewer: super admins see any non-deleted post;
+// authors always see their own non-deleted post; others only see public published normal posts.
+func (s *Service) GetForViewer(ctx context.Context, postID int64, viewerID *int64, viewerIsSuperAdmin bool) (*domainpost.Post, error) {
 	p, err := s.Posts.GetByID(ctx, postID)
 	if err != nil {
 		return nil, err
 	}
 	if p.DeletedAt != nil {
 		return nil, domainpost.ErrNotFound
+	}
+	if viewerIsSuperAdmin {
+		return p, nil
 	}
 	if viewerID != nil && *viewerID == p.UserID {
 		return p, nil

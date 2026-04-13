@@ -10,6 +10,7 @@ import (
 	appcategory "github.com/lpxxn/blink/application/category"
 	apppost "github.com/lpxxn/blink/application/post"
 	domainpost "github.com/lpxxn/blink/domain/post"
+	domainuser "github.com/lpxxn/blink/domain/user"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 )
 
@@ -54,10 +55,16 @@ func (s *Server) GetPost(c *gin.Context) {
 		return
 	}
 	var viewer *int64
+	viewerIsSuperAdmin := false
 	if uid, ok := httpauth.UserIDFromContext(c); ok {
 		viewer = &uid
+		if s.Users != nil {
+			if u, err := s.Users.GetByID(c.Request.Context(), uid); err == nil && u.Role == domainuser.RoleSuperAdmin {
+				viewerIsSuperAdmin = true
+			}
+		}
 	}
-	p, err := s.Posts.GetForViewer(c.Request.Context(), id, viewer)
+	p, err := s.Posts.GetForViewer(c.Request.Context(), id, viewer, viewerIsSuperAdmin)
 	if err != nil {
 		if errors.Is(err, domainpost.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})

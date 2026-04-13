@@ -12,6 +12,7 @@ import (
 	apppostreply "github.com/lpxxn/blink/application/postreply"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
+	domainuser "github.com/lpxxn/blink/domain/user"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 )
 
@@ -31,7 +32,17 @@ func (s *Server) ListReplies(c *gin.Context) {
 		afterID = &id
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	list, err := s.Replies.List(c.Request.Context(), postID, afterID, limit)
+	var viewer *int64
+	viewerIsSuperAdmin := false
+	if uid, ok := httpauth.UserIDFromContext(c); ok {
+		viewer = &uid
+		if s.Users != nil {
+			if u, err := s.Users.GetByID(c.Request.Context(), uid); err == nil && u.Role == domainuser.RoleSuperAdmin {
+				viewerIsSuperAdmin = true
+			}
+		}
+	}
+	list, err := s.Replies.List(c.Request.Context(), postID, afterID, limit, viewer, viewerIsSuperAdmin)
 	if err != nil {
 		if errors.Is(err, domainpost.ErrNotFound) || errors.Is(err, apppost.ErrNotVisible) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
