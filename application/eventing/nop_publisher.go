@@ -17,6 +17,10 @@ func (NopNotificationPublisher) PublishPostRemoved(context.Context, int64, int64
 	return nil
 }
 
+func (NopNotificationPublisher) PublishPostFlagged(context.Context, int64, int64, string) error {
+	return nil
+}
+
 func (NopNotificationPublisher) PublishAppealResolved(context.Context, int64, int64, bool, string) error {
 	return nil
 }

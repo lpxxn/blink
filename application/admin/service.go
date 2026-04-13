@@ -129,6 +129,9 @@ func (s *Service) PatchPost(ctx context.Context, postID int64, moderationFlag *i
 	if s.NotifyEvents != nil && moderationFlag != nil && *moderationFlag == domainpost.ModerationRemoved && oldMod != domainpost.ModerationRemoved {
 		_ = s.NotifyEvents.PublishPostRemoved(ctx, p.UserID, p.ID, p.ModerationNote)
 	}
+	if s.NotifyEvents != nil && moderationFlag != nil && *moderationFlag == domainpost.ModerationFlagged && oldMod != domainpost.ModerationFlagged {
+		_ = s.NotifyEvents.PublishPostFlagged(ctx, p.UserID, p.ID, p.ModerationNote)
+	}
 	return p, nil
 }
 

@@ -7,8 +7,9 @@ const (
 	TypeReply          = "reply"
 	TypeReplyToComment = "reply_to_comment"
 	TypePostRemoved    = "post_removed"
-	TypeAppealResult = "appeal_result"
-	TypeSystem       = "system"
+	TypePostFlagged    = "post_flagged"
+	TypeAppealResult   = "appeal_result"
+	TypeSystem         = "system"
 )
 
 type Notification struct {

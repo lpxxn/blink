@@ -80,6 +80,15 @@ func (s *Service) OnPostRemoved(ctx context.Context, authorID, postID int64, rea
 	return s.send(ctx, authorID, domainnotification.TypePostRemoved, "帖子已下架", body, &pid, nil)
 }
 
+func (s *Service) OnPostFlagged(ctx context.Context, authorID, postID int64, note string) error {
+	pid := postID
+	body := "管理员已将你的帖子标记为违规，公开流中将不再展示该帖。"
+	if strings.TrimSpace(note) != "" {
+		body += "\n说明：" + strings.TrimSpace(note)
+	}
+	return s.send(ctx, authorID, domainnotification.TypePostFlagged, "帖子被标记违规", body, &pid, nil)
+}
+
 func (s *Service) OnAppealResolved(ctx context.Context, authorID, postID int64, approved bool, adminNote string) error {
 	pid := postID
 	title := "申诉/复核结果"

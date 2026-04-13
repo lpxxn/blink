@@ -6,5 +6,6 @@ const (
 	NotificationReplyToPost    = "reply_to_post"
 	NotificationReplyToComment = "reply_to_comment"
 	NotificationPostRemoved    = "post_removed"
+	NotificationPostFlagged    = "post_flagged"
 	NotificationAppealResolved = "appeal_resolved"
 )
