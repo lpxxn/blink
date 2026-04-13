@@ -4,12 +4,13 @@ import "time"
 
 // Types for notifications.type (VARCHAR).
 const (
-	TypeReply          = "reply"
-	TypeReplyToComment = "reply_to_comment"
-	TypePostRemoved    = "post_removed"
-	TypePostFlagged    = "post_flagged"
-	TypeAppealResult   = "appeal_result"
-	TypeSystem         = "system"
+	TypeReply                = "reply"
+	TypeReplyToComment       = "reply_to_comment"
+	TypePostRemoved          = "post_removed"
+	TypePostFlagged          = "post_flagged"
+	TypeAppealSubmittedAdmin = "appeal_submitted_admin"
+	TypeAppealResult         = "appeal_result"
+	TypeSystem               = "system"
 )
 
 type Notification struct {

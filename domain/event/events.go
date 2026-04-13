@@ -5,6 +5,7 @@ const (
 	ReplyPosted            = "reply.posted"
 	PostRemovedByModerator = "post.removed_by_moderator"
 	PostFlaggedByModerator = "post.flagged_by_moderator"
+	AppealSubmitted        = "post.appeal_submitted"
 	AppealResolved         = "post.appeal_resolved"
 )
 
@@ -30,6 +31,14 @@ type PostFlaggedByModeratorPayload struct {
 	PostID   int64  `json:"post_id,string"`
 	AuthorID int64  `json:"author_id,string"`
 	Note     string `json:"note"`
+}
+
+// AppealSubmittedPayload 作者提交申诉或复核申请（通知超级管理员）。
+type AppealSubmittedPayload struct {
+	PostID   int64  `json:"post_id,string"`
+	AuthorID int64  `json:"author_id,string"`
+	Kind     string `json:"kind"`
+	Message  string `json:"message"`
 }
 
 // AppealResolvedPayload 申诉/复核已裁决。

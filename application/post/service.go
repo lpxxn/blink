@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	appcategory "github.com/lpxxn/blink/application/category"
+	appeventing "github.com/lpxxn/blink/application/eventing"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	domaincategory "github.com/lpxxn/blink/domain/category"
 	domainpost "github.com/lpxxn/blink/domain/post"
@@ -17,20 +18,21 @@ const (
 )
 
 var (
-	ErrForbidden           = errors.New("post: forbidden")
-	ErrInvalidInput        = errors.New("post: invalid input")
-	ErrNotVisible          = errors.New("post: not visible to viewer")
+	ErrForbidden            = errors.New("post: forbidden")
+	ErrInvalidInput         = errors.New("post: invalid input")
+	ErrNotVisible           = errors.New("post: not visible to viewer")
 	ErrCannotPublishRemoved = errors.New("post: cannot set published while removed; use moderation request")
-	ErrAppealNotAllowed    = errors.New("post: appeal only when post is admin-removed")
-	ErrAppealPending       = errors.New("post: moderation request already pending")
+	ErrAppealNotAllowed     = errors.New("post: appeal only when post is admin-removed")
+	ErrAppealPending        = errors.New("post: moderation request already pending")
 )
 
 const maxAppealMessageLen = 4000
 
 type Service struct {
-	Posts      domainpost.Repository
-	Categories domaincategory.Repository
-	NewID      func() int64
+	Posts        domainpost.Repository
+	Categories   domaincategory.Repository
+	NewID        func() int64
+	NotifyEvents appeventing.NotificationPublisher // optional; appeal / moderation requests
 }
 
 func (s *Service) validateCategory(ctx context.Context, categoryID *int64) error {
@@ -286,6 +288,9 @@ func (s *Service) SubmitModerationRequest(ctx context.Context, authorID, postID 
 	p.AppealStatus = domainpost.AppealPending
 	if err := s.Posts.Update(ctx, p); err != nil {
 		return nil, err
+	}
+	if s.NotifyEvents != nil {
+		_ = s.NotifyEvents.PublishAppealSubmitted(ctx, authorID, postID, kind, p.AppealBody)
 	}
 	return p, nil
 }

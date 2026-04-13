@@ -99,6 +99,12 @@ func derefString(p *string) string {
 	return *p
 }
 
+func (r *UserRepository) ListSnowflakeIDsByRole(ctx context.Context, role string) ([]int64, error) {
+	var ids []int64
+	err := r.DB.WithContext(ctx).Model(&UserModel{}).Where("role = ?", role).Order("snowflake_id ASC").Pluck("snowflake_id", &ids).Error
+	return ids, err
+}
+
 func (r *UserRepository) ListForAdmin(ctx context.Context, offset, limit int) ([]domainuser.AdminListEntry, error) {
 	var rows []UserModel
 	err := r.DB.WithContext(ctx).Model(&UserModel{}).Order("snowflake_id DESC").Offset(offset).Limit(limit).Find(&rows).Error

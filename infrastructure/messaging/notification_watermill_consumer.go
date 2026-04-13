@@ -96,6 +96,17 @@ func dispatchNotificationEvent(ctx context.Context, notif *appnotification.Servi
 			return nil
 		}
 		return notif.OnPostFlagged(ctx, body.AuthorID, body.PostID, body.Note)
+	case domainevent.NotificationAppealSubmitted:
+		var body struct {
+			AuthorID int64  `json:"author_id,string"`
+			PostID   int64  `json:"post_id,string"`
+			Kind     string `json:"kind"`
+			Message  string `json:"message"`
+		}
+		if err := json.Unmarshal(payload, &body); err != nil {
+			return nil
+		}
+		return notif.OnAppealSubmittedForAdmins(ctx, body.AuthorID, body.PostID, body.Kind, body.Message)
 	case domainevent.NotificationAppealResolved:
 		var body struct {
 			AuthorID  int64  `json:"author_id,string"`

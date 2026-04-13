@@ -92,6 +92,22 @@ func (p *NotificationWatermillPublisher) PublishPostFlagged(ctx context.Context,
 	})
 }
 
+func (p *NotificationWatermillPublisher) PublishAppealSubmitted(ctx context.Context, authorID, postID int64, kind, message string) error {
+	return p.publish(ctx, struct {
+		Type     string `json:"type"`
+		AuthorID int64  `json:"author_id,string"`
+		PostID   int64  `json:"post_id,string"`
+		Kind     string `json:"kind"`
+		Message  string `json:"message"`
+	}{
+		Type:     domainevent.NotificationAppealSubmitted,
+		AuthorID: authorID,
+		PostID:   postID,
+		Kind:     kind,
+		Message:  message,
+	})
+}
+
 func (p *NotificationWatermillPublisher) PublishAppealResolved(ctx context.Context, authorID, postID int64, approved bool, adminNote string) error {
 	return p.publish(ctx, struct {
 		Type      string `json:"type"`

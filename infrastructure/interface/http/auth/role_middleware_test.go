@@ -27,6 +27,9 @@ func (roleStubUsers) UpdateLastLogin(context.Context, int64, string, string) err
 func (roleStubUsers) ListForAdmin(context.Context, int, int) ([]domainuser.AdminListEntry, error) {
 	panic("unimplemented")
 }
+func (roleStubUsers) ListSnowflakeIDsByRole(context.Context, string) ([]int64, error) {
+	panic("unimplemented")
+}
 func (roleStubUsers) Count(context.Context) (int64, error) { panic("unimplemented") }
 func (roleStubUsers) UpdateStatusRole(context.Context, int64, *int, *string) error {
 	panic("unimplemented")

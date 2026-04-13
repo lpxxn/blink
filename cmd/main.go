@@ -108,6 +108,7 @@ func main() {
 	notifSvc := &appnotification.Service{
 		Repo:  notifRepo,
 		NewID: func() int64 { return node.Generate().Int64() },
+		Users: userRepo,
 	}
 
 	wmLogger := watermill.NewStdLogger(false, false)
@@ -120,6 +121,7 @@ func main() {
 	}
 	defer func() { _ = wmPublisher.Close() }()
 	notifyEventBus := messaging.NewNotificationWatermillPublisher(wmPublisher)
+	postSvc.NotifyEvents = notifyEventBus
 
 	if strings.TrimSpace(getenv("BLINK_DISABLE_NOTIFICATION_CONSUMER", "")) == "" {
 		consumer := strings.TrimSpace(getenv("BLINK_WATERMILL_CONSUMER", ""))

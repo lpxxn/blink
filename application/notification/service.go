@@ -2,9 +2,11 @@ package notification
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	domainnotification "github.com/lpxxn/blink/domain/notification"
+	domainuser "github.com/lpxxn/blink/domain/user"
 )
 
 const (
@@ -15,6 +17,8 @@ const (
 type Service struct {
 	Repo  domainnotification.Repository
 	NewID func() int64
+	// Users is optional; when set, used to notify super admins (e.g. new appeal).
+	Users domainuser.Repository
 }
 
 func (s *Service) send(ctx context.Context, userID int64, typ, title, body string, postID, replyID *int64) error {
@@ -87,6 +91,42 @@ func (s *Service) OnPostFlagged(ctx context.Context, authorID, postID int64, not
 		body += "\n说明：" + strings.TrimSpace(note)
 	}
 	return s.send(ctx, authorID, domainnotification.TypePostFlagged, "帖子被标记违规", body, &pid, nil)
+}
+
+// OnAppealSubmittedForAdmins notifies every super_admin (except the author) that a moderation request was filed.
+func (s *Service) OnAppealSubmittedForAdmins(ctx context.Context, authorID, postID int64, kind, message string) error {
+	if s.Users == nil {
+		return nil
+	}
+	ids, err := s.Users.ListSnowflakeIDsByRole(ctx, domainuser.RoleSuperAdmin)
+	if err != nil {
+		return err
+	}
+	kind = strings.TrimSpace(strings.ToLower(kind))
+	kindLabel := "复核申请"
+	if kind == "appeal" {
+		kindLabel = "申诉"
+	}
+	msg := strings.TrimSpace(message)
+	if len(msg) > 500 {
+		msg = msg[:500] + "…"
+	}
+	body := "用户 " + strconv.FormatInt(authorID, 10) + " 对帖子 " + strconv.FormatInt(postID, 10) + " 提交了「" + kindLabel + "」。"
+	if msg != "" {
+		body += "\n说明：" + msg
+	}
+	body += "\n请在管理后台「待处理申诉/复核」中处理。"
+	pid := postID
+	title := "待处理申诉/复核"
+	for _, uid := range ids {
+		if uid == authorID {
+			continue
+		}
+		if err := s.send(ctx, uid, domainnotification.TypeAppealSubmittedAdmin, title, body, &pid, nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Service) OnAppealResolved(ctx context.Context, authorID, postID int64, approved bool, adminNote string) error {
