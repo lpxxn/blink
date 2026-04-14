@@ -41,6 +41,18 @@ func (s *stubSessionStore) Delete(_ context.Context, token string) error {
 	return nil
 }
 
+func (s *stubSessionStore) DeleteAllForUser(_ context.Context, userID int64) error {
+	if s.tokens == nil {
+		return nil
+	}
+	for tok, uid := range s.tokens {
+		if uid == userID {
+			delete(s.tokens, tok)
+		}
+	}
+	return nil
+}
+
 func TestRegisterWithPassword_CreatesBuiltinIdentity(t *testing.T) {
 	db := testutil.OpenSQLiteMemory(t)
 	node, err := snowflake.NewNode(1)

@@ -141,7 +141,7 @@ func main() {
 			log.Fatalf("watermill redis subscriber: %v", err)
 		}
 		defer func() { _ = wmSubscriber.Close() }()
-		wmRouter, err := messaging.RunNotificationWatermillRouter(context.Background(), wmSubscriber, notifSvc, wmLogger)
+		wmRouter, err := messaging.RunNotificationWatermillRouter(context.Background(), wmSubscriber, notifSvc, sessStore, wmLogger)
 		if err != nil {
 			log.Fatalf("watermill notification router: %v", err)
 		}
@@ -151,6 +151,7 @@ func main() {
 	adminSvc := &appadmin.Service{
 		Users:        userRepo,
 		Posts:        postRepo,
+		Sessions:     sessStore,
 		NotifyEvents: notifyEventBus,
 	}
 
@@ -278,11 +279,12 @@ func main() {
 	api.GET("/posts/:id/replies", apiSrv.ListReplies)
 	api.POST("/logout", apiSrv.Logout)
 	opt := api.Group("")
-	opt.Use(httpauth.OptionalSession(sessStore))
+	opt.Use(httpauth.OptionalSession(sessStore, userRepo))
 	opt.GET("/posts/:id", apiSrv.GetPost)
 
 	authed := api.Group("")
 	authed.Use(httpauth.RequireSession(sessStore))
+	authed.Use(httpauth.RequireActiveUser(sessStore, userRepo))
 	authed.GET("/me", apiSrv.GetMe)
 	authed.PATCH("/me", apiSrv.PatchMe)
 	authed.POST("/posts", apiSrv.CreatePost)
@@ -300,10 +302,12 @@ func main() {
 
 	adminG := r.Group("/admin/api")
 	adminG.Use(httpauth.RequireSession(sessStore))
+	adminG.Use(httpauth.RequireActiveUser(sessStore, userRepo))
 	adminG.Use(httpauth.RequireUserRole(userRepo, domainuser.RoleSuperAdmin))
 	adminG.GET("/overview", adminSrv.Overview)
 	adminG.GET("/users", adminSrv.ListUsers)
 	adminG.PATCH("/users/:id", adminSrv.PatchUser)
+	adminG.POST("/users/:id/reset_password", adminSrv.ResetUserPassword)
 	adminG.GET("/posts", adminSrv.ListPosts)
 	adminG.PATCH("/posts/:id", adminSrv.PatchPost)
 	adminG.POST("/posts/:id/resolve_appeal", adminSrv.ResolveAppeal)

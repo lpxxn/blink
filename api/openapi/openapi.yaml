@@ -594,6 +594,36 @@ paths:
         "204":
           description: 成功
 
+  /admin/api/users/{id}/reset_password:
+    post:
+      operationId: adminResetUserPassword
+      tags: [admin]
+      summary: 管理员重置用户密码（builtin 登录）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "204":
+          description: 成功
+
   /admin/api/posts:
     get:
       operationId: adminListPosts

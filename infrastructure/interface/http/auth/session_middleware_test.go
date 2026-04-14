@@ -33,6 +33,8 @@ func (s *stubStore) Get(_ context.Context, token string) (*domainsession.Session
 
 func (s *stubStore) Delete(_ context.Context, _ string) error { return nil }
 
+func (s *stubStore) DeleteAllForUser(context.Context, int64) error { return nil }
+
 func TestRequireSession_AuthorizationBearer(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -93,7 +95,7 @@ func TestOptionalSession_setsUserWhenTokenValid(t *testing.T) {
 		},
 	}
 	r := gin.New()
-	r.GET("/", OptionalSession(store), func(c *gin.Context) {
+	r.GET("/", OptionalSession(store, nil), func(c *gin.Context) {
 		uid, ok := UserIDFromContext(c)
 		if !ok {
 			c.JSON(http.StatusOK, gin.H{"user_id": nil})
@@ -114,7 +116,7 @@ func TestOptionalSession_noUserWhenNoToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	store := &stubStore{}
 	r := gin.New()
-	r.GET("/", OptionalSession(store), func(c *gin.Context) {
+	r.GET("/", OptionalSession(store, nil), func(c *gin.Context) {
 		_, ok := UserIDFromContext(c)
 		if ok {
 			c.Status(http.StatusInternalServerError)

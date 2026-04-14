@@ -35,6 +35,9 @@ func (roleStubUsers) UpdateStatusRole(context.Context, int64, *int, *string) err
 	panic("unimplemented")
 }
 func (roleStubUsers) UpdateName(context.Context, int64, string) error { panic("unimplemented") }
+func (roleStubUsers) UpdatePasswordHash(context.Context, int64, string) error {
+	panic("unimplemented")
+}
 
 func (r roleStubUsers) GetByID(_ context.Context, id int64) (*domainuser.User, error) {
 	return &domainuser.User{SnowflakeID: id, Role: r.role}, nil

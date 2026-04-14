@@ -1,12 +1,14 @@
 package httpauth
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	domainsession "github.com/lpxxn/blink/domain/session"
+	domainuser "github.com/lpxxn/blink/domain/user"
 )
 
 const (
@@ -17,8 +19,8 @@ const (
 // SessionTokenFromRequest extracts a Blink session token from an HTTP request.
 //
 // Priority:
-//  1) Authorization: Bearer <token>
-//  2) Cookie: blink_session=<token>
+//  1. Authorization: Bearer <token>
+//  2. Cookie: blink_session=<token>
 func SessionTokenFromRequest(r *http.Request) (string, bool) {
 	if r == nil {
 		return "", false
@@ -82,8 +84,9 @@ func UserIDFromContext(c *gin.Context) (int64, bool) {
 	return id, ok
 }
 
-// OptionalSession sets ContextUserIDKey when a valid session is present; otherwise continues without user.
-func OptionalSession(store domainsession.Store) gin.HandlerFunc {
+// OptionalSession sets ContextUserIDKey when a valid session is present and the user is active; otherwise continues without user.
+// Banned or inactive accounts are treated as logged out; the session token is removed when users repository is provided.
+func OptionalSession(store domainsession.Store, users domainuser.Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if store == nil {
 			c.Next()
@@ -98,6 +101,22 @@ func OptionalSession(store domainsession.Store) gin.HandlerFunc {
 		if err != nil {
 			c.Next()
 			return
+		}
+		if users != nil {
+			u, err := users.GetByID(c.Request.Context(), sess.UserID)
+			if err != nil {
+				if !errors.Is(err, domainuser.ErrNotFound) {
+					c.AbortWithStatus(http.StatusInternalServerError)
+					return
+				}
+				c.Next()
+				return
+			}
+			if u.Status != domainuser.StatusActive {
+				_ = store.Delete(c.Request.Context(), tok)
+				c.Next()
+				return
+			}
 		}
 		c.Set(ContextUserIDKey, sess.UserID)
 		c.Next()

@@ -157,3 +157,18 @@ func (r *UserRepository) UpdateName(ctx context.Context, id int64, name string) 
 		"updated_at": now,
 	}).Error
 }
+
+func (r *UserRepository) UpdatePasswordHash(ctx context.Context, id int64, passwordHash string) error {
+	now := time.Now().UTC()
+	res := r.DB.WithContext(ctx).Model(&UserModel{}).Where("snowflake_id = ?", id).Updates(map[string]interface{}{
+		"password_hash": passwordHash,
+		"updated_at":    now,
+	})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return domainuser.ErrNotFound
+	}
+	return nil
+}

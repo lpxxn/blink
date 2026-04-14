@@ -28,3 +28,7 @@ func (NopNotificationPublisher) PublishAppealSubmitted(context.Context, int64, i
 func (NopNotificationPublisher) PublishAppealResolved(context.Context, int64, int64, bool, string) error {
 	return nil
 }
+
+func (NopNotificationPublisher) PublishUserBanned(context.Context, int64) error {
+	return nil
+}

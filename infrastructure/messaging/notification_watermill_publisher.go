@@ -123,3 +123,13 @@ func (p *NotificationWatermillPublisher) PublishAppealResolved(ctx context.Conte
 		AdminNote: adminNote,
 	})
 }
+
+func (p *NotificationWatermillPublisher) PublishUserBanned(ctx context.Context, userID int64) error {
+	return p.publish(ctx, struct {
+		Type   string `json:"type"`
+		UserID int64  `json:"user_id,string"`
+	}{
+		Type:   domainevent.UserBanned,
+		UserID: userID,
+	})
+}

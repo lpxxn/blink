@@ -15,4 +15,6 @@ type Store interface {
 	Create(ctx context.Context, userID int64, ttl time.Duration, ip, ua string) (token string, err error)
 	Get(ctx context.Context, token string) (*Session, error)
 	Delete(ctx context.Context, token string) error
+	// DeleteAllForUser removes every tracked session for the user (e.g. after ban).
+	DeleteAllForUser(ctx context.Context, userID int64) error
 }

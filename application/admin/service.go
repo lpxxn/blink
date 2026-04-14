@@ -9,7 +9,9 @@ import (
 	appeventing "github.com/lpxxn/blink/application/eventing"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	domainpost "github.com/lpxxn/blink/domain/post"
+	domainsession "github.com/lpxxn/blink/domain/session"
 	domainuser "github.com/lpxxn/blink/domain/user"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -18,11 +20,15 @@ var (
 	ErrInvalidModeration = errors.New("admin: invalid moderation flag")
 	ErrInvalidPostStatus = errors.New("admin: invalid post status")
 	ErrNoPendingAppeal   = errors.New("admin: no pending appeal")
+	ErrWeakPassword      = errors.New("admin: password too short")
 )
+
+const resetPasswordMinLen = 8
 
 type Service struct {
 	Users        domainuser.Repository
 	Posts        domainpost.Repository
+	Sessions     domainsession.Store               // optional; used when banning users (session invalidation)
 	NotifyEvents appeventing.NotificationPublisher // optional; e.g. Watermill → Redis Stream
 }
 
@@ -72,7 +78,39 @@ func (s *Service) PatchUser(ctx context.Context, actorID, targetID int64, status
 			return ErrCannotDemoteSelf
 		}
 	}
-	return s.Users.UpdateStatusRole(ctx, targetID, status, role)
+	err := s.Users.UpdateStatusRole(ctx, targetID, status, role)
+	return s.patchUserAfterDB(ctx, targetID, status, err)
+}
+
+// patchUserAfterDB runs session invalidation and event publish after a successful status/role update.
+func (s *Service) patchUserAfterDB(ctx context.Context, targetID int64, status *int, updateErr error) error {
+	if updateErr != nil {
+		return updateErr
+	}
+	if status != nil && *status == domainuser.StatusBanned {
+		if s.Sessions != nil {
+			_ = s.Sessions.DeleteAllForUser(ctx, targetID)
+		}
+		if s.NotifyEvents != nil {
+			_ = s.NotifyEvents.PublishUserBanned(ctx, targetID)
+		}
+	}
+	return nil
+}
+
+// ResetUserPassword sets a new bcrypt password for the target user (builtin IdP login).
+func (s *Service) ResetUserPassword(ctx context.Context, targetID int64, newPassword string) error {
+	if len(newPassword) < resetPasswordMinLen {
+		return ErrWeakPassword
+	}
+	if _, err := s.Users.GetByID(ctx, targetID); err != nil {
+		return err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	return s.Users.UpdatePasswordHash(ctx, targetID, string(hash))
 }
 
 func (s *Service) ListUsers(ctx context.Context, offset, limit int) ([]domainuser.AdminListEntry, error) {

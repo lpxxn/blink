@@ -93,6 +93,37 @@ func (s *Server) PatchUser(c *gin.Context) {
 	c.AbortWithStatus(http.StatusNoContent)
 }
 
+type resetPasswordBody struct {
+	Password string `json:"password"`
+}
+
+func (s *Server) ResetUserPassword(c *gin.Context) {
+	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
+		return
+	}
+	var body resetPasswordBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err = s.Admin.ResetUserPassword(c.Request.Context(), targetID, body.Password)
+	if err != nil {
+		if errors.Is(err, appadmin.ErrWeakPassword) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, domainuser.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.AbortWithStatus(http.StatusNoContent)
+}
+
 func (s *Server) ListPosts(c *gin.Context) {
 	var f domainpost.AdminListFilters
 	if v := c.Query("user_id"); v != "" {

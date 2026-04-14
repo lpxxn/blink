@@ -11,10 +11,12 @@ import (
 
 	appnotification "github.com/lpxxn/blink/application/notification"
 	domainevent "github.com/lpxxn/blink/domain/event"
+	domainsession "github.com/lpxxn/blink/domain/session"
 )
 
 // RunNotificationWatermillRouter consumes notification domain events and writes in-app notifications.
-func RunNotificationWatermillRouter(ctx context.Context, sub message.Subscriber, notif *appnotification.Service, wmLog watermill.LoggerAdapter) (*message.Router, error) {
+// sess may be nil; when set, user_banned events trigger idempotent session invalidation.
+func RunNotificationWatermillRouter(ctx context.Context, sub message.Subscriber, notif *appnotification.Service, sess domainsession.Store, wmLog watermill.LoggerAdapter) (*message.Router, error) {
 	if notif == nil {
 		return nil, errors.New("messaging: notification service is nil")
 	}
@@ -28,7 +30,7 @@ func RunNotificationWatermillRouter(ctx context.Context, sub message.Subscriber,
 		TopicNotificationEvents,
 		sub,
 		func(msg *message.Message) error {
-			if err := dispatchNotificationEvent(context.Background(), notif, msg.Payload); err != nil {
+			if err := dispatchNotificationEvent(context.Background(), notif, sess, msg.Payload); err != nil {
 				log.Printf("notification event handler: %v", err)
 				return err
 			}
@@ -46,7 +48,7 @@ func RunNotificationWatermillRouter(ctx context.Context, sub message.Subscriber,
 	return router, nil
 }
 
-func dispatchNotificationEvent(ctx context.Context, notif *appnotification.Service, payload []byte) error {
+func dispatchNotificationEvent(ctx context.Context, notif *appnotification.Service, sess domainsession.Store, payload []byte) error {
 	var head struct {
 		Type string `json:"type"`
 	}
@@ -118,6 +120,17 @@ func dispatchNotificationEvent(ctx context.Context, notif *appnotification.Servi
 			return nil
 		}
 		return notif.OnAppealResolved(ctx, body.AuthorID, body.PostID, body.Approved, body.AdminNote)
+	case domainevent.UserBanned:
+		var body struct {
+			UserID int64 `json:"user_id,string"`
+		}
+		if err := json.Unmarshal(payload, &body); err != nil {
+			return nil
+		}
+		if sess == nil {
+			return nil
+		}
+		return sess.DeleteAllForUser(ctx, body.UserID)
 	default:
 		return nil
 	}

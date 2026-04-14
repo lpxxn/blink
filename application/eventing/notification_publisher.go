@@ -11,4 +11,5 @@ type NotificationPublisher interface {
 	PublishPostFlagged(ctx context.Context, authorID, postID int64, note string) error
 	PublishAppealSubmitted(ctx context.Context, authorID, postID int64, kind, message string) error
 	PublishAppealResolved(ctx context.Context, authorID, postID int64, approved bool, adminNote string) error
+	PublishUserBanned(ctx context.Context, userID int64) error
 }
