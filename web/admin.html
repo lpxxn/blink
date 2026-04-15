@@ -13,11 +13,24 @@
       <a href="/web/index.html">首页</a>
       <a href="/web/register.html">注册</a>
       <a href="/web/feed.html">帖子流</a>
+      <a href="/web/compose.html">发帖</a>
       <a href="/web/mine.html">我的</a>
       <a href="/web/messages.html">消息</a>
-      <a href="/web/admin.html" class="nav-active">管理</a>
+      <a href="/web/admin.html" class="nav-active" data-blink-nav="admin" hidden>管理</a>
     </nav>
 
+    <div id="admin-gate">
+      <h1 class="page-title">管理后台</h1>
+      <div class="card" style="margin-top:0.75rem">
+        <p class="page-lead" id="admin-gate-lead" style="margin-top:0">正在验证权限…</p>
+        <p style="margin:1rem 0 0">
+          <a class="btn btn-primary" href="/web/index.html">去首页登录</a>
+          <a class="btn btn-secondary" href="/web/feed.html" style="margin-left:0.35rem">返回帖子流</a>
+        </p>
+      </div>
+    </div>
+
+    <div id="admin-app" hidden>
     <h1 class="page-title">超级管理</h1>
     <p id="err" class="err" role="alert"></p>
 
@@ -63,6 +76,7 @@
         <thead><tr><th>ID</th><th>用户</th><th>申诉/说明</th><th>操作</th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
     </div>
   </div>
   <script>
@@ -145,7 +159,7 @@
       if (p.length < 8) {
         return Promise.reject(new Error('密码至少 8 位'));
       }
-      return fetch('/admin/api/users/' + encodeURIComponent(String(uid)) + '/reset_password', {
+      return fetch(API + '/admin/api/users/' + encodeURIComponent(String(uid)) + '/reset_password', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -397,31 +411,75 @@
         });
     }
 
-    document.getElementById('posts-mod-filter').onchange = function () {
-      postsOffset = 0;
-      loadPostsOnly().catch(function (e) {
-        document.getElementById('err').textContent = String(e);
-      });
-    };
-    document.getElementById('posts-prev').onclick = function () {
-      postsOffset = Math.max(0, postsOffset - postsLimit);
-      loadPostsOnly().catch(function (e) {
-        document.getElementById('err').textContent = String(e);
-      });
-    };
-    document.getElementById('posts-next').onclick = function () {
-      if (postsOffset + postsLimit < postsTotal) {
-        postsOffset += postsLimit;
+    function bindAdminUI() {
+      document.getElementById('posts-mod-filter').onchange = function () {
+        postsOffset = 0;
         loadPostsOnly().catch(function (e) {
           document.getElementById('err').textContent = String(e);
         });
-      }
-    };
+      };
+      document.getElementById('posts-prev').onclick = function () {
+        postsOffset = Math.max(0, postsOffset - postsLimit);
+        loadPostsOnly().catch(function (e) {
+          document.getElementById('err').textContent = String(e);
+        });
+      };
+      document.getElementById('posts-next').onclick = function () {
+        if (postsOffset + postsLimit < postsTotal) {
+          postsOffset += postsLimit;
+          loadPostsOnly().catch(function (e) {
+            document.getElementById('err').textContent = String(e);
+          });
+        }
+      };
+      document.getElementById('load-appeals').onclick = function () { loadAppeals(); };
+    }
 
-    document.getElementById('load-appeals').onclick = function () { loadAppeals(); };
+    function showAdminGate(msg) {
+      var g = document.getElementById('admin-gate');
+      var a = document.getElementById('admin-app');
+      document.getElementById('admin-gate-lead').textContent = msg;
+      g.hidden = false;
+      a.hidden = true;
+    }
 
-    loadAll();
-    loadAppeals();
+    function showAdminApp() {
+      document.getElementById('admin-gate').hidden = true;
+      document.getElementById('admin-app').hidden = false;
+    }
+
+    function startAdmin() {
+      document.getElementById('admin-gate-lead').textContent = '正在验证权限…';
+      fetch(API + '/api/me', { credentials: 'include' })
+        .then(function (r) {
+          if (r.status === 401) {
+            showAdminGate('请先登录后再访问管理后台。');
+            return null;
+          }
+          if (!r.ok) {
+            showAdminGate('无法验证登录状态（HTTP ' + r.status + '）。');
+            return null;
+          }
+          return r.json();
+        })
+        .then(function (me) {
+          if (!me) return;
+          if (me.role !== 'super_admin') {
+            showAdminGate('当前账号不是超级管理员，无法使用此页面。');
+            return;
+          }
+          showAdminApp();
+          bindAdminUI();
+          loadAll();
+          loadAppeals();
+        })
+        .catch(function () {
+          showAdminGate('无法验证登录状态。');
+        });
+    }
+
+    startAdmin();
   </script>
+  <script src="/web/nav.js"></script>
 </body>
 </html>

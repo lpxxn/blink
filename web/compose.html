@@ -16,6 +16,7 @@
       <a href="/web/compose.html" class="nav-active">发帖</a>
       <a href="/web/mine.html">我的</a>
       <a href="/web/messages.html">消息</a>
+      <a href="/web/admin.html" data-blink-nav="admin" hidden>管理</a>
     </nav>
 
     <h1 class="page-title">发帖</h1>
@@ -143,5 +144,6 @@
     document.getElementById('draft').onclick = function () { submit(true); };
     loadCats();
   </script>
+  <script src="/web/nav.js"></script>
 </body>
 </html>

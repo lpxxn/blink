@@ -16,7 +16,7 @@
       <a href="/web/compose.html">发帖</a>
       <a href="/web/mine.html">我的</a>
       <a href="/web/messages.html">消息</a>
-      <a href="/web/admin.html">管理</a>
+      <a href="/web/admin.html" data-blink-nav="admin" hidden>管理</a>
     </nav>
 
     <h1 class="page-title">轻量帖子与评论</h1>
@@ -28,7 +28,7 @@
         <li><a href="/web/feed.html">帖子流</a> — 按分类浏览</li>
         <li><a href="/web/compose.html">发帖</a> — 图文与草稿</li>
         <li><a href="/web/mine.html">我的</a> — 个人设置、帖子与草稿</li>
-        <li><a href="/web/admin.html">管理后台</a> — 需 super_admin</li>
+        <li data-blink-nav="admin" hidden><a href="/web/admin.html">管理后台</a> — 需 super_admin</li>
       </ul>
     </div>
 
@@ -45,6 +45,7 @@
     </div>
   </div>
   <script>
+    var API = '';
     function login(provider) {
       var next = encodeURIComponent('/web/feed.html');
       window.location.href = '/auth/oauth/' + provider + '/login?next=' + next;
@@ -56,5 +57,6 @@
       login('google');
     };
   </script>
+  <script src="/web/nav.js"></script>
 </body>
 </html>
