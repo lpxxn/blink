@@ -1,30 +1,14 @@
 package moderation
 
 import (
-	"os"
 	"strings"
 
 	domainpost "github.com/lpxxn/blink/domain/post"
 )
 
-const envSensitiveWords = "BLINK_SENSITIVE_WORDS"
-
-// SensitiveWords returns the configured word list: comma-separated in BLINK_SENSITIVE_WORDS,
-// trimmed, empty entries dropped. Empty env means no words configured (nothing matches).
+// SensitiveWords returns the current in-memory word list (reloaded from DB via WordListStore).
 func SensitiveWords() []string {
-	raw := strings.TrimSpace(os.Getenv(envSensitiveWords))
-	if raw == "" {
-		return nil
-	}
-	parts := strings.Split(raw, ",")
-	var out []string
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
+	return loadWordsSnapshot()
 }
 
 // FindSensitiveHits returns which configured words appear as substrings in text.

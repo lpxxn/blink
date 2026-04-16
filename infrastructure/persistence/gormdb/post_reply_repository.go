@@ -82,6 +82,87 @@ func (r *PostReplyRepository) ListByPostID(ctx context.Context, postID int64, af
 	return out, nil
 }
 
+func (r *PostReplyRepository) ListByPostIDAllStatuses(ctx context.Context, postID int64, afterID *int64, limit int) ([]*domainpostreply.Reply, error) {
+	q := r.DB.WithContext(ctx).Model(&PostReplyModel{}).
+		Where("post_id = ? AND deleted_at IS NULL", postID)
+	if afterID != nil {
+		q = q.Where("id > ?", *afterID)
+	}
+	var rows []PostReplyModel
+	if err := q.Order("id ASC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]*domainpostreply.Reply, 0, len(rows))
+	for i := range rows {
+		out = append(out, replyModelToDomain(&rows[i]))
+	}
+	return out, nil
+}
+
 func (r *PostReplyRepository) SoftDelete(ctx context.Context, id int64) error {
 	return r.DB.WithContext(ctx).Where("id = ?", id).Delete(&PostReplyModel{}).Error
+}
+
+func (r *PostReplyRepository) HideSubtree(ctx context.Context, rootID int64) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var root PostReplyModel
+		if err := tx.Where("id = ? AND deleted_at IS NULL", rootID).First(&root).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domainpostreply.ErrNotFound
+			}
+			return err
+		}
+		frontier := []int64{rootID}
+		now := time.Now().UTC()
+		for len(frontier) > 0 {
+			if err := tx.Model(&PostReplyModel{}).
+				Where("id IN ? AND deleted_at IS NULL", frontier).
+				Updates(map[string]interface{}{
+					"status":     domainpostreply.StatusHidden,
+					"updated_at": now,
+				}).Error; err != nil {
+				return err
+			}
+			var next []int64
+			if err := tx.Model(&PostReplyModel{}).
+				Where("parent_reply_id IN ? AND deleted_at IS NULL", frontier).
+				Pluck("id", &next).Error; err != nil {
+				return err
+			}
+			frontier = next
+		}
+		return nil
+	})
+}
+
+func (r *PostReplyRepository) UnhideSubtree(ctx context.Context, rootID int64) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var root PostReplyModel
+		if err := tx.Where("id = ? AND deleted_at IS NULL", rootID).First(&root).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domainpostreply.ErrNotFound
+			}
+			return err
+		}
+		frontier := []int64{rootID}
+		now := time.Now().UTC()
+		for len(frontier) > 0 {
+			if err := tx.Model(&PostReplyModel{}).
+				Where("id IN ? AND deleted_at IS NULL", frontier).
+				Updates(map[string]interface{}{
+					"status":     domainpostreply.StatusVisible,
+					"updated_at": now,
+				}).Error; err != nil {
+				return err
+			}
+			var next []int64
+			if err := tx.Model(&PostReplyModel{}).
+				Where("parent_reply_id IN ? AND deleted_at IS NULL", frontier).
+				Pluck("id", &next).Error; err != nil {
+				return err
+			}
+			frontier = next
+		}
+		return nil
+	})
 }

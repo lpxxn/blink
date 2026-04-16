@@ -14,9 +14,12 @@
 |------|------|
 | `BLINK_UPLOAD_DIR` | 上传存储目录，默认 `data/uploads` |
 | `BLINK_BOOTSTRAP_SUPER_ADMIN_EMAIL` | 若该邮箱用户存在且当前角色为 `user`，启动时提升为 `super_admin`（幂等；已为非 `user` 则跳过） |
-| `BLINK_SENSITIVE_WORDS` | 可选，英文逗号分隔的敏感词子串；未配置则不匹配任何词（帖子、评论均 **视为无敏感词**）。命中时：帖子写入 `moderation_flag=1` 与 `moderation_note`；评论接口返回 400。 |
+| `BLINK_SENSITIVE_WORDS_POLL_INTERVAL` | 可选，如 `3m`：周期性从数据库全量重载敏感词内存快照（消息丢失或仅 API 节点时的兜底）。 |
+| `BLINK_DISABLE_SENSITIVE_WORDS_CONSUMER` | 可选，设为非空表示禁用敏感词变更广播消费（不建议；多实例会依赖轮询兜底）。 |
 
-仍需：**Redis**（会话）、**数据库迁移**（含 `platform/db/0005_post_categories_moderation.sql`）。
+敏感词存于表 **`sensitive_words`**，进程内维护快照；管理端 `POST/PATCH/DELETE /admin/api/sensitive_words` 写库后会 **Reload** 并通过 Redis Stream `blink.moderation.sensitive_words` 通知其他实例刷新。正式发布帖子若正文命中敏感词则 **拒绝**（HTTP 400）；草稿可保存。评论命中敏感词同样 **拒绝提交**。
+
+仍需：**Redis**（会话、Watermill Stream）、**数据库迁移**（含 `platform/db/0007_sensitive_words.sql` 等）。
 
 ## 超级管理员
 
@@ -32,4 +35,4 @@
 
 `posts.moderation_flag`：`0` 正常（公开流可见）、`1` 标记违规、`2` 管理下架。公开流仅展示 `0` 且已发布、未软删的原创公开帖。
 
-新建/编辑帖子时会对正文跑 **敏感词子串检测**（见 `application/moderation`）：无命中则 **`moderation_flag=0`（审核通过）**；有命中则自动标为 `1` 并在 `moderation_note` 中记录 `sensitive_hit: ...`。评论若命中敏感词则 **拒绝提交**（HTTP 400）。
+**正式发布**的帖子在创建/编辑时会检测敏感词：命中则接口 **失败**（不写入已发布内容）。**草稿**可含敏感词直至用户改为发布。评论若命中敏感词则 **拒绝提交**（HTTP 400）。管理员可对单条评论 `PATCH /admin/api/replies/{id}` body `{"hidden":true}`，该条及其所有子回复均设为隐藏。

@@ -16,7 +16,8 @@ import (
 
 // RunNotificationWatermillRouter consumes notification domain events and writes in-app notifications.
 // sess may be nil; when set, user_banned events trigger idempotent session invalidation.
-func RunNotificationWatermillRouter(ctx context.Context, sub message.Subscriber, notif *appnotification.Service, sess domainsession.Store, wmLog watermill.LoggerAdapter) (*message.Router, error) {
+// reloadSensitiveWords, when non-nil, is invoked when another instance signals a sensitive-word list change.
+func RunNotificationWatermillRouter(ctx context.Context, sub message.Subscriber, notif *appnotification.Service, sess domainsession.Store, reloadSensitiveWords func(context.Context) error, wmLog watermill.LoggerAdapter) (*message.Router, error) {
 	if notif == nil {
 		return nil, errors.New("messaging: notification service is nil")
 	}

@@ -8,6 +8,8 @@ import (
 
 	appadmin "github.com/lpxxn/blink/application/admin"
 	domainpost "github.com/lpxxn/blink/domain/post"
+	domainpostreply "github.com/lpxxn/blink/domain/postreply"
+	domainsensitiveword "github.com/lpxxn/blink/domain/sensitiveword"
 	domainuser "github.com/lpxxn/blink/domain/user"
 	httpapi "github.com/lpxxn/blink/infrastructure/interface/http/api"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
@@ -252,4 +254,197 @@ func (s *Server) ResolveAppeal(c *gin.Context) {
 		adm.UserName = names[p.UserID]
 	}
 	c.JSON(http.StatusOK, adm)
+}
+
+func (s *Server) ListSensitiveWords(c *gin.Context) {
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	list, total, err := s.Admin.ListSensitiveWords(c.Request.Context(), offset, limit)
+	if err != nil {
+		if errors.Is(err, appadmin.ErrInvalidSensitiveWord) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "sensitive words not configured"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	out := make([]httpapi.AdminSensitiveWordJSON, 0, len(list))
+	for _, w := range list {
+		out = append(out, httpapi.AdminSensitiveWordToJSON(w))
+	}
+	c.JSON(http.StatusOK, httpapi.AdminSensitiveWordsPageJSON{Words: out, Total: total})
+}
+
+type createSensitiveWordBody struct {
+	Word string `json:"word"`
+}
+
+func (s *Server) CreateSensitiveWord(c *gin.Context) {
+	var body createSensitiveWordBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	w, err := s.Admin.CreateSensitiveWord(c.Request.Context(), body.Word)
+	if err != nil {
+		if errors.Is(err, appadmin.ErrInvalidSensitiveWord) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, domainsensitiveword.ErrDuplicateWord) {
+			c.JSON(http.StatusConflict, gin.H{"error": "duplicate word"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, httpapi.AdminSensitiveWordToJSON(w))
+}
+
+type patchSensitiveWordBody struct {
+	Enabled *bool `json:"enabled"`
+}
+
+func (s *Server) PatchSensitiveWord(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
+		return
+	}
+	var body patchSensitiveWordBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	w, err := s.Admin.PatchSensitiveWord(c.Request.Context(), id, body.Enabled)
+	if err != nil {
+		if errors.Is(err, domainsensitiveword.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, appadmin.ErrInvalidSensitiveWord) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "sensitive words not configured"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, httpapi.AdminSensitiveWordToJSON(w))
+}
+
+func (s *Server) DeleteSensitiveWord(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
+		return
+	}
+	err = s.Admin.DeleteSensitiveWord(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, domainsensitiveword.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, appadmin.ErrInvalidSensitiveWord) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "sensitive words not configured"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.AbortWithStatus(http.StatusNoContent)
+}
+
+type patchAdminReplyBody struct {
+	Hidden *bool `json:"hidden"`
+}
+
+func (s *Server) PatchReply(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
+		return
+	}
+	var body patchAdminReplyBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if body.Hidden == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing hidden"})
+		return
+	}
+	if *body.Hidden {
+		err = s.Admin.HidePostReply(c.Request.Context(), id)
+	} else {
+		err = s.Admin.UnhidePostReply(c.Request.Context(), id)
+	}
+	if err != nil {
+		if errors.Is(err, domainpostreply.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, appadmin.ErrRepliesNotConfigured) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "replies not configured"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.AbortWithStatus(http.StatusNoContent)
+}
+
+func (s *Server) ListPostReplies(c *gin.Context) {
+	postID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad post id"})
+		return
+	}
+	var afterID *int64
+	if v := c.Query("cursor"); v != "" {
+		id, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bad cursor"})
+			return
+		}
+		afterID = &id
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+
+	list, err := s.Admin.ListPostReplies(c.Request.Context(), postID, afterID, limit)
+	if err != nil {
+		if errors.Is(err, domainpost.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, appadmin.ErrRepliesNotConfigured) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "replies not configured"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	out := make([]httpapi.ReplyJSON, 0, len(list))
+	for _, r := range list {
+		out = append(out, httpapi.ReplyToJSON(r))
+	}
+	// Resolve user names in batch (optional).
+	if s.Users != nil && len(out) > 0 {
+		ids := make([]int64, 0, len(out))
+		for _, r := range out {
+			ids = append(ids, r.UserID)
+		}
+		names := httpapi.ResolveUserNames(c.Request.Context(), s.Users, ids)
+		if names != nil {
+			for i := range out {
+				out[i].UserName = names[out[i].UserID]
+			}
+		}
+	}
+
+	var next *string
+	if len(list) > 0 {
+		next = httpapi.NextCursorString(list[len(list)-1].ID)
+	}
+	c.JSON(http.StatusOK, httpapi.RepliesPageJSON{Replies: out, NextCursor: next})
 }

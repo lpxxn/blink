@@ -72,9 +72,14 @@ func (s *Service) Create(ctx context.Context, authorID int64, body string, categ
 	if draft {
 		status = domainpost.StatusDraft
 	}
-	words := appmoderation.SensitiveWords()
-	hits := appmoderation.FindSensitiveHits(body, words)
-	modFlag, modNote := appmoderation.PostModerationFromHits(hits)
+	if !draft {
+		words := appmoderation.SensitiveWords()
+		if len(appmoderation.FindSensitiveHits(body, words)) > 0 {
+			return nil, appmoderation.ErrSensitiveContent
+		}
+	}
+	modFlag := domainpost.ModerationNormal
+	modNote := ""
 	p := &domainpost.Post{
 		ID:             s.NewID(),
 		UserID:         authorID,
@@ -156,9 +161,17 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 		p.ModerationFlag = domainpost.ModerationRemoved
 		p.ModerationNote = adminTakedownNote
 	} else {
-		w := appmoderation.SensitiveWords()
-		h := appmoderation.FindSensitiveHits(p.Body, w)
-		p.ModerationFlag, p.ModerationNote = appmoderation.PostModerationFromHits(h)
+		if p.Status == domainpost.StatusPublished {
+			w := appmoderation.SensitiveWords()
+			if len(appmoderation.FindSensitiveHits(p.Body, w)) > 0 {
+				return nil, appmoderation.ErrSensitiveContent
+			}
+			p.ModerationFlag = domainpost.ModerationNormal
+			p.ModerationNote = ""
+		} else {
+			p.ModerationFlag = domainpost.ModerationNormal
+			p.ModerationNote = ""
+		}
 	}
 	if err := s.Posts.Update(ctx, p); err != nil {
 		return nil, err

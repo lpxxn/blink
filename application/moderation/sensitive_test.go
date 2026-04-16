@@ -1,6 +1,17 @@
 package moderation
 
-import "testing"
+import (
+	"testing"
+)
+
+func TestSensitiveWords_readsSnapshot(t *testing.T) {
+	SetWordsSnapshot([]string{"alpha", "beta"})
+	defer SetWordsSnapshot(nil)
+	w := SensitiveWords()
+	if len(w) != 2 || w[0] != "alpha" {
+		t.Fatalf("got %v", w)
+	}
+}
 
 func TestFindSensitiveHits_emptyWords(t *testing.T) {
 	if h := FindSensitiveHits("anything", nil); len(h) != 0 {

@@ -118,3 +118,16 @@ type PostReplyModel struct {
 func (PostReplyModel) TableName() string {
 	return "post_replies"
 }
+
+// SensitiveWordModel maps sensitive_words (platform/db/0007_sensitive_words.sql).
+type SensitiveWordModel struct {
+	ID        int64     `gorm:"column:id;primaryKey"`
+	Word      string    `gorm:"column:word;type:text;not null;uniqueIndex:idx_sensitive_words_word"`
+	Enabled   int       `gorm:"column:enabled;not null;index:idx_sensitive_words_enabled"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+}
+
+func (SensitiveWordModel) TableName() string {
+	return "sensitive_words"
+}

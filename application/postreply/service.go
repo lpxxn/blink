@@ -49,7 +49,7 @@ func (s *Service) Add(ctx context.Context, userID, postID int64, body string, pa
 		if err != nil {
 			return nil, err
 		}
-		if parent.PostID != postID || parent.DeletedAt != nil {
+		if parent.PostID != postID || parent.DeletedAt != nil || parent.Status != domainpostreply.StatusVisible {
 			return nil, ErrInvalidInput
 		}
 	}

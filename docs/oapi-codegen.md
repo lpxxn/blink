@@ -13,13 +13,24 @@
 
 新增需 **参与代码生成** 的 operation 时，在 `openapi.yaml` 里为该 operation 增加标签 **`servergen`**（可与 `system` 等并存）。
 
-在仓库根目录执行：
+## 修改 openapi.yaml 后如何重新生成
+
+- **`api/openapi/openapi.yaml` 不由命令生成**，在仓库里手写维护，是全量 HTTP 契约的单一事实来源。
+- 下列命令根据该 YAML **重新生成** `api/gen/apigen.gen.go`：其中的 **类型**、**嵌入的 OpenAPI spec**（供 `apigen.GetSwagger()` 等使用）、以及带 **`servergen`** 标签的 **Gin 路由注册与 `ServerInterface` 方法签名**。
+
+在**仓库根目录**执行（推荐）：
 
 ```bash
 go generate ./api/gen/...
 ```
 
-或在 `api/gen` 目录执行 `go generate .`。修改 YAML 后应重新生成并保证 `go build ./...` 通过。
+或在 **`api/gen` 目录**下执行（与 `api/gen/doc.go` 里 `go:generate` 的相对路径一致）：
+
+```bash
+cd api/gen && go generate .
+```
+
+`go:generate` 使用 `go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.6.0`，**首次执行或清理模块缓存后需要能访问模块代理以下载该版本**。生成后建议执行 `go build ./...` 确认编译通过。
 
 ## 命令行参数
 

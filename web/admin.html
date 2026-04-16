@@ -37,6 +37,32 @@
     <h2 class="section-title">概览</h2>
     <pre id="overview" class="code-block">加载中…</pre>
 
+    <h2 class="section-title">敏感词</h2>
+    <div class="card" style="margin-top:0.75rem">
+      <p class="page-lead" style="margin-top:0">管理敏感词：新增、启用/停用、删除。</p>
+      <p style="margin:0">
+        <a class="btn btn-secondary btn-sm" href="/web/sensitive-words.html">打开敏感词管理页</a>
+      </p>
+    </div>
+
+    <h2 class="section-title">帖子评论（含隐藏）</h2>
+    <div class="card" style="margin-top:0.75rem">
+      <p class="page-lead" style="margin-top:0">按 post_id 查看评论列表（含隐藏），并可对评论「隐藏 / 恢复显示（级联）」。</p>
+      <p style="margin:0">
+        <a class="btn btn-secondary btn-sm" href="/web/post-replies-admin.html">打开帖子评论管理页</a>
+      </p>
+    </div>
+
+    <h2 class="section-title">隐藏评论（按 reply_id）</h2>
+    <div class="card" style="margin-top:0.75rem">
+      <p class="page-lead" style="margin-top:0">输入评论 ID 后将该评论及其所有子评论设为隐藏（级联）。</p>
+      <div class="field" style="margin-bottom:0.75rem">
+        <label for="hide-reply-id">reply_id</label>
+        <input id="hide-reply-id" placeholder="例如：1234567890" />
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="hide-reply-btn">隐藏评论（级联）</button>
+    </div>
+
     <h2 class="section-title">用户（最近 50）</h2>
     <div class="data-table-wrap">
       <table class="data-table" id="users">
@@ -169,6 +195,23 @@
         if (r.status === 401) throw new Error('请先登录');
         if (r.status === 204) return;
         return r.text().then(function (t) { throw new Error(t || String(r.status)); });
+      });
+    }
+
+    function hideReplyByID(replyId) {
+      return fetch(API + '/admin/api/replies/' + encodeURIComponent(sid(replyId)), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hidden: true })
+      }).then(function (r) {
+        if (r.status === 403) throw new Error('需要 super_admin');
+        if (r.status === 401) throw new Error('请先登录');
+        if (r.status === 204) return;
+        if (!r.ok) {
+          return r.text().then(function (t) { throw new Error(t || String(r.status)); });
+        }
+        return r.json();
       });
     }
 
@@ -433,6 +476,20 @@
         }
       };
       document.getElementById('load-appeals').onclick = function () { loadAppeals(); };
+
+      document.getElementById('hide-reply-btn').onclick = function () {
+        document.getElementById('err').textContent = '';
+        var rid = String(document.getElementById('hide-reply-id').value || '').trim();
+        if (!rid) return;
+        if (!window.confirm('隐藏评论 #' + rid + '（含所有子评论）？')) return;
+        hideReplyByID(rid)
+          .then(function () {
+            document.getElementById('hide-reply-id').value = '';
+          })
+          .catch(function (e) {
+            document.getElementById('err').textContent = String(e);
+          });
+      };
     }
 
     function showAdminGate(msg) {

@@ -49,6 +49,7 @@
     var params = new URLSearchParams(location.search);
     var id = params.get('id');
     var myUserId = null;
+    var myRole = null;
     var parentReplyId = null;
 
     if (!id) {
@@ -73,10 +74,16 @@
         })
         .then(function (d) {
           if (d && d.user_id != null) myUserId = sid(d.user_id);
+          if (d && d.role != null) myRole = String(d.role);
         })
         .catch(function () {
           myUserId = null;
+          myRole = null;
         });
+    }
+
+    function isSuperAdmin() {
+      return myRole === 'super_admin';
     }
 
     function showPost(p) {
@@ -190,6 +197,34 @@
               document.getElementById('rbody').focus();
             };
             actions.appendChild(rb);
+            if (isSuperAdmin()) {
+              var hb = document.createElement('button');
+              hb.type = 'button';
+              hb.className = 'btn btn-secondary btn-sm';
+              hb.textContent = '隐藏';
+              hb.onclick = function () {
+                if (!window.confirm('隐藏评论 #' + sid(x.id) + '（含所有子评论）？')) return;
+                fetch(API + '/admin/api/replies/' + encodeURIComponent(sid(x.id)), {
+                  method: 'PATCH',
+                  credentials: 'include',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ hidden: true })
+                })
+                  .then(function (res) {
+                    if (res.status === 401) throw new Error('请先登录');
+                    if (res.status === 403) throw new Error('需要 super_admin');
+                    if (res.status === 204) return;
+                    if (!res.ok) throw new Error('隐藏失败 ' + res.status);
+                  })
+                  .then(function () {
+                    loadReplies();
+                  })
+                  .catch(function (e) {
+                    document.getElementById('err').textContent = String(e);
+                  });
+              };
+              actions.appendChild(hb);
+            }
             if (myUserId && sid(x.user_id) === myUserId) {
               var db = document.createElement('button');
               db.type = 'button';

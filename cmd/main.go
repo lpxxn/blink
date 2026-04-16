@@ -25,6 +25,7 @@ import (
 	appbootstrap "github.com/lpxxn/blink/application/bootstrap"
 	appcategory "github.com/lpxxn/blink/application/category"
 	appidp "github.com/lpxxn/blink/application/idp"
+	appmoderation "github.com/lpxxn/blink/application/moderation"
 	appnotification "github.com/lpxxn/blink/application/notification"
 	appoauth "github.com/lpxxn/blink/application/oauth"
 	apppost "github.com/lpxxn/blink/application/post"
@@ -85,6 +86,11 @@ func main() {
 	replyRepo := &gormdb.PostReplyRepository{DB: gdb}
 	notifRepo := &gormdb.NotificationRepository{DB: gdb}
 	catRepo := &gormdb.CategoryRepository{DB: gdb}
+	sensitiveRepo := &gormdb.SensitiveWordRepository{DB: gdb}
+	wordStore := &appmoderation.WordListStore{Repo: sensitiveRepo}
+	if err := wordStore.Reload(ctx); err != nil {
+		log.Printf("sensitive words initial load: %v", err)
+	}
 	sessStore := &redisstore.SessionStore{Client: rdb}
 	stateStore := &redisstore.OAuthStateStore{Client: rdb}
 
@@ -120,15 +126,18 @@ func main() {
 		log.Fatalf("watermill redis publisher: %v", err)
 	}
 	defer func() { _ = wmPublisher.Close() }()
+	sensitiveWordsPub := messaging.NewSensitiveWordsWatermillPublisher(wmPublisher)
 	notifyEventBus := messaging.NewNotificationWatermillPublisher(wmPublisher)
 	postSvc.NotifyEvents = notifyEventBus
 
+	consumer := strings.TrimSpace(getenv("BLINK_WATERMILL_CONSUMER", ""))
+	if consumer == "" {
+		h, _ := os.Hostname()
+		consumer = fmt.Sprintf("%s-%d", h, os.Getpid())
+	}
+
+	// Notification consumer (optional)
 	if strings.TrimSpace(getenv("BLINK_DISABLE_NOTIFICATION_CONSUMER", "")) == "" {
-		consumer := strings.TrimSpace(getenv("BLINK_WATERMILL_CONSUMER", ""))
-		if consumer == "" {
-			h, _ := os.Hostname()
-			consumer = fmt.Sprintf("%s-%d", h, os.Getpid())
-		}
 		wmSubscriber, err := redisstream.NewSubscriber(redisstream.SubscriberConfig{
 			Client:                        rdb,
 			Unmarshaller:                  redisstream.DefaultMarshallerUnmarshaller{},
@@ -141,18 +150,58 @@ func main() {
 			log.Fatalf("watermill redis subscriber: %v", err)
 		}
 		defer func() { _ = wmSubscriber.Close() }()
-		wmRouter, err := messaging.RunNotificationWatermillRouter(context.Background(), wmSubscriber, notifSvc, sessStore, wmLogger)
+		wmRouter, err := messaging.RunNotificationWatermillRouter(context.Background(), wmSubscriber, notifSvc, sessStore, nil, wmLogger)
 		if err != nil {
 			log.Fatalf("watermill notification router: %v", err)
 		}
 		defer func() { _ = wmRouter.Close() }()
 	}
 
+	// Sensitive-words reload consumer (recommended on all instances)
+	if strings.TrimSpace(getenv("BLINK_DISABLE_SENSITIVE_WORDS_CONSUMER", "")) == "" {
+		wmSubscriber, err := redisstream.NewSubscriber(redisstream.SubscriberConfig{
+			Client:                        rdb,
+			Unmarshaller:                  redisstream.DefaultMarshallerUnmarshaller{},
+			ConsumerGroup:                 getenv("BLINK_SENSITIVE_WORDS_CONSUMER_GROUP", "blink-sensitive-words"),
+			Consumer:                      consumer,
+			OldestId:                      getenv("BLINK_SENSITIVE_WORDS_STREAM_FROM", "$"),
+			DisableIndefiniteInitialBlock: true,
+		}, wmLogger)
+		if err != nil {
+			log.Fatalf("watermill sensitive words subscriber: %v", err)
+		}
+		defer func() { _ = wmSubscriber.Close() }()
+		wmRouter, err := messaging.RunSensitiveWordsWatermillRouter(context.Background(), wmSubscriber, wordStore.Reload, wmLogger)
+		if err != nil {
+			log.Fatalf("watermill sensitive words router: %v", err)
+		}
+		defer func() { _ = wmRouter.Close() }()
+	}
+
+	if poll := strings.TrimSpace(getenv("BLINK_SENSITIVE_WORDS_POLL_INTERVAL", "")); poll != "" {
+		if dur, err := time.ParseDuration(poll); err == nil && dur > 0 {
+			go func() {
+				ticker := time.NewTicker(dur)
+				defer ticker.Stop()
+				for range ticker.C {
+					if err := wordStore.Reload(context.Background()); err != nil {
+						log.Printf("sensitive words poll reload: %v", err)
+					}
+				}
+			}()
+		}
+	}
+
 	adminSvc := &appadmin.Service{
-		Users:        userRepo,
-		Posts:        postRepo,
-		Sessions:     sessStore,
-		NotifyEvents: notifyEventBus,
+		Users:                   userRepo,
+		Posts:                   postRepo,
+		Replies:                 replyRepo,
+		Sessions:                sessStore,
+		NotifyEvents:            notifyEventBus,
+		SensitiveWords:          sensitiveRepo,
+		NewID:                   func() int64 { return node.Generate().Int64() },
+		ReloadSensitiveWords:    wordStore.Reload,
+		SensitiveWordsPublisher: sensitiveWordsPub,
 	}
 
 	uploadRoot := getenv("BLINK_UPLOAD_DIR", "data/uploads")
@@ -311,6 +360,12 @@ func main() {
 	adminG.GET("/posts", adminSrv.ListPosts)
 	adminG.PATCH("/posts/:id", adminSrv.PatchPost)
 	adminG.POST("/posts/:id/resolve_appeal", adminSrv.ResolveAppeal)
+	adminG.GET("/posts/:id/replies", adminSrv.ListPostReplies)
+	adminG.GET("/sensitive_words", adminSrv.ListSensitiveWords)
+	adminG.POST("/sensitive_words", adminSrv.CreateSensitiveWord)
+	adminG.PATCH("/sensitive_words/:id", adminSrv.PatchSensitiveWord)
+	adminG.DELETE("/sensitive_words/:id", adminSrv.DeleteSensitiveWord)
+	adminG.PATCH("/replies/:id", adminSrv.PatchReply)
 
 	addr := getenv("BLINK_HTTP_ADDR", ":11110")
 	log.Printf("listening on %s (OAuth providers: %d, builtin IdP: %v, POST /auth/register: on)", addr, len(providers), idpHTTP != nil)

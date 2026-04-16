@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	appcategory "github.com/lpxxn/blink/application/category"
+	appmoderation "github.com/lpxxn/blink/application/moderation"
 	apppost "github.com/lpxxn/blink/application/post"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainuser "github.com/lpxxn/blink/domain/user"
@@ -111,6 +112,10 @@ func (s *Server) CreatePost(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category_id"})
 			return
 		}
+		if errors.Is(err, appmoderation.ErrSensitiveContent) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "内容包含敏感词"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -164,6 +169,10 @@ func (s *Server) PatchPost(c *gin.Context) {
 		}
 		if errors.Is(err, apppost.ErrInvalidInput) || errors.Is(err, appcategory.ErrInvalidCategory) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, appmoderation.ErrSensitiveContent) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "内容包含敏感词"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

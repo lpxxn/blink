@@ -332,7 +332,7 @@ paths:
       summary: 分类列表
       responses:
         "200":
-          description: JSON `{ "categories": [...] }`
+          description: 'JSON `{ "categories": [...] }`'
 
   /api/posts:
     get:
@@ -342,7 +342,7 @@ paths:
       description: Query `category_id`、`uncategorized=1`、`cursor`（上一页最后一条 id）、`limit`。
       responses:
         "200":
-          description: `{ "posts": [...], "next_cursor": int64|null }`
+          description: '`{ "posts": [...], "next_cursor": int64|null }`'
     post:
       operationId: createPost
       tags: [social]
@@ -470,7 +470,7 @@ paths:
             format: int64
       responses:
         "200":
-          description: `{ "replies": [...], "next_cursor" }`
+          description: '`{ "replies": [...], "next_cursor" }`'
     post:
       operationId: createReply
       tags: [social]
@@ -539,7 +539,7 @@ paths:
                   format: binary
       responses:
         "200":
-          description: `{ "url": "/uploads/{user_id}/{file}" }`
+          description: '`{ "url": "/uploads/{user_id}/{file}" }`'
 
   /admin/api/overview:
     get:
@@ -563,7 +563,7 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: `{ "users": [...] }`
+          description: '`{ "users": [...] }`'
 
   /admin/api/users/{id}:
     patch:
@@ -632,10 +632,10 @@ paths:
       security:
         - sessionCookie: []
         - bearerAuth: []
-      description: Query `user_id`、`category_id`、`moderation_flag`、`include_deleted`、`offset`、`limit`。
+      description: Query `user_id`、`category_id`、`moderation_flag`、`include_deleted`、`appeal_pending`、`offset`、`limit`。
       responses:
         "200":
-          description: `{ "posts": [...], "total" }`
+          description: '`{ "posts": [...], "total" }`'
 
   /admin/api/posts/{id}:
     patch:
@@ -667,6 +667,178 @@ paths:
       responses:
         "200":
           description: 帖子 JSON
+
+  /admin/api/posts/{id}/resolve_appeal:
+    post:
+      operationId: adminResolveAppeal
+      tags: [admin]
+      summary: 处理帖子申诉
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approve]
+              properties:
+                approve:
+                  type: boolean
+                note:
+                  type: string
+      responses:
+        "200":
+          description: 帖子 JSON
+        "404":
+          description: not found
+        "409":
+          description: no pending appeal
+
+  /admin/api/sensitive_words:
+    get:
+      operationId: adminListSensitiveWords
+      tags: [admin]
+      summary: 敏感词分页列表
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: '`{ "words": [...], "total" }`'
+        "503":
+          description: sensitive words not configured
+    post:
+      operationId: adminCreateSensitiveWord
+      tags: [admin]
+      summary: 新增敏感词
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [word]
+              properties:
+                word:
+                  type: string
+      responses:
+        "201":
+          description: 敏感词 JSON
+        "400":
+          description: invalid word
+        "409":
+          description: duplicate word
+
+  /admin/api/sensitive_words/{id}:
+    patch:
+      operationId: adminPatchSensitiveWord
+      tags: [admin]
+      summary: 启用/禁用敏感词
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: 敏感词 JSON
+        "404":
+          description: not found
+        "503":
+          description: sensitive words not configured
+    delete:
+      operationId: adminDeleteSensitiveWord
+      tags: [admin]
+      summary: 删除敏感词
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "404":
+          description: not found
+        "503":
+          description: sensitive words not configured
+
+  /admin/api/replies/{id}:
+    patch:
+      operationId: adminPatchReply
+      tags: [admin]
+      summary: 隐藏回复（仅支持 hidden:true）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hidden]
+              properties:
+                hidden:
+                  type: boolean
+                  description: 必须为 true
+      responses:
+        "204":
+          description: 成功
+        "400":
+          description: only hidden:true is supported
+        "404":
+          description: not found
+        "503":
+          description: replies not configured
 
 components:
   securitySchemes:

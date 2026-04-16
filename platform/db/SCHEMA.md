@@ -11,7 +11,10 @@ SQL 需同时兼容 **SQLite / MySQL / PostgreSQL**；业务访问请走 **repos
 | `0001_init.sql` | `users`、`sessions` |
 | `0002_create_post.sql` | `user_follows`、`friendships`、`user_lists`、`user_list_members`、`posts` |
 | `0003_post_replies.sql` | `post_replies`（帖子评论 / 楼中楼） |
+| `0004_oauth_identities.sql` | `oauth_identities` |
 | `0005_post_categories_moderation.sql` | `categories`；`posts` 增加 `category_id`、`moderation_flag`、`moderation_note` |
+| `0006_notifications_appeals.sql` | `notifications`；`posts` 申诉字段 |
+| `0007_sensitive_words.sql` | `sensitive_words`（敏感词，启用行参与内存匹配） |
 
 ### CLI：`cmd/migrate`
 

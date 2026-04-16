@@ -7,6 +7,7 @@ import (
 	domainnotification "github.com/lpxxn/blink/domain/notification"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
+	domainsensitiveword "github.com/lpxxn/blink/domain/sensitiveword"
 	domainuser "github.com/lpxxn/blink/domain/user"
 )
 
@@ -223,4 +224,30 @@ func NotificationToJSON(n *domainnotification.Notification) NotificationJSON {
 		CreatedAt: n.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 	}
 	return j
+}
+
+// AdminSensitiveWordJSON is one row for GET /admin/api/sensitive_words.
+type AdminSensitiveWordJSON struct {
+	ID        int64  `json:"id,string"`
+	Word      string `json:"word"`
+	Enabled   bool   `json:"enabled"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// AdminSensitiveWordToJSON maps a domain sensitive word.
+func AdminSensitiveWordToJSON(w *domainsensitiveword.Word) AdminSensitiveWordJSON {
+	return AdminSensitiveWordJSON{
+		ID:        w.ID,
+		Word:      w.Word,
+		Enabled:   w.Enabled,
+		CreatedAt: w.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt: w.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+// AdminSensitiveWordsPageJSON is GET /admin/api/sensitive_words.
+type AdminSensitiveWordsPageJSON struct {
+	Words []AdminSensitiveWordJSON `json:"words"`
+	Total int64                    `json:"total"`
 }

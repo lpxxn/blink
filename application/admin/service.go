@@ -9,18 +9,22 @@ import (
 	appeventing "github.com/lpxxn/blink/application/eventing"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	domainpost "github.com/lpxxn/blink/domain/post"
+	domainpostreply "github.com/lpxxn/blink/domain/postreply"
+	domainsensitiveword "github.com/lpxxn/blink/domain/sensitiveword"
 	domainsession "github.com/lpxxn/blink/domain/session"
 	domainuser "github.com/lpxxn/blink/domain/user"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	ErrCannotDemoteSelf  = errors.New("admin: cannot remove own super_admin role")
-	ErrInvalidRole       = errors.New("admin: invalid role")
-	ErrInvalidModeration = errors.New("admin: invalid moderation flag")
-	ErrInvalidPostStatus = errors.New("admin: invalid post status")
-	ErrNoPendingAppeal   = errors.New("admin: no pending appeal")
-	ErrWeakPassword      = errors.New("admin: password too short")
+	ErrCannotDemoteSelf     = errors.New("admin: cannot remove own super_admin role")
+	ErrInvalidRole          = errors.New("admin: invalid role")
+	ErrInvalidModeration    = errors.New("admin: invalid moderation flag")
+	ErrInvalidPostStatus    = errors.New("admin: invalid post status")
+	ErrNoPendingAppeal      = errors.New("admin: no pending appeal")
+	ErrWeakPassword         = errors.New("admin: password too short")
+	ErrInvalidSensitiveWord = errors.New("admin: invalid sensitive word")
+	ErrRepliesNotConfigured = errors.New("admin: reply repository not configured")
 )
 
 const resetPasswordMinLen = 8
@@ -28,8 +32,14 @@ const resetPasswordMinLen = 8
 type Service struct {
 	Users        domainuser.Repository
 	Posts        domainpost.Repository
+	Replies      domainpostreply.Repository // optional; hide comment subtree
 	Sessions     domainsession.Store               // optional; used when banning users (session invalidation)
 	NotifyEvents appeventing.NotificationPublisher // optional; e.g. Watermill → Redis Stream
+
+	SensitiveWords          domainsensitiveword.Repository // optional
+	NewID                   func() int64                        // ids for sensitive_words rows
+	ReloadSensitiveWords    func(context.Context) error         // refresh in-process word snapshot
+	SensitiveWordsPublisher appeventing.SensitiveWordsPublisher // optional; broadcast reload
 }
 
 type Overview struct {

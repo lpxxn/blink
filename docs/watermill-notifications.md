@@ -117,8 +117,11 @@ Handler 逻辑（简化）：
 2. 构造 `redisstream.NewPublisher`，再包一层 `messaging.NewNotificationWatermillPublisher` → 注入 `httpapi.Server.NotifyEvents`、`admin.Service.NotifyEvents`。
 3. 若未设置 `BLINK_DISABLE_NOTIFICATION_CONSUMER`：
    - `redisstream.NewSubscriber`（配置 ConsumerGroup / Consumer / OldestId 等）；
-   - `messaging.RunNotificationWatermillRouter`：内部 `go router.Run(ctx)`，并 **`<-router.Running()`** 等待路由就绪后再继续启动 Gin（避免刚上线时短时间消费不到消息）。
-4. `defer` 顺序：`Router.Close` → `Subscriber.Close` → `Publisher.Close`（后注册的先执行）。
+   - `messaging.RunNotificationWatermillRouter`：消费 `blink.notification.events`；内部 `go router.Run(ctx)`，并 **`<-router.Running()`** 等待路由就绪后再继续启动 Gin（避免刚上线时短时间消费不到消息）。
+4. 若未设置 `BLINK_DISABLE_SENSITIVE_WORDS_CONSUMER`：
+   - `redisstream.NewSubscriber`（独立 ConsumerGroup / Consumer / OldestId）；
+   - `messaging.RunSensitiveWordsWatermillRouter`：消费 `blink.moderation.sensitive_words`，收到后全量重载敏感词内存快照。
+5. `defer` 顺序：`Router.Close` → `Subscriber.Close` → `Publisher.Close`（后注册的先执行）。
 
 `RunNotificationWatermillRouter` 使用的 `ctx` 当前为 **`context.Background()`**，即随进程生命周期；优雅停机若要停止 Router，需要改为可取消的 `Context` 并在收到信号时 `cancel`（当前未实现，属改进项）。
 

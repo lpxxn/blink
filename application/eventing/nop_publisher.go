@@ -32,3 +32,10 @@ func (NopNotificationPublisher) PublishAppealResolved(context.Context, int64, in
 func (NopNotificationPublisher) PublishUserBanned(context.Context, int64) error {
 	return nil
 }
+
+// NopSensitiveWordsPublisher discards sensitive-word reload signals (tests).
+type NopSensitiveWordsPublisher struct{}
+
+func (NopSensitiveWordsPublisher) PublishSensitiveWordsChanged(context.Context) error {
+	return nil
+}
