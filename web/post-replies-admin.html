@@ -32,7 +32,7 @@
 
     <div id="app" hidden>
       <h1 class="page-title">帖子评论管理（含隐藏）</h1>
-      <p class="page-lead" style="margin-top:0">仅 super_admin 可见；可查看隐藏状态并恢复显示（级联）。</p>
+      <p class="page-lead" style="margin-top:0">仅 super_admin 可见；可按帖子加载评论并隐藏/恢复（级联），也可直接按 reply_id 级联隐藏。</p>
       <p id="err" class="err" role="alert"></p>
 
       <div class="card" style="margin-top:0.75rem">
@@ -46,6 +46,16 @@
           <button type="button" class="btn btn-secondary btn-sm" id="more" disabled>加载更多</button>
           <button type="button" class="btn btn-secondary btn-sm" id="refresh" disabled>刷新</button>
         </div>
+      </div>
+
+      <div class="card" style="margin-top:0.75rem">
+        <h2 class="section-title" style="margin-top:0">按 reply_id 隐藏</h2>
+        <p class="page-lead" style="margin-top:0">输入评论 ID 后将该评论及其所有子评论设为隐藏（级联）。无需先加载帖子列表。</p>
+        <div class="field" style="margin-bottom:0.75rem">
+          <label for="hide-reply-id">reply_id</label>
+          <input id="hide-reply-id" placeholder="例如：1234567890" />
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="hide-reply-btn">隐藏评论（级联）</button>
       </div>
 
       <h2 class="section-title">评论列表</h2>
@@ -256,6 +266,19 @@
       document.getElementById('load').onclick = loadFirstPage;
       document.getElementById('more').onclick = loadMore;
       document.getElementById('refresh').onclick = loadFirstPage;
+
+      document.getElementById('hide-reply-btn').onclick = function () {
+        document.getElementById('err').textContent = '';
+        var rid = String(document.getElementById('hide-reply-id').value || '').trim();
+        if (!rid) return showErr(new Error('请填写 reply_id'));
+        if (!window.confirm('隐藏评论 #' + rid + '（含所有子评论）？')) return;
+        patchReplyHidden(rid, true)
+          .then(function () {
+            document.getElementById('hide-reply-id').value = '';
+            if (currentPostID) return loadFirstPage();
+          })
+          .catch(showErr);
+      };
     }
 
     init();
