@@ -74,8 +74,8 @@ func (s *Service) Create(ctx context.Context, authorID int64, body string, categ
 	}
 	if !draft {
 		words := appmoderation.SensitiveWords()
-		if len(appmoderation.FindSensitiveHits(body, words)) > 0 {
-			return nil, appmoderation.ErrSensitiveContent
+		if hits := appmoderation.FindSensitiveHits(body, words); len(hits) > 0 {
+			return nil, appmoderation.ErrSensitiveWithHits(hits)
 		}
 	}
 	modFlag := domainpost.ModerationNormal
@@ -163,8 +163,8 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 	} else {
 		if p.Status == domainpost.StatusPublished {
 			w := appmoderation.SensitiveWords()
-			if len(appmoderation.FindSensitiveHits(p.Body, w)) > 0 {
-				return nil, appmoderation.ErrSensitiveContent
+			if hits := appmoderation.FindSensitiveHits(p.Body, w); len(hits) > 0 {
+				return nil, appmoderation.ErrSensitiveWithHits(hits)
 			}
 			p.ModerationFlag = domainpost.ModerationNormal
 			p.ModerationNote = ""

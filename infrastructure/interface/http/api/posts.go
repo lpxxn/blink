@@ -113,7 +113,7 @@ func (s *Server) CreatePost(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, appmoderation.ErrSensitiveContent) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "内容包含敏感词"})
+			c.JSON(http.StatusBadRequest, SensitiveContentPayload(err))
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -172,7 +172,7 @@ func (s *Server) PatchPost(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, appmoderation.ErrSensitiveContent) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "内容包含敏感词"})
+			c.JSON(http.StatusBadRequest, SensitiveContentPayload(err))
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

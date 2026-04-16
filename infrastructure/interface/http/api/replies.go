@@ -91,7 +91,7 @@ func (s *Server) CreateReply(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, appmoderation.ErrSensitiveContent) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "内容包含敏感词"})
+			c.JSON(http.StatusBadRequest, SensitiveContentPayload(err))
 			return
 		}
 		if errors.Is(err, domainpostreply.ErrNotFound) {

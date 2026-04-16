@@ -41,8 +41,9 @@ func (s *Service) Add(ctx context.Context, userID, postID int64, body string, pa
 	if body == "" || len(body) > maxReplyBody {
 		return nil, ErrInvalidInput
 	}
-	if appmoderation.ReplyContainsSensitive(body, appmoderation.SensitiveWords()) {
-		return nil, appmoderation.ErrSensitiveContent
+	words := appmoderation.SensitiveWords()
+	if hits := appmoderation.FindSensitiveHits(body, words); len(hits) > 0 {
+		return nil, appmoderation.ErrSensitiveWithHits(hits)
 	}
 	if parentReplyID != nil {
 		parent, err := s.Replies.GetByID(ctx, *parentReplyID)
