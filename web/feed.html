@@ -38,6 +38,7 @@
     var cursor = null;
     var categoryId = null;
     var uncategorized = false;
+    var loadingPosts = false;
 
     function el(tag, text) {
       var e = document.createElement(tag);
@@ -97,16 +98,24 @@
 
     function resetList() {
       cursor = null;
+      loadingPosts = false;
+      var moreBtn = document.getElementById('more');
+      moreBtn.hidden = true;
+      moreBtn.disabled = false;
       document.getElementById('list').innerHTML = '';
-      document.getElementById('more').hidden = true;
     }
 
     function loadPosts(reset) {
+      if (loadingPosts) return;
+      if (!reset && (cursor == null || cursor === '')) return;
+      loadingPosts = true;
+      var moreBtn = document.getElementById('more');
+      moreBtn.disabled = true;
       document.getElementById('err').textContent = '';
       var q = 'limit=15';
       if (categoryId != null) q += '&category_id=' + encodeURIComponent(categoryId);
       if (uncategorized) q += '&uncategorized=1';
-      if (cursor != null && !reset) q += '&cursor=' + encodeURIComponent(cursor);
+      if (cursor != null && cursor !== '' && !reset) q += '&cursor=' + encodeURIComponent(cursor);
       if (reset) cursor = null;
       fetch(API + '/api/posts?' + q, { credentials: 'include' })
         .then(function (r) {
@@ -146,11 +155,15 @@
             }
             list.appendChild(art);
           });
-          cursor = d.next_cursor;
-          document.getElementById('more').hidden = !cursor || (d.posts || []).length === 0;
+                   cursor = d.next_cursor != null && d.next_cursor !== '' ? d.next_cursor : null;
+          moreBtn.hidden = !cursor || (d.posts || []).length === 0;
         })
         .catch(function (e) {
           document.getElementById('err').textContent = String(e);
+        })
+        .then(function () {
+          loadingPosts = false;
+          moreBtn.disabled = false;
         });
     }
 
