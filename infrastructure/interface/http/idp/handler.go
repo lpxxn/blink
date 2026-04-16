@@ -67,11 +67,23 @@ func (h *Handler) authorizePost(w http.ResponseWriter, r *http.Request) {
 	clientID := r.Form.Get("client_id")
 	redirectURI := r.Form.Get("redirect_uri")
 	state := r.Form.Get("state")
+	responseType := r.Form.Get("response_type")
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
 	loc, err := h.Svc.LoginWithPassword(r.Context(), clientID, redirectURI, state, email, password)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		// Re-render the login page with an error message instead of leaving the user on a blank 401 page.
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = authorizeTmpl.Execute(w, map[string]string{
+			"FormAction":   h.FormAction,
+			"ClientID":     clientID,
+			"RedirectURI":  redirectURI,
+			"State":        state,
+			"ResponseType": responseType,
+			"Email":        email,
+			"Error":        "登录失败：请检查邮箱/密码，或账号状态是否正常。",
+		})
 		return
 	}
 	http.Redirect(w, r, loc, http.StatusFound)
@@ -130,12 +142,13 @@ var authorizeTmpl = template.Must(template.New("authorize").Parse(`<!DOCTYPE htm
 <head><meta charset="utf-8"><title>登录</title></head>
 <body>
 <h1>登录</h1>
+{{if .Error}}<p style="color:#b91c1c">{{.Error}}</p>{{end}}
 <form method="POST" action="{{.FormAction}}">
   <input type="hidden" name="client_id" value="{{.ClientID}}">
   <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}">
   <input type="hidden" name="state" value="{{.State}}">
   <input type="hidden" name="response_type" value="{{.ResponseType}}">
-  <p><label>邮箱 <input type="email" name="email" required autocomplete="username"></label></p>
+  <p><label>邮箱 <input type="email" name="email" required autocomplete="username" value="{{.Email}}"></label></p>
   <p><label>密码 <input type="password" name="password" required autocomplete="current-password"></label></p>
   <p><button type="submit">继续</button></p>
 </form>
