@@ -10,6 +10,7 @@ import (
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
+	domainsettings "github.com/lpxxn/blink/domain/settings"
 	domainsensitiveword "github.com/lpxxn/blink/domain/sensitiveword"
 	domainsession "github.com/lpxxn/blink/domain/session"
 	domainuser "github.com/lpxxn/blink/domain/user"
@@ -25,6 +26,8 @@ var (
 	ErrWeakPassword         = errors.New("admin: password too short")
 	ErrInvalidSensitiveWord = errors.New("admin: invalid sensitive word")
 	ErrRepliesNotConfigured = errors.New("admin: reply repository not configured")
+	ErrSettingsNotConfigured = errors.New("admin: settings repository not configured")
+	ErrInvalidSetting        = errors.New("admin: invalid setting value")
 )
 
 const resetPasswordMinLen = 8
@@ -33,6 +36,7 @@ type Service struct {
 	Users        domainuser.Repository
 	Posts        domainpost.Repository
 	Replies      domainpostreply.Repository // optional; hide comment subtree
+	Settings     domainsettings.Repository  // optional; admin settings
 	Sessions     domainsession.Store               // optional; used when banning users (session invalidation)
 	NotifyEvents appeventing.NotificationPublisher // optional; e.g. Watermill → Redis Stream
 

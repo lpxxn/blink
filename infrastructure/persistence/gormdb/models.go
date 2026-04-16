@@ -131,3 +131,14 @@ type SensitiveWordModel struct {
 func (SensitiveWordModel) TableName() string {
 	return "sensitive_words"
 }
+
+// AppSettingModel maps app_settings (platform/db/0008_app_settings.sql).
+type AppSettingModel struct {
+	Key       string    `gorm:"column:key;type:varchar(128);primaryKey"`
+	Value     string    `gorm:"column:value;type:text;not null"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+}
+
+func (AppSettingModel) TableName() string {
+	return "app_settings"
+}

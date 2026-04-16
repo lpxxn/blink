@@ -129,6 +129,34 @@ func (s *Service) OnAppealSubmittedForAdmins(ctx context.Context, authorID, post
 	return nil
 }
 
+// OnSensitiveHitForAdmins notifies every super_admin (except the author) that a post hit sensitive words.
+func (s *Service) OnSensitiveHitForAdmins(ctx context.Context, authorID, postID int64, hits []string) error {
+	if s.Users == nil {
+		return nil
+	}
+	ids, err := s.Users.ListSnowflakeIDsByRole(ctx, domainuser.RoleSuperAdmin)
+	if err != nil {
+		return err
+	}
+	h := strings.Join(hits, ", ")
+	if len(h) > 500 {
+		h = h[:500] + "…"
+	}
+	body := "帖子 " + strconv.FormatInt(postID, 10) + " 命中敏感词，作者 " + strconv.FormatInt(authorID, 10) + "。\n命中：" + h
+	body += "\n请在管理后台处理（可标记/下架）。"
+	pid := postID
+	title := "敏感词命中待处理"
+	for _, uid := range ids {
+		if uid == authorID {
+			continue
+		}
+		if err := s.send(ctx, uid, domainnotification.TypeSensitiveHitAdmin, title, body, &pid, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Service) OnAppealResolved(ctx context.Context, authorID, postID int64, approved bool, adminNote string) error {
 	pid := postID
 	title := "申诉/复核结果"

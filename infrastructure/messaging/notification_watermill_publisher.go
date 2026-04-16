@@ -92,6 +92,20 @@ func (p *NotificationWatermillPublisher) PublishPostFlagged(ctx context.Context,
 	})
 }
 
+func (p *NotificationWatermillPublisher) PublishSensitiveHitForAdmins(ctx context.Context, authorID, postID int64, hits []string) error {
+	return p.publish(ctx, struct {
+		Type     string   `json:"type"`
+		AuthorID int64    `json:"author_id,string"`
+		PostID   int64    `json:"post_id,string"`
+		Hits     []string `json:"hits"`
+	}{
+		Type:     domainevent.NotificationSensitiveHit,
+		AuthorID: authorID,
+		PostID:   postID,
+		Hits:     hits,
+	})
+}
+
 func (p *NotificationWatermillPublisher) PublishAppealSubmitted(ctx context.Context, authorID, postID int64, kind, message string) error {
 	return p.publish(ctx, struct {
 		Type     string `json:"type"`

@@ -87,6 +87,7 @@ func main() {
 	notifRepo := &gormdb.NotificationRepository{DB: gdb}
 	catRepo := &gormdb.CategoryRepository{DB: gdb}
 	sensitiveRepo := &gormdb.SensitiveWordRepository{DB: gdb}
+	settingsRepo := &gormdb.AppSettingsRepository{DB: gdb}
 	wordStore := &appmoderation.WordListStore{Repo: sensitiveRepo}
 	if err := wordStore.Reload(ctx); err != nil {
 		log.Printf("sensitive words initial load: %v", err)
@@ -128,7 +129,9 @@ func main() {
 	defer func() { _ = wmPublisher.Close() }()
 	sensitiveWordsPub := messaging.NewSensitiveWordsWatermillPublisher(wmPublisher)
 	notifyEventBus := messaging.NewNotificationWatermillPublisher(wmPublisher)
+	postScanPub := messaging.NewPostSensitiveScanWatermillPublisher(wmPublisher)
 	postSvc.NotifyEvents = notifyEventBus
+	postSvc.SensitiveScan = postScanPub
 
 	consumer := strings.TrimSpace(getenv("BLINK_WATERMILL_CONSUMER", ""))
 	if consumer == "" {
@@ -196,12 +199,34 @@ func main() {
 		Users:                   userRepo,
 		Posts:                   postRepo,
 		Replies:                 replyRepo,
+		Settings:                settingsRepo,
 		Sessions:                sessStore,
 		NotifyEvents:            notifyEventBus,
 		SensitiveWords:          sensitiveRepo,
 		NewID:                   func() int64 { return node.Generate().Int64() },
 		ReloadSensitiveWords:    wordStore.Reload,
 		SensitiveWordsPublisher: sensitiveWordsPub,
+	}
+
+	// Post sensitive-scan consumer (recommended on all instances)
+	if strings.TrimSpace(getenv("BLINK_DISABLE_POST_SENSITIVE_SCAN_CONSUMER", "")) == "" {
+		wmSubscriber, err := redisstream.NewSubscriber(redisstream.SubscriberConfig{
+			Client:                        rdb,
+			Unmarshaller:                  redisstream.DefaultMarshallerUnmarshaller{},
+			ConsumerGroup:                 getenv("BLINK_POST_SENSITIVE_SCAN_CONSUMER_GROUP", "blink-post-sensitive-scan"),
+			Consumer:                      consumer,
+			OldestId:                      getenv("BLINK_POST_SENSITIVE_SCAN_STREAM_FROM", "$"),
+			DisableIndefiniteInitialBlock: true,
+		}, wmLogger)
+		if err != nil {
+			log.Fatalf("watermill post sensitive scan subscriber: %v", err)
+		}
+		defer func() { _ = wmSubscriber.Close() }()
+		wmRouter, err := messaging.RunPostSensitiveScanWatermillRouter(context.Background(), wmSubscriber, adminSvc, wmLogger)
+		if err != nil {
+			log.Fatalf("watermill post sensitive scan router: %v", err)
+		}
+		defer func() { _ = wmRouter.Close() }()
 	}
 
 	uploadRoot := getenv("BLINK_UPLOAD_DIR", "data/uploads")
@@ -361,6 +386,8 @@ func main() {
 	adminG.PATCH("/posts/:id", adminSrv.PatchPost)
 	adminG.POST("/posts/:id/resolve_appeal", adminSrv.ResolveAppeal)
 	adminG.GET("/posts/:id/replies", adminSrv.ListPostReplies)
+	adminG.GET("/settings/sensitive_post_mode", adminSrv.GetSensitivePostMode)
+	adminG.PUT("/settings/sensitive_post_mode", adminSrv.SetSensitivePostMode)
 	adminG.GET("/sensitive_words", adminSrv.ListSensitiveWords)
 	adminG.POST("/sensitive_words", adminSrv.CreateSensitiveWord)
 	adminG.PATCH("/sensitive_words/:id", adminSrv.PatchSensitiveWord)

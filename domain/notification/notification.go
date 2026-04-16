@@ -9,6 +9,7 @@ const (
 	TypePostRemoved          = "post_removed"
 	TypePostFlagged          = "post_flagged"
 	TypeAppealSubmittedAdmin = "appeal_submitted_admin"
+	TypeSensitiveHitAdmin    = "sensitive_hit_admin"
 	TypeAppealResult         = "appeal_result"
 	TypeSystem               = "system"
 )

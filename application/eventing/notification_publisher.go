@@ -9,6 +9,7 @@ type NotificationPublisher interface {
 	PublishReplyToComment(ctx context.Context, parentAuthorID, postID, replyID int64, snippet string) error
 	PublishPostRemoved(ctx context.Context, authorID, postID int64, reason string) error
 	PublishPostFlagged(ctx context.Context, authorID, postID int64, note string) error
+	PublishSensitiveHitForAdmins(ctx context.Context, authorID, postID int64, hits []string) error
 	PublishAppealSubmitted(ctx context.Context, authorID, postID int64, kind, message string) error
 	PublishAppealResolved(ctx context.Context, authorID, postID int64, approved bool, adminNote string) error
 	PublishUserBanned(ctx context.Context, userID int64) error

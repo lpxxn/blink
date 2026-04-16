@@ -7,7 +7,6 @@ import (
 
 	appcategory "github.com/lpxxn/blink/application/category"
 	appeventing "github.com/lpxxn/blink/application/eventing"
-	appmoderation "github.com/lpxxn/blink/application/moderation"
 	domaincategory "github.com/lpxxn/blink/domain/category"
 	domainpost "github.com/lpxxn/blink/domain/post"
 )
@@ -33,6 +32,7 @@ type Service struct {
 	Categories   domaincategory.Repository
 	NewID        func() int64
 	NotifyEvents appeventing.NotificationPublisher // optional; appeal / moderation requests
+	SensitiveScan appeventing.PostSensitiveScanPublisher // optional; async scan after publish
 }
 
 func (s *Service) validateCategory(ctx context.Context, categoryID *int64) error {
@@ -72,12 +72,6 @@ func (s *Service) Create(ctx context.Context, authorID int64, body string, categ
 	if draft {
 		status = domainpost.StatusDraft
 	}
-	if !draft {
-		words := appmoderation.SensitiveWords()
-		if hits := appmoderation.FindSensitiveHits(body, words); len(hits) > 0 {
-			return nil, appmoderation.ErrSensitiveWithHits(hits)
-		}
-	}
 	modFlag := domainpost.ModerationNormal
 	modNote := ""
 	p := &domainpost.Post{
@@ -95,7 +89,14 @@ func (s *Service) Create(ctx context.Context, authorID int64, body string, categ
 	if err := s.Posts.Create(ctx, p); err != nil {
 		return nil, err
 	}
-	return p, nil
+	created, err := s.Posts.GetByID(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	if !draft && created != nil && s.SensitiveScan != nil {
+		_ = s.SensitiveScan.PublishPostSensitiveScan(ctx, created.ID, created.UserID, created.UpdatedAt.UTC().UnixNano(), "create")
+	}
+	return created, nil
 }
 
 // GetByID loads a post by id (any state); for notifications / internal use.
@@ -162,10 +163,6 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 		p.ModerationNote = adminTakedownNote
 	} else {
 		if p.Status == domainpost.StatusPublished {
-			w := appmoderation.SensitiveWords()
-			if hits := appmoderation.FindSensitiveHits(p.Body, w); len(hits) > 0 {
-				return nil, appmoderation.ErrSensitiveWithHits(hits)
-			}
 			p.ModerationFlag = domainpost.ModerationNormal
 			p.ModerationNote = ""
 		} else {
@@ -176,7 +173,14 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 	if err := s.Posts.Update(ctx, p); err != nil {
 		return nil, err
 	}
-	return p, nil
+	updated, err := s.Posts.GetByID(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	if updated != nil && updated.Status == domainpost.StatusPublished && updated.ModerationFlag == domainpost.ModerationNormal && s.SensitiveScan != nil {
+		_ = s.SensitiveScan.PublishPostSensitiveScan(ctx, updated.ID, updated.UserID, updated.UpdatedAt.UTC().UnixNano(), "patch")
+	}
+	return updated, nil
 }
 
 func (s *Service) Delete(ctx context.Context, authorID, postID int64) error {

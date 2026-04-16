@@ -30,12 +30,16 @@ func (createPostTestCatRepo) Count(context.Context) (int64, error) { panic("ni")
 
 type createPostTestPostRepo struct {
 	lastCreated *domainpost.Post
+	byID        map[int64]*domainpost.Post
 }
 
 func (createPostTestPostRepo) Update(context.Context, *domainpost.Post) error   { panic("ni") }
 func (createPostTestPostRepo) SoftDelete(context.Context, int64) error            { panic("ni") }
-func (createPostTestPostRepo) GetByID(context.Context, int64) (*domainpost.Post, error) {
-	panic("ni")
+func (r *createPostTestPostRepo) GetByID(_ context.Context, id int64) (*domainpost.Post, error) {
+	if r.byID == nil || r.byID[id] == nil {
+		return nil, domainpost.ErrNotFound
+	}
+	return r.byID[id], nil
 }
 func (createPostTestPostRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
@@ -53,6 +57,18 @@ func (createPostTestPostRepo) CountCreatedSince(context.Context, time.Time) (int
 
 func (r *createPostTestPostRepo) Create(_ context.Context, p *domainpost.Post) error {
 	r.lastCreated = p
+	now := time.Now().UTC()
+	cp := *p
+	if cp.CreatedAt.IsZero() {
+		cp.CreatedAt = now
+	}
+	if cp.UpdatedAt.IsZero() {
+		cp.UpdatedAt = now
+	}
+	if r.byID == nil {
+		r.byID = map[int64]*domainpost.Post{}
+	}
+	r.byID[p.ID] = &cp
 	return nil
 }
 

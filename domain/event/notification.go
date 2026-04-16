@@ -12,4 +12,5 @@ const (
 	NotificationPostFlagged     = "post_flagged"
 	NotificationAppealSubmitted = "appeal_submitted"
 	NotificationAppealResolved  = "appeal_resolved"
+	NotificationSensitiveHit    = "sensitive_hit"
 )

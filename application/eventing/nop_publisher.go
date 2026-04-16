@@ -21,6 +21,10 @@ func (NopNotificationPublisher) PublishPostFlagged(context.Context, int64, int64
 	return nil
 }
 
+func (NopNotificationPublisher) PublishSensitiveHitForAdmins(context.Context, int64, int64, []string) error {
+	return nil
+}
+
 func (NopNotificationPublisher) PublishAppealSubmitted(context.Context, int64, int64, string, string) error {
 	return nil
 }

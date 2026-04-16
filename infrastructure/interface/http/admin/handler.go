@@ -448,3 +448,41 @@ func (s *Server) ListPostReplies(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, httpapi.RepliesPageJSON{Replies: out, NextCursor: next})
 }
+
+type sensitivePostModeJSON struct {
+	Mode string `json:"mode"`
+}
+
+func (s *Server) GetSensitivePostMode(c *gin.Context) {
+	mode, err := s.Admin.GetSensitivePostMode(c.Request.Context())
+	if err != nil {
+		if errors.Is(err, appadmin.ErrSettingsNotConfigured) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "settings not configured"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, sensitivePostModeJSON{Mode: mode})
+}
+
+func (s *Server) SetSensitivePostMode(c *gin.Context) {
+	var body sensitivePostModeJSON
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := s.Admin.SetSensitivePostMode(c.Request.Context(), body.Mode); err != nil {
+		if errors.Is(err, appadmin.ErrSettingsNotConfigured) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "settings not configured"})
+			return
+		}
+		if errors.Is(err, appadmin.ErrInvalidSetting) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mode"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.AbortWithStatus(http.StatusNoContent)
+}
