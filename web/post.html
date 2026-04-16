@@ -89,6 +89,50 @@
     function showPost(p) {
       var root = document.getElementById('post');
       root.innerHTML = '';
+      var mf = p.moderation_flag != null ? Number(p.moderation_flag) : 0;
+      if (mf === 1 || mf === 2) {
+        var ban = document.createElement('div');
+        ban.className = 'banner-warn';
+        ban.style.marginBottom = '0.75rem';
+        var title = document.createElement('strong');
+        title.textContent = mf === 2 ? '该帖已被管理员下架' : '该帖已被标记为违规，公开流中暂不展示';
+        ban.appendChild(title);
+        var lbl = document.createElement('p');
+        lbl.className = 'field-hint';
+        lbl.style.margin = '0.35rem 0 0';
+        lbl.textContent = mf === 2 ? '原因' : '说明';
+        ban.appendChild(lbl);
+        var pre = document.createElement('pre');
+        pre.style.margin = '0';
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.style.fontFamily = 'inherit';
+        pre.style.fontSize = '0.9rem';
+        var noteRaw = (p.moderation_note && String(p.moderation_note).trim()) ? String(p.moderation_note).trim() : '';
+        pre.textContent = noteRaw ? BlinkMD.formatModerationNote(noteRaw) : '（未填写）';
+        ban.appendChild(pre);
+        if (Number(p.appeal_status) === 1) {
+          var pend = document.createElement('p');
+          pend.className = 'ok';
+          pend.style.margin = '0.75rem 0 0';
+          pend.textContent = mf === 2
+            ? '你的申诉或复核申请正在等待管理员处理。'
+            : '你的恢复申请正在等待管理员处理。';
+          ban.appendChild(pend);
+        }
+        if (myUserId && sid(p.user_id) === myUserId) {
+          var hint = document.createElement('p');
+          hint.className = 'field-hint';
+          hint.style.marginTop = '0.5rem';
+          hint.appendChild(document.createTextNode('如需修改内容或提交申请，请前往 '));
+          var edL = document.createElement('a');
+          edL.href = '/web/edit-post.html?id=' + encodeURIComponent(sid(p.id));
+          edL.textContent = '编辑页';
+          hint.appendChild(edL);
+          hint.appendChild(document.createTextNode('。'));
+          ban.appendChild(hint);
+        }
+        root.appendChild(ban);
+      }
       var meta = document.createElement('div');
       meta.className = 'meta';
       meta.textContent = '#' + sid(p.id) + ' · ' + authorLabel(p) + ' · 状态 ' + sid(p.status);

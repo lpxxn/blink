@@ -39,6 +39,22 @@
       </div>
     </div>
 
+    <div id="flagged-banner" class="banner-warn" hidden>
+      <strong>该帖已被标记为违规，公开流中暂不展示</strong>
+      <p class="field-hint" style="margin:0.35rem 0 0">说明</p>
+      <pre id="flagged-mod-reason" style="margin:0;white-space:pre-wrap;font-family:inherit;font-size:0.9rem"></pre>
+      <p id="flagged-appeal-pending" class="ok" style="margin:0.75rem 0 0" hidden>你的恢复申请正在等待管理员处理。</p>
+      <div id="flagged-appeal-actions" hidden>
+        <div class="field" style="margin-bottom:0.75rem">
+          <label for="flagged-restore-msg">申请恢复理由（必填）</label>
+          <textarea id="flagged-restore-msg" rows="3" placeholder="请说明修改内容或申诉理由，供管理员审核。"></textarea>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="btn-flagged-restore">提交恢复申请</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card" id="form-card" hidden>
       <div class="field">
         <label for="cat">分类</label>
@@ -106,23 +122,41 @@
       m.textContent = t || '';
     }
 
-    function updateRemovalUI(p) {
-      var ban = document.getElementById('removed-banner');
-      if (!ban) return;
-      if (p.moderation_flag !== 2) {
-        ban.hidden = true;
+    function updateModerationUI(p) {
+      var removed = document.getElementById('removed-banner');
+      var flagged = document.getElementById('flagged-banner');
+      if (removed) removed.hidden = true;
+      if (flagged) flagged.hidden = true;
+      if (!p) return;
+      var mf = p.moderation_flag != null ? Number(p.moderation_flag) : 0;
+      if (mf === 2 && removed) {
+        removed.hidden = false;
+        document.getElementById('mod-reason').textContent = (p.moderation_note && String(p.moderation_note).trim())
+          ? BlinkMD.formatModerationNote(p.moderation_note) : '（未填写）';
+        var pending = document.getElementById('appeal-pending');
+        var actions = document.getElementById('appeal-actions');
+        if (p.appeal_status === 1) {
+          pending.hidden = false;
+          actions.hidden = true;
+        } else {
+          pending.hidden = true;
+          actions.hidden = false;
+        }
         return;
       }
-      ban.hidden = false;
-      document.getElementById('mod-reason').textContent = (p.moderation_note && String(p.moderation_note).trim()) ? p.moderation_note : '（未填写）';
-      var pending = document.getElementById('appeal-pending');
-      var actions = document.getElementById('appeal-actions');
-      if (p.appeal_status === 1) {
-        pending.hidden = false;
-        actions.hidden = true;
-      } else {
-        pending.hidden = true;
-        actions.hidden = false;
+      if (mf === 1 && flagged) {
+        flagged.hidden = false;
+        document.getElementById('flagged-mod-reason').textContent = (p.moderation_note && String(p.moderation_note).trim())
+          ? BlinkMD.formatModerationNote(p.moderation_note) : '（未填写）';
+        var fp = document.getElementById('flagged-appeal-pending');
+        var fa = document.getElementById('flagged-appeal-actions');
+        if (p.appeal_status === 1) {
+          fp.hidden = false;
+          fa.hidden = true;
+        } else {
+          fp.hidden = true;
+          fa.hidden = false;
+        }
       }
     }
 
@@ -147,7 +181,7 @@
         })
         .then(function (p) {
           showOk(kind === 'appeal' ? '申诉已提交' : '已申请复核');
-          updateRemovalUI(p);
+          updateModerationUI(p);
         })
         .catch(function (e) {
           showErr(String(e));
@@ -156,6 +190,35 @@
 
     document.getElementById('btn-appeal').onclick = function () { submitModReq('appeal'); };
     document.getElementById('btn-resubmit').onclick = function () { submitModReq('resubmit'); };
+
+    function submitFlaggedRestore() {
+      showErr('');
+      var msg = document.getElementById('flagged-restore-msg').value.trim();
+      if (!msg) {
+        showErr('申请恢复时请填写理由');
+        return;
+      }
+      fetch(API + '/api/posts/' + encodeURIComponent(id) + '/moderation_request', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'resubmit', message: msg })
+      })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (r.status === 409) return r.json().then(function (d) { throw new Error(d.error || '已有待处理申请'); });
+          if (!r.ok) return r.text().then(function (t) { throw new Error(t || String(r.status)); });
+          return r.json();
+        })
+        .then(function (p) {
+          showOk('恢复申请已提交');
+          updateModerationUI(p);
+        })
+        .catch(function (e) {
+          showErr(String(e));
+        });
+    }
+    document.getElementById('btn-flagged-restore').onclick = function () { submitFlaggedRestore(); };
 
     if (!id) {
       showErr('缺少 id');
@@ -208,7 +271,7 @@
             }
           });
           document.getElementById('form-card').hidden = false;
-          updateRemovalUI(p);
+          updateModerationUI(p);
         })
         .catch(function (e) {
           showErr(String(e));
@@ -278,6 +341,9 @@
         .then(function (p) {
           if (p && p.status != null) {
             document.getElementById('status').value = String(p.status);
+          }
+          if (p && p.moderation_flag != null) {
+            updateModerationUI(p);
           }
           showOk(okMsg || '已保存');
         })

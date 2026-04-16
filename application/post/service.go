@@ -125,6 +125,7 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 		return nil, domainpost.ErrNotFound
 	}
 	wasRemoved := p.ModerationFlag == domainpost.ModerationRemoved
+	prevModerationFlag := p.ModerationFlag
 	adminTakedownNote := p.ModerationNote
 	if patch.Body != nil {
 		b := strings.TrimSpace(*patch.Body)
@@ -161,6 +162,8 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 	if wasRemoved {
 		p.ModerationFlag = domainpost.ModerationRemoved
 		p.ModerationNote = adminTakedownNote
+	} else if prevModerationFlag == domainpost.ModerationFlagged {
+		// Keep admin/system violation state until appeal resolved or admin clears.
 	} else {
 		if p.Status == domainpost.StatusPublished {
 			p.ModerationFlag = domainpost.ModerationNormal
@@ -177,7 +180,7 @@ func (s *Service) Patch(ctx context.Context, authorID, postID int64, patch Patch
 	if err != nil {
 		return nil, err
 	}
-	if updated != nil && updated.Status == domainpost.StatusPublished && updated.ModerationFlag == domainpost.ModerationNormal && s.SensitiveScan != nil {
+	if updated != nil && updated.Status == domainpost.StatusPublished && updated.ModerationFlag != domainpost.ModerationRemoved && s.SensitiveScan != nil {
 		_ = s.SensitiveScan.PublishPostSensitiveScan(ctx, updated.ID, updated.UserID, updated.UpdatedAt.UTC().UnixNano(), "patch")
 	}
 	return updated, nil
@@ -271,8 +274,8 @@ func (s *Service) ListMine(ctx context.Context, userID int64, includeDraft bool,
 	return s.Posts.ListByUserID(ctx, userID, includeDraft, beforeID, limit)
 }
 
-// SubmitModerationRequest: author asks for review after admin removal (appeal or resubmit after edit).
-// kind is "appeal" (requires non-empty message) or "resubmit" (message optional).
+// SubmitModerationRequest: author asks for review after removal (appeal/resubmit) or after violation flag (resubmit + reason).
+// kind is "appeal" (removed only; requires non-empty message) or "resubmit" (removed: message optional with default; flagged: message required).
 func (s *Service) SubmitModerationRequest(ctx context.Context, authorID, postID int64, kind, message string) (*domainpost.Post, error) {
 	kind = strings.TrimSpace(strings.ToLower(kind))
 	message = strings.TrimSpace(message)
@@ -281,12 +284,6 @@ func (s *Service) SubmitModerationRequest(ctx context.Context, authorID, postID 
 	}
 	if kind != "appeal" && kind != "resubmit" {
 		return nil, ErrInvalidInput
-	}
-	if kind == "appeal" && message == "" {
-		return nil, ErrInvalidInput
-	}
-	if kind == "resubmit" && message == "" {
-		message = "（已修改内容，申请复核上架）"
 	}
 	p, err := s.Posts.GetByID(ctx, postID)
 	if err != nil {
@@ -298,7 +295,22 @@ func (s *Service) SubmitModerationRequest(ctx context.Context, authorID, postID 
 	if p.UserID != authorID {
 		return nil, ErrForbidden
 	}
-	if p.ModerationFlag != domainpost.ModerationRemoved {
+	switch p.ModerationFlag {
+	case domainpost.ModerationRemoved:
+		if kind == "appeal" && message == "" {
+			return nil, ErrInvalidInput
+		}
+		if kind == "resubmit" && message == "" {
+			message = "（已修改内容，申请复核上架）"
+		}
+	case domainpost.ModerationFlagged:
+		if kind != "resubmit" {
+			return nil, ErrInvalidInput
+		}
+		if message == "" {
+			return nil, ErrInvalidInput
+		}
+	default:
 		return nil, ErrAppealNotAllowed
 	}
 	if p.AppealStatus == domainpost.AppealPending {

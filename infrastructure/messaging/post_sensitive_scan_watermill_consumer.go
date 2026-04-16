@@ -70,8 +70,8 @@ func handlePostSensitiveScan(ctx context.Context, admin *appadmin.Service, paylo
 	if p == nil || p.DeletedAt != nil {
 		return nil
 	}
-	// Only act on currently published + normal posts.
-	if p.Status != domainpost.StatusPublished || p.ModerationFlag != domainpost.ModerationNormal {
+	// Published, not admin-removed (scan normal posts and re-scan violation-flagged posts).
+	if p.Status != domainpost.StatusPublished || p.ModerationFlag == domainpost.ModerationRemoved {
 		return nil
 	}
 
@@ -83,6 +83,7 @@ func handlePostSensitiveScan(ctx context.Context, admin *appadmin.Service, paylo
 	words := appmoderation.SensitiveWords()
 	hits := appmoderation.FindSensitiveHits(p.Body, words)
 	if len(hits) == 0 {
+		// Do not auto-clear ModerationFlagged; authors use moderation_request + admin resolve.
 		return nil
 	}
 	if admin.NotifyEvents != nil {
@@ -93,7 +94,7 @@ func handlePostSensitiveScan(ctx context.Context, admin *appadmin.Service, paylo
 	if m, err := admin.GetSensitivePostMode(ctx); err == nil && strings.TrimSpace(m) != "" {
 		mode = m
 	}
-	note := "sensitive_hit: " + strings.Join(hits, ", ")
+	note := appmoderation.ModerationNoteForSensitiveHits(hits)
 	switch mode {
 	case appadmin.SensitivePostModeAutoRemove:
 		flag := domainpost.ModerationRemoved

@@ -100,6 +100,43 @@ func (r *patchStubPostRepo) GetByID(context.Context, int64) (*domainpost.Post, e
 
 func (patchStubPostRepo) Update(context.Context, *domainpost.Post) error { return nil }
 
+type scanCountStub struct{ n int }
+
+func (s *scanCountStub) PublishPostSensitiveScan(context.Context, int64, int64, int64, string) error {
+	s.n++
+	return nil
+}
+
+type modReqPostRepo struct{ p *domainpost.Post }
+
+func (r *modReqPostRepo) GetByID(_ context.Context, _ int64) (*domainpost.Post, error) {
+	if r.p == nil {
+		return nil, domainpost.ErrNotFound
+	}
+	cp := *r.p
+	return &cp, nil
+}
+func (r *modReqPostRepo) Update(_ context.Context, p *domainpost.Post) error {
+	cp := *p
+	r.p = &cp
+	return nil
+}
+func (modReqPostRepo) Create(context.Context, *domainpost.Post) error         { panic("ni") }
+func (modReqPostRepo) SoftDelete(context.Context, int64) error              { panic("ni") }
+func (modReqPostRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
+func (modReqPostRepo) ListByUserID(context.Context, int64, bool, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
+func (modReqPostRepo) AdminList(context.Context, domainpost.AdminListFilters, int, int) ([]*domainpost.Post, int64, error) {
+	panic("ni")
+}
+func (modReqPostRepo) Count(context.Context) (int64, error) { panic("ni") }
+func (modReqPostRepo) CountCreatedSince(context.Context, time.Time) (int64, error) {
+	panic("ni")
+}
+
 func TestService_Create_rejectsUnknownCategory(t *testing.T) {
 	ctx := context.Background()
 	pr := &stubPostRepo{}
@@ -190,6 +227,80 @@ func TestService_Patch_blocksSensitiveWhenPublished(t *testing.T) {
 	b := "hello x world"
 	_, err := svc.Patch(ctx, 1, 1, Patch{Body: &b})
 	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestService_Patch_preservesModerationFlagged(t *testing.T) {
+	ctx := context.Background()
+	base := &domainpost.Post{
+		ID: 1, UserID: 1, Body: "ok", Status: domainpost.StatusPublished,
+		ModerationFlag: domainpost.ModerationFlagged, ModerationNote: "hit", Images: []string{},
+	}
+	svc := &Service{
+		Posts: &patchStubPostRepo{p: base},
+		NewID: func() int64 { return 1 },
+	}
+	b := "edited"
+	out, err := svc.Patch(ctx, 1, 1, Patch{Body: &b})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.ModerationFlag != domainpost.ModerationFlagged || out.ModerationNote != "hit" {
+		t.Fatalf("expected flagged preserved, got flag=%d note=%q", out.ModerationFlag, out.ModerationNote)
+	}
+}
+
+func TestService_Patch_enqueuesSensitiveScanWhenFlaggedPublished(t *testing.T) {
+	ctx := context.Background()
+	base := &domainpost.Post{
+		ID: 1, UserID: 1, Body: "ok", Status: domainpost.StatusPublished,
+		ModerationFlag: domainpost.ModerationFlagged, Images: []string{},
+	}
+	stub := &scanCountStub{}
+	svc := &Service{
+		Posts:         &patchStubPostRepo{p: base},
+		NewID:         func() int64 { return 1 },
+		SensitiveScan: stub,
+	}
+	body := "x"
+	if _, err := svc.Patch(ctx, 1, 1, Patch{Body: &body}); err != nil {
+		t.Fatal(err)
+	}
+	if stub.n != 1 {
+		t.Fatalf("scan publishes: got %d want 1", stub.n)
+	}
+}
+
+func TestService_SubmitModerationRequest_flagged(t *testing.T) {
+	ctx := context.Background()
+	repo := &modReqPostRepo{p: &domainpost.Post{
+		ID: 1, UserID: 1, ModerationFlag: domainpost.ModerationFlagged, AppealStatus: domainpost.AppealNone,
+	}}
+	svc := &Service{Posts: repo, NewID: func() int64 { return 1 }}
+
+	if _, err := svc.SubmitModerationRequest(ctx, 1, 1, "appeal", "please"); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("appeal on flagged: err=%v", err)
+	}
+	if _, err := svc.SubmitModerationRequest(ctx, 1, 1, "resubmit", ""); !errors.Is(err, ErrInvalidInput) {
+		t.Fatalf("empty message: err=%v", err)
+	}
+	out, err := svc.SubmitModerationRequest(ctx, 1, 1, "resubmit", "reason")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.AppealStatus != domainpost.AppealPending || out.AppealBody != "reason" {
+		t.Fatalf("unexpected: %+v", out)
+	}
+}
+
+func TestService_SubmitModerationRequest_normalNotAllowed(t *testing.T) {
+	ctx := context.Background()
+	repo := &modReqPostRepo{p: &domainpost.Post{
+		ID: 1, UserID: 1, ModerationFlag: domainpost.ModerationNormal,
+	}}
+	svc := &Service{Posts: repo, NewID: func() int64 { return 1 }}
+	if _, err := svc.SubmitModerationRequest(ctx, 1, 1, "resubmit", "x"); !errors.Is(err, ErrAppealNotAllowed) {
 		t.Fatalf("err=%v", err)
 	}
 }

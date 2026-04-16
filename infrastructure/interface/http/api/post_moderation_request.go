@@ -43,7 +43,7 @@ func (s *Server) SubmitModerationRequest(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, apppost.ErrAppealNotAllowed) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "仅在下架状态下可提交申诉或复核申请"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "仅在下架或违规标记状态下可提交申请"})
 			return
 		}
 		if errors.Is(err, apppost.ErrAppealPending) {
@@ -51,7 +51,7 @@ func (s *Server) SubmitModerationRequest(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, apppost.ErrInvalidInput) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "请求无效：kind 须为 appeal 或 resubmit；申诉须填写说明"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "请求无效：下架帖可 appeal/resubmit；违规帖仅 resubmit 且须填写恢复理由"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

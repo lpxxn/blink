@@ -65,10 +65,24 @@
     return t.slice(0, maxLen) + '…';
   }
 
+  /** Author-facing moderation_note: legacy prefix "sensitive_hit:" → 有敏感词： */
+  function formatModerationNote(note) {
+    if (note == null) return '';
+    var s = String(note).trim();
+    if (!s) return '';
+    var legacy = /^sensitive_hit:\s*/i;
+    if (legacy.test(s)) {
+      s = '有敏感词：' + s.replace(legacy, '').trim();
+      s = s.replace(/, /g, '、');
+    }
+    return s;
+  }
+
   global.BlinkMD = {
     parse: parse,
     plainSnippet: plainSnippet,
     insertImageMarkdown: insertImageMarkdown,
     mdImageUrl: mdImageUrl,
+    formatModerationNote: formatModerationNote,
   };
 })(typeof window !== 'undefined' ? window : this);

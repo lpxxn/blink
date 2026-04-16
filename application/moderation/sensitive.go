@@ -40,17 +40,25 @@ func FindSensitiveHits(text string, words []string) []string {
 
 const maxModerationNoteLen = 2048
 
+// ModerationNoteForSensitiveHits builds moderation_note when a post hits configured sensitive words.
+func ModerationNoteForSensitiveHits(hits []string) string {
+	if len(hits) == 0 {
+		return ""
+	}
+	note := "有敏感词：" + strings.Join(hits, "、")
+	if len(note) > maxModerationNoteLen {
+		note = note[:maxModerationNoteLen]
+	}
+	return note
+}
+
 // PostModerationFromHits returns moderation_flag and moderation_note for posts.
 // No hits → 审核通过 (ModerationNormal); otherwise flagged for review.
 func PostModerationFromHits(hits []string) (flag int, note string) {
 	if len(hits) == 0 {
 		return domainpost.ModerationNormal, ""
 	}
-	note = "sensitive_hit: " + strings.Join(hits, ", ")
-	if len(note) > maxModerationNoteLen {
-		note = note[:maxModerationNoteLen]
-	}
-	return domainpost.ModerationFlagged, note
+	return domainpost.ModerationFlagged, ModerationNoteForSensitiveHits(hits)
 }
 
 // ReplyContainsSensitive reports whether the reply body matches any configured word.

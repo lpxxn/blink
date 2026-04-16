@@ -44,7 +44,8 @@ func TestPostModerationFromHits_pass(t *testing.T) {
 
 func TestPostModerationFromHits_flag(t *testing.T) {
 	f, n := PostModerationFromHits([]string{"a", "b"})
-	if f != 1 || n == "" {
-		t.Fatalf("flag=%d note=%q", f, n)
+	want := "有敏感词：a、b"
+	if f != 1 || n != want {
+		t.Fatalf("flag=%d note=%q want %q", f, n, want)
 	}
 }
