@@ -131,6 +131,20 @@
           hint.appendChild(document.createTextNode('。'));
           ban.appendChild(hint);
         }
+        if (isSuperAdmin()) {
+          var adminRow = document.createElement('div');
+          adminRow.className = 'btn-row';
+          adminRow.style.marginTop = '0.75rem';
+          var admBtn = document.createElement('button');
+          admBtn.type = 'button';
+          admBtn.className = 'btn btn-primary btn-sm';
+          admBtn.textContent = mf === 2 ? '管理员：恢复上架' : '管理员：解除违规';
+          admBtn.onclick = function () {
+            adminRestorePost(sid(p.id), mf);
+          };
+          adminRow.appendChild(admBtn);
+          ban.appendChild(adminRow);
+        }
         root.appendChild(ban);
       }
       var meta = document.createElement('div');
@@ -176,6 +190,40 @@
         if (d > 40) break;
       }
       return d;
+    }
+
+    function adminRestorePost(postId, mf) {
+      var msg = mf === 2
+        ? '确定恢复该帖上架？将清除下架标记、清空备注，并把状态设为「已发布」。'
+        : '确定解除违规标记？将清空备注；不改变帖子发布/草稿状态。';
+      if (!window.confirm(msg)) return;
+      document.getElementById('err').textContent = '';
+      var body = { moderation_flag: 0, moderation_note: '' };
+      if (mf === 2) {
+        body.status = 1;
+      }
+      fetch(API + '/admin/api/posts/' + encodeURIComponent(postId), {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+        .then(function (r) {
+          if (r.status === 401) throw new Error('请先登录');
+          if (r.status === 403) throw new Error('需要 super_admin');
+          if (!r.ok) {
+            return r.text().then(function (t) {
+              throw new Error(t || String(r.status));
+            });
+          }
+          return r.json();
+        })
+        .then(function () {
+          loadPost();
+        })
+        .catch(function (e) {
+          document.getElementById('err').textContent = String(e);
+        });
     }
 
     function loadPost() {

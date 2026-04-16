@@ -160,6 +160,10 @@ func (s *Service) PatchPost(ctx context.Context, postID int64, moderationFlag *i
 			if *moderationFlag == domainpost.ModerationRemoved {
 				p.Status = domainpost.StatusHidden
 			}
+			if *moderationFlag == domainpost.ModerationNormal {
+				p.AppealStatus = domainpost.AppealNone
+				p.AppealBody = ""
+			}
 		default:
 			return nil, ErrInvalidModeration
 		}
