@@ -5,145 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>发帖 — Blink</title>
   <link rel="stylesheet" href="/web/common.css" />
+  <link rel="stylesheet" href="/web/assets/css/pages/compose.css" />
 </head>
 <body class="blink-page">
   <div class="shell shell-wide">
-    <nav class="top-nav">
-      <a class="brand" href="/web/index.html">Blink</a>
-      <a href="/web/index.html">首页</a>
-      <a href="/web/register.html">注册</a>
-      <a href="/web/feed.html">帖子流</a>
-      <a href="/web/compose.html" class="nav-active">发帖</a>
-      <a href="/web/mine.html">我的</a>
-      <a href="/web/messages.html">消息</a>
-      <a href="/web/admin.html" data-blink-nav="admin" hidden>管理</a>
-    </nav>
+    <blink-nav active="compose"></blink-nav>
 
     <h1 class="page-title">发帖</h1>
+    <p class="page-lead">
+      支持 Markdown；工具条 / 键盘快捷键 / 拖拽或粘贴图片上传。
+      正文里的 <code>![图片](…)</code> 与右侧图片面板保持同步——在面板点「×」会自动清理正文里对应的引用。
+    </p>
+
+    <div id="banner-mount"></div>
+
     <div class="card">
-      <p id="msg" class="err" role="alert"></p>
-      <div class="field">
-        <label for="cat">分类</label>
-        <select id="cat"><option value="">（未分类）</option></select>
-      </div>
-      <div class="field">
-        <label for="body">正文（Markdown）</label>
-        <textarea id="body" placeholder="支持标题、列表、**粗体**、`代码`、[链接](https://example.com)…"></textarea>
-        <p class="field-hint">保存为 Markdown 原文。图片：上传成功后会自动插入 <code>![图片](地址)</code>；也可手写 <code>![说明](/uploads/…)</code>。下方可预览。</p>
-        <div class="btn-row">
-          <button type="button" class="btn btn-secondary btn-sm" id="md-preview-btn">预览渲染</button>
-        </div>
-        <div id="md-preview-wrap" class="md-preview-wrap" hidden>
-          <div class="field-hint" style="margin-top:0">预览</div>
-          <div id="md-preview" class="markdown-body"></div>
-        </div>
-      </div>
-      <div class="field">
-        <label for="file">图片（上传后写入正文 Markdown）</label>
-        <input type="file" id="file" accept="image/*" />
-        <div class="btn-row" style="margin-top:0.5rem">
-          <button type="button" class="btn btn-secondary" id="upload">上传所选图片</button>
-        </div>
-        <div id="thumbs"></div>
-      </div>
-      <div class="btn-row">
-        <button type="button" class="btn btn-primary" id="pub">发布</button>
-        <button type="button" class="btn btn-secondary" id="draft">保存草稿</button>
-      </div>
+      <div id="editor-mount"></div>
     </div>
   </div>
+
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
-  <script src="/web/md.js"></script>
-  <script>
-    var API = '';
-    var images = [];
-
-    function loadCats() {
-      fetch(API + '/api/categories', { credentials: 'include' })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var s = document.getElementById('cat');
-          (d.categories || []).forEach(function (c) {
-            var o = document.createElement('option');
-            o.value = String(c.id);
-            o.textContent = c.name;
-            s.appendChild(o);
-          });
-        });
-    }
-
-    document.getElementById('upload').onclick = function () {
-      document.getElementById('msg').textContent = '';
-      document.getElementById('msg').className = 'err';
-      var f = document.getElementById('file').files[0];
-      if (!f) return;
-      var fd = new FormData();
-      fd.append('file', f);
-      fetch(API + '/api/uploads', { method: 'POST', credentials: 'include', body: fd })
-        .then(function (r) {
-          if (r.status === 401) throw new Error('请先登录');
-          if (!r.ok) throw new Error('上传失败 ' + r.status);
-          return r.json();
-        })
-        .then(function (d) {
-          images.push(d.url);
-          var img = document.createElement('img');
-          img.src = d.url;
-          document.getElementById('thumbs').appendChild(img);
-          BlinkMD.insertImageMarkdown(document.getElementById('body'), d.url);
-        })
-        .catch(function (e) {
-          document.getElementById('msg').textContent = String(e);
-        });
-    };
-
-    function submit(draft) {
-      document.getElementById('msg').textContent = '';
-      document.getElementById('msg').className = 'err';
-      var cat = document.getElementById('cat').value;
-      var payload = {
-        body: document.getElementById('body').value,
-        images: images,
-        draft: draft
-      };
-      if (cat) payload.category_id = cat;
-      fetch(API + '/api/posts', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(function (r) {
-          if (r.status === 401) throw new Error('请先登录');
-          if (!r.ok) {
-            return r.text().then(function (t) {
-              throw new Error(t || String(r.status));
-            });
-          }
-          return r.json();
-        })
-        .then(function (p) {
-          document.getElementById('msg').className = 'ok';
-          document.getElementById('msg').textContent = '已保存，跳转…';
-          location.href = '/web/post.html?id=' + encodeURIComponent(p.id);
-        })
-        .catch(function (e) {
-          document.getElementById('msg').className = 'err';
-          document.getElementById('msg').textContent = String(e);
-        });
-    }
-
-    document.getElementById('md-preview-btn').onclick = function () {
-      var w = document.getElementById('md-preview-wrap');
-      w.hidden = false;
-      document.getElementById('md-preview').innerHTML = BlinkMD.parse(document.getElementById('body').value);
-    };
-
-    document.getElementById('pub').onclick = function () { submit(false); };
-    document.getElementById('draft').onclick = function () { submit(true); };
-    loadCats();
-  </script>
-  <script src="/web/nav.js"></script>
+  <script src="/web/assets/js/md.js"></script>
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/ui.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
+  <script src="/web/assets/js/post-editor.js"></script>
+  <script src="/web/assets/js/pages/compose.js"></script>
 </body>
 </html>
