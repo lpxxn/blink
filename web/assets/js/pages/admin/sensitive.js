@@ -67,11 +67,11 @@
     const tableWrap = el('div', { class: 'admin-table-wrap' }, [
       el('table', { class: 'admin-table' }, [
         el('thead', {}, el('tr', {}, [
-          el('th', {}, 'ID'),
+          el('th', { class: 'nowrap' }, 'ID'),
           el('th', {}, '词'),
-          el('th', {}, '启用'),
-          el('th', {}, '更新时间'),
-          el('th', { style: 'text-align:right' }, '操作'),
+          el('th', { class: 'nowrap' }, '启用'),
+          el('th', { class: 'nowrap' }, '更新时间'),
+          el('th', { class: 'col-actions' }, '操作'),
         ])),
         tbody,
       ]),
@@ -132,12 +132,12 @@
     function renderRow(w) {
       const tr = el('tr');
       const enabled = !!w.enabled;
-      tr.appendChild(el('td', { class: 'mono' }, String(w.id)));
+      tr.appendChild(el('td', { class: 'mono nowrap' }, String(w.id)));
       tr.appendChild(el('td', {}, w.word || ''));
-      tr.appendChild(el('td', {}, el('span', {
+      tr.appendChild(el('td', { class: 'nowrap' }, el('span', {
         class: 'chip ' + (enabled ? 'chip-ok' : 'chip-muted'),
       }, enabled ? '启用' : '停用')));
-      tr.appendChild(el('td', {}, fmtTime(w.updated_at)));
+      tr.appendChild(el('td', { class: 'nowrap' }, fmtTime(w.updated_at)));
       const actions = el('div', { class: 'row-actions' }, [
         el('button', {
           type: 'button', class: 'btn btn-secondary btn-sm',
@@ -148,7 +148,7 @@
           onClick: () => remove(w),
         }, '删除'),
       ]);
-      tr.appendChild(el('td', {}, actions));
+      tr.appendChild(el('td', { class: 'col-actions' }, actions));
       return tr;
     }
 

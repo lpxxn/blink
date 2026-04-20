@@ -8,16 +8,7 @@
 </head>
 <body class="blink-page">
   <div class="shell shell-wide">
-    <nav class="top-nav">
-      <a class="brand" href="/web/index.html">Blink</a>
-      <a href="/web/index.html" class="nav-active">首页</a>
-      <a href="/web/register.html">注册</a>
-      <a href="/web/feed.html">帖子流</a>
-      <a href="/web/compose.html">发帖</a>
-      <a href="/web/mine.html">我的</a>
-      <a href="/web/messages.html">消息</a>
-      <a href="/web/admin.html" data-blink-nav="admin" hidden>管理</a>
-    </nav>
+    <blink-nav active="home"></blink-nav>
 
     <h1 class="page-title">轻量帖子与评论</h1>
     <p class="page-lead">演示站点：浏览动态、发帖与评论。部分操作需先登录。</p>
@@ -36,27 +27,26 @@
       <h2 class="section-title" style="margin-top:0">登录</h2>
       <p class="page-lead" style="margin-bottom:0.75rem">使用已配置的 OAuth（需环境变量与回调 URL 正确）。邮箱注册用户请选「内置账号」。</p>
       <ul class="oauth-list">
-        <li><button type="button" class="btn btn-primary" id="builtin">内置账号（builtin）</button></li>
-        <li><button type="button" class="btn btn-secondary" id="google">Google</button></li>
+        <li><button type="button" class="btn btn-primary" data-login="builtin">内置账号（builtin）</button></li>
+        <li><button type="button" class="btn btn-secondary" data-login="google">Google</button></li>
       </ul>
       <p class="field-hint" style="margin-top:1rem;margin-bottom:0">
         还没有账号？<a href="/web/register.html" style="color:var(--accent);font-weight:600;text-decoration:none">注册邮箱密码</a> 后，可用内置账号登录。
       </p>
     </div>
   </div>
+
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
   <script>
-    var API = '';
-    function login(provider) {
+    (function () {
       var next = encodeURIComponent('/web/feed.html');
-      window.location.href = '/auth/oauth/' + provider + '/login?next=' + next;
-    }
-    document.getElementById('builtin').onclick = function () {
-      login('builtin');
-    };
-    document.getElementById('google').onclick = function () {
-      login('google');
-    };
+      document.querySelectorAll('[data-login]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          window.location.href = '/auth/oauth/' + btn.dataset.login + '/login?next=' + next;
+        });
+      });
+    })();
   </script>
-  <script src="/web/nav.js"></script>
 </body>
 </html>

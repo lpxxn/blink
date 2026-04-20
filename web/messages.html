@@ -8,16 +8,7 @@
 </head>
 <body class="blink-page">
   <div class="shell shell-wide">
-    <nav class="top-nav">
-      <a class="brand" href="/web/index.html">Blink</a>
-      <a href="/web/index.html">首页</a>
-      <a href="/web/register.html">注册</a>
-      <a href="/web/feed.html">帖子流</a>
-      <a href="/web/compose.html">发帖</a>
-      <a href="/web/mine.html">我的</a>
-      <a href="/web/messages.html" class="nav-active">消息</a>
-      <a href="/web/admin.html" data-blink-nav="admin" hidden>管理</a>
-    </nav>
+    <blink-nav active="messages"></blink-nav>
 
     <h1 class="page-title">站内消息</h1>
     <p class="page-lead">评论、下架与申诉结果等会出现在这里。</p>
@@ -34,136 +25,10 @@
       </p>
     </div>
   </div>
-  <script>
-    var API = '';
-    var cursor = null;
 
-    function el(tag, text) {
-      var e = document.createElement(tag);
-      if (text) e.textContent = text;
-      return e;
-    }
-
-    function loadUnread() {
-      fetch(API + '/api/me/notifications/unread_count', { credentials: 'include' })
-        .then(function (r) {
-          if (r.status === 401) return null;
-          if (!r.ok) return null;
-          return r.json();
-        })
-        .then(function (d) {
-          var h = document.getElementById('unread-hint');
-          if (!d || d.unread_count == null) {
-            h.textContent = '';
-            return;
-          }
-          h.textContent = '未读 ' + String(d.unread_count);
-        });
-    }
-
-    function renderOne(n) {
-      var wrap = document.createElement('div');
-      wrap.className = 'notif-item' + (n.read ? '' : ' unread');
-      var head = document.createElement('div');
-      head.style.display = 'flex';
-      head.style.flexWrap = 'wrap';
-      head.style.gap = '0.35rem 0.75rem';
-      head.style.alignItems = 'baseline';
-      var t = el('strong', n.title || '通知');
-      var meta = el('span', (n.type || '') + ' · ' + (n.created_at || ''));
-      meta.style.color = 'var(--text-muted)';
-      meta.style.fontSize = '0.85rem';
-      head.appendChild(t);
-      head.appendChild(meta);
-      wrap.appendChild(head);
-      var body = el('div', n.body || '');
-      body.style.whiteSpace = 'pre-wrap';
-      body.style.marginTop = '0.35rem';
-      body.style.fontSize = '0.92rem';
-      wrap.appendChild(body);
-      if (n.ref_post_id != null && n.ref_post_id !== '') {
-        var a = document.createElement('a');
-        a.href = '/web/post.html?id=' + encodeURIComponent(String(n.ref_post_id));
-        a.textContent = '查看帖子';
-        a.style.display = 'inline-block';
-        a.style.marginTop = '0.5rem';
-        a.style.fontSize = '0.9rem';
-        wrap.appendChild(a);
-      }
-      if (!n.read) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-ghost btn-sm';
-        btn.textContent = '标为已读';
-        btn.style.marginTop = '0.35rem';
-        btn.onclick = function () {
-          fetch(API + '/api/me/notifications/' + encodeURIComponent(String(n.id)) + '/read', {
-            method: 'POST',
-            credentials: 'include'
-          })
-            .then(function (r) {
-              if (!r.ok) throw new Error('操作失败 ' + r.status);
-              n.read = true;
-              wrap.className = 'notif-item';
-              btn.remove();
-              loadUnread();
-            })
-            .catch(function (e) {
-              document.getElementById('err').textContent = String(e);
-            });
-        };
-        wrap.appendChild(btn);
-      }
-      return wrap;
-    }
-
-    function loadPage(reset) {
-      document.getElementById('err').textContent = '';
-      var url = API + '/api/me/notifications?limit=30';
-      if (!reset && cursor) url += '&cursor=' + encodeURIComponent(cursor);
-      fetch(url, { credentials: 'include' })
-        .then(function (r) {
-          if (r.status === 401) throw new Error('请先登录');
-          if (!r.ok) throw new Error('加载失败 ' + r.status);
-          return r.json();
-        })
-        .then(function (d) {
-          var list = document.getElementById('list');
-          if (reset) list.innerHTML = '';
-          (d.notifications || []).forEach(function (n) {
-            list.appendChild(renderOne(n));
-          });
-          cursor = d.next_cursor || null;
-          document.getElementById('more').hidden = !cursor;
-          if (reset && (!d.notifications || d.notifications.length === 0)) {
-            list.appendChild(el('p', '暂无消息'));
-          }
-          loadUnread();
-        })
-        .catch(function (e) {
-          document.getElementById('err').textContent = String(e);
-        });
-    }
-
-    document.getElementById('more').onclick = function () {
-      loadPage(false);
-    };
-
-    document.getElementById('mark-all').onclick = function () {
-      fetch(API + '/api/me/notifications/read_all', { method: 'POST', credentials: 'include' })
-        .then(function (r) {
-          if (r.status === 401) throw new Error('请先登录');
-          if (!r.ok) throw new Error('操作失败 ' + r.status);
-          cursor = null;
-          loadPage(true);
-        })
-        .catch(function (e) {
-          document.getElementById('err').textContent = String(e);
-        });
-    };
-
-    loadPage(true);
-  </script>
-  <script src="/web/nav.js"></script>
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/ui.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
+  <script src="/web/assets/js/pages/messages.js"></script>
 </body>
 </html>

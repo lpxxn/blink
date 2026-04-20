@@ -99,13 +99,13 @@
     const tableWrap = el('div', { class: 'admin-table-wrap' }, [
       el('table', { class: 'admin-table' }, [
         el('thead', {}, el('tr', {}, [
-          el('th', {}, 'ID'),
+          el('th', { class: 'nowrap' }, 'ID'),
           el('th', {}, '作者'),
-          el('th', {}, '审核'),
-          el('th', {}, '状态'),
+          el('th', { class: 'nowrap' }, '审核'),
+          el('th', { class: 'nowrap' }, '状态'),
           el('th', {}, '摘要'),
-          el('th', {}, '创建'),
-          el('th', { style: 'text-align:right' }, '操作'),
+          el('th', { class: 'nowrap' }, '创建'),
+          el('th', { class: 'col-actions' }, '操作'),
         ])),
         tbody,
       ]),
@@ -177,7 +177,7 @@
     function renderRow(p) {
       const expanded = state.expanded.has(String(p.id));
       const tr = el('tr');
-      tr.appendChild(el('td', { class: 'mono' }, String(p.id)));
+      tr.appendChild(el('td', { class: 'mono nowrap' }, String(p.id)));
 
       const author = el('td', {}, [
         el('div', {}, p.user_name && p.user_name.trim() ? p.user_name : '—'),
@@ -185,29 +185,20 @@
       ]);
       tr.appendChild(author);
 
-      const modTd = el('td', {}, [modChip(p), appealChip(p)].filter(Boolean));
+      const modTd = el('td', { class: 'nowrap' }, [modChip(p), appealChip(p)].filter(Boolean));
       tr.appendChild(modTd);
-      tr.appendChild(el('td', {}, statusChip(p)));
+      tr.appendChild(el('td', { class: 'nowrap' }, statusChip(p)));
 
       const summary = el('td', { class: 'cell-ellipsis' },
         truncate(p.body || '', 100) || '—');
       tr.appendChild(summary);
-      tr.appendChild(el('td', {}, fmtTime(p.created_at)));
+      tr.appendChild(el('td', { class: 'nowrap' }, fmtTime(p.created_at)));
 
       const actions = el('div', { class: 'row-actions' });
       actions.appendChild(el('button', {
         type: 'button', class: 'btn btn-ghost btn-sm',
         onClick: () => toggleExpand(p.id),
       }, expanded ? '收起' : '展开'));
-      actions.appendChild(el('a', {
-        class: 'btn btn-ghost btn-sm',
-        href: '/web/post.html?id=' + encodeURIComponent(String(p.id)),
-        target: '_blank', rel: 'noopener',
-      }, '查看'));
-      actions.appendChild(el('button', {
-        type: 'button', class: 'btn btn-ghost btn-sm',
-        onClick: () => ctx.navigate('replies', { post_id: p.id }),
-      }, '评论'));
 
       const mf = p.moderation_flag || 0;
       if (mf !== 2) {
@@ -226,9 +217,9 @@
         actions.appendChild(el('button', {
           type: 'button', class: 'btn btn-primary btn-sm',
           onClick: () => restore(p),
-        }, '恢复公开'));
+        }, '恢复'));
       }
-      tr.appendChild(el('td', {}, actions));
+      tr.appendChild(el('td', { class: 'col-actions' }, actions));
       return tr;
     }
 
@@ -237,6 +228,17 @@
         el('div', {}, [
           el('p', { class: 'admin-expand-title' }, '正文预览'),
           el('pre', { class: 'admin-expand-body' }, p.body || '（空）'),
+          el('div', { class: 'admin-expand-shortcuts' }, [
+            el('a', {
+              class: 'btn btn-ghost btn-sm',
+              href: '/web/post.html?id=' + encodeURIComponent(String(p.id)),
+              target: '_blank', rel: 'noopener',
+            }, '在新窗口查看'),
+            el('button', {
+              type: 'button', class: 'btn btn-ghost btn-sm',
+              onClick: () => ctx.navigate('replies', { post_id: p.id }),
+            }, '管理评论'),
+          ]),
         ]),
         el('dl', { class: 'admin-expand-meta' }, [
           el('dt', {}, '更新时间'),       el('dd', {}, fmtTime(p.updated_at) || '—'),

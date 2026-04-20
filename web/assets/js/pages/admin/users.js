@@ -68,13 +68,13 @@
     const tableWrap = el('div', { class: 'admin-table-wrap' }, [
       el('table', { class: 'admin-table' }, [
         el('thead', {}, el('tr', {}, [
-          el('th', {}, 'ID'),
+          el('th', { class: 'nowrap' }, 'ID'),
           el('th', {}, '邮箱'),
           el('th', {}, '名称'),
-          el('th', {}, '角色'),
-          el('th', {}, '状态'),
-          el('th', {}, '最近登录'),
-          el('th', { style: 'text-align:right' }, '操作'),
+          el('th', { class: 'nowrap' }, '角色'),
+          el('th', { class: 'nowrap' }, '状态'),
+          el('th', { class: 'nowrap' }, '最近登录'),
+          el('th', { class: 'col-actions' }, '操作'),
         ])),
         tbody,
       ]),
@@ -118,12 +118,12 @@
 
     function renderRow(u) {
       const tr = el('tr');
-      tr.appendChild(el('td', { class: 'mono' }, String(u.id)));
+      tr.appendChild(el('td', { class: 'mono nowrap' }, String(u.id)));
       tr.appendChild(el('td', {}, u.email || '—'));
       tr.appendChild(el('td', {}, u.name || '—'));
-      tr.appendChild(el('td', {}, roleChip(u)));
-      tr.appendChild(el('td', {}, statusChip(u)));
-      tr.appendChild(el('td', {}, fmtTime(u.last_login_at)));
+      tr.appendChild(el('td', { class: 'nowrap' }, roleChip(u)));
+      tr.appendChild(el('td', { class: 'nowrap' }, statusChip(u)));
+      tr.appendChild(el('td', { class: 'nowrap' }, fmtTime(u.last_login_at)));
 
       const actions = el('div', { class: 'row-actions' });
       if (u.status !== 1) {
@@ -146,7 +146,7 @@
         type: 'button', class: 'btn btn-ghost btn-sm',
         onClick: () => resetPassword(u),
       }, '重置密码'));
-      tr.appendChild(el('td', {}, actions));
+      tr.appendChild(el('td', { class: 'col-actions' }, actions));
       return tr;
     }
 

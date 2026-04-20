@@ -181,6 +181,11 @@
   background: #f1f5f9;
   color: #475569;
   border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.chip + .chip {
+  margin-left: 0.25rem;
 }
 .chip-ok      { background: #ecfdf5; color: #047857; }
 .chip-info    { background: var(--accent-soft); color: var(--accent); }
@@ -217,9 +222,21 @@
 }
 
 .admin-table tbody td {
-  padding: 0.7rem 0.75rem;
+  padding: 0.55rem 0.75rem;
   border-bottom: 1px solid var(--border);
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.admin-table td.nowrap,
+.admin-table th.nowrap {
+  white-space: nowrap;
+}
+
+.admin-table td.col-actions,
+.admin-table th.col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .admin-table tbody tr:hover {
@@ -315,6 +332,13 @@
 .admin-expand-meta dd {
   margin: 0;
   color: var(--text);
+}
+
+.admin-expand-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
 }
 
 /* ---------- appeal cards ---------- */

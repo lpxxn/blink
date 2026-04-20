@@ -83,13 +83,13 @@
     const tableWrap = el('div', { class: 'admin-table-wrap' }, [
       el('table', { class: 'admin-table' }, [
         el('thead', {}, el('tr', {}, [
-          el('th', {}, 'ID'),
+          el('th', { class: 'nowrap' }, 'ID'),
           el('th', {}, '作者'),
-          el('th', {}, '父评论'),
-          el('th', {}, '状态'),
+          el('th', { class: 'nowrap' }, '父评论'),
+          el('th', { class: 'nowrap' }, '状态'),
           el('th', {}, '内容'),
-          el('th', {}, '时间'),
-          el('th', { style: 'text-align:right' }, '操作'),
+          el('th', { class: 'nowrap' }, '时间'),
+          el('th', { class: 'col-actions' }, '操作'),
         ])),
         tbody,
       ]),
@@ -123,15 +123,15 @@
 
     function renderRow(r) {
       const tr = el('tr');
-      tr.appendChild(el('td', { class: 'mono' }, String(r.id)));
+      tr.appendChild(el('td', { class: 'mono nowrap' }, String(r.id)));
       tr.appendChild(el('td', {}, [
         el('div', {}, r.user_name || '—'),
         el('div', { class: 'mono' }, String(r.user_id || '—')),
       ]));
-      tr.appendChild(el('td', { class: 'mono' }, r.parent_reply_id != null ? String(r.parent_reply_id) : '—'));
-      tr.appendChild(el('td', {}, statusChip(r)));
+      tr.appendChild(el('td', { class: 'mono nowrap' }, r.parent_reply_id != null ? String(r.parent_reply_id) : '—'));
+      tr.appendChild(el('td', { class: 'nowrap' }, statusChip(r)));
       tr.appendChild(el('td', { class: 'cell-ellipsis' }, truncate(r.body || '', 80) || '—'));
-      tr.appendChild(el('td', {}, fmtTime(r.created_at)));
+      tr.appendChild(el('td', { class: 'nowrap' }, fmtTime(r.created_at)));
 
       const actions = el('div', { class: 'row-actions' });
       if (r.status === 1) {
@@ -145,7 +145,7 @@
           onClick: () => toggleHidden(r, true),
         }, '隐藏（级联）'));
       }
-      tr.appendChild(el('td', {}, actions));
+      tr.appendChild(el('td', { class: 'col-actions' }, actions));
       return tr;
     }
 
