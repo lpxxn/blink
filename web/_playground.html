@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>P1 骨架自检 — Blink</title>
+  <link rel="stylesheet" href="/web/common.css" />
+</head>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <blink-nav active="home"></blink-nav>
+
+    <h1 class="page-title">P1 共享模块自检</h1>
+    <p class="page-lead">本页不进正式导航，仅用于验证 <code>/web/assets/js/*</code> 已就位。</p>
+
+    <div class="card">
+      <h2 class="section-title" style="margin-top:0">BlinkAPI</h2>
+      <p><button type="button" class="btn btn-secondary" id="btn-me">调用 BlinkAPI.me()</button></p>
+      <pre id="me-out" class="code-block">（未调用）</pre>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="margin-top:0">BlinkUI.el / mountList</h2>
+      <div id="list"></div>
+      <p>
+        <button type="button" class="btn btn-secondary" id="btn-render">渲染示例列表</button>
+        <button type="button" class="btn btn-secondary" id="btn-clear">清空</button>
+      </p>
+      <p id="flash" role="status" aria-live="polite"></p>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title" style="margin-top:0">&lt;blink-nav&gt; 上方渲染结果</h2>
+      <p class="field-hint">如果顶部导航正常显示，说明自定义元素已注册成功。</p>
+    </div>
+  </div>
+
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/ui.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
+  <script>
+    const { el, flash, mountList } = window.BlinkUI;
+
+    document.getElementById('btn-me').onclick = async () => {
+      const out = document.getElementById('me-out');
+      out.textContent = '加载中…';
+      try {
+        const me = await window.BlinkAPI.me();
+        out.textContent = me ? JSON.stringify(me, null, 2) : '（未登录，/api/me → 401）';
+      } catch (err) {
+        out.textContent = 'ERROR: ' + err.message + ' (status=' + err.status + ')';
+      }
+    };
+
+    document.getElementById('btn-render').onclick = () => {
+      const items = [
+        { id: 1, name: 'alpha' },
+        { id: 2, name: 'beta' },
+        { id: 3, name: 'gamma' },
+      ];
+      mountList('list', items, (it) =>
+        el('div', { class: 'mine-row' }, [
+          el('p', { class: 'mine-snippet' }, `#${it.id} · ${it.name}`),
+          el('div', { class: 'meta' }, `item id = ${it.id}`),
+        ])
+      );
+      flash('flash', '渲染了 3 条', 'ok');
+    };
+
+    document.getElementById('btn-clear').onclick = () => {
+      mountList('list', [], null, '列表已清空');
+      flash('flash', '', '');
+    };
+  </script>
+</body>
+</html>
