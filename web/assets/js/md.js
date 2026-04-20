@@ -65,6 +65,37 @@
     return t.slice(0, maxLen) + '…';
   }
 
+  /**
+   * Return image URLs in `images` that are NOT already referenced by
+   * a Markdown `![...](url)` in `body`. Caller renders the result as a
+   * supplementary gallery so we don't duplicate inline images.
+   */
+  function orphanImages(body, images) {
+    if (!images || !images.length) return [];
+    var referenced = referencedImageUrls(body);
+    var out = [];
+    for (var i = 0; i < images.length; i++) {
+      var u = String(images[i] || '');
+      if (!u) continue;
+      if (!referenced[u]) out.push(u);
+    }
+    return out;
+  }
+
+  /** Parse all Markdown image URLs out of a body. */
+  function referencedImageUrls(body) {
+    var set = {};
+    if (!body) return set;
+    // ![alt](url) or ![alt](<url with spaces>)
+    var re = /!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))(?:\s+"[^"]*")?\s*\)/g;
+    var m;
+    while ((m = re.exec(String(body)))) {
+      var u = (m[1] != null ? m[1] : m[2]) || '';
+      if (u) set[u] = true;
+    }
+    return set;
+  }
+
   /** Author-facing moderation_note: legacy prefix "sensitive_hit:" → 有敏感词： */
   function formatModerationNote(note) {
     if (note == null) return '';
@@ -83,6 +114,8 @@
     plainSnippet: plainSnippet,
     insertImageMarkdown: insertImageMarkdown,
     mdImageUrl: mdImageUrl,
+    orphanImages: orphanImages,
+    referencedImageUrls: referencedImageUrls,
     formatModerationNote: formatModerationNote,
   };
 })(typeof window !== 'undefined' ? window : this);

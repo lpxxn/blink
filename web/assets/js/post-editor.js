@@ -725,8 +725,10 @@
           statusSelect.value = String(state.status);
         }
         if (partial.postId != null) state.postId = String(partial.postId);
+        // Programmatic update → don't mark as dirty / fire onChange
         renderImages();
-        syncBodyToState();
+        renderMeta();
+        renderPreview();
       },
       focus: () => textarea.focus(),
       setError,

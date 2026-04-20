@@ -8,16 +8,7 @@
 </head>
 <body class="blink-page">
   <div class="shell shell-wide">
-    <nav class="top-nav">
-      <a class="brand" href="/web/index.html">Blink</a>
-      <a href="/web/index.html">首页</a>
-      <a href="/web/register.html">注册</a>
-      <a href="/web/feed.html" class="nav-active">帖子流</a>
-      <a href="/web/compose.html">发帖</a>
-      <a href="/web/mine.html">我的</a>
-      <a href="/web/messages.html">消息</a>
-      <a href="/web/admin.html" data-blink-nav="admin" hidden>管理</a>
-    </nav>
+    <blink-nav active="feed"></blink-nav>
 
     <h1 class="page-title">帖子流</h1>
     <p id="err" class="err" role="alert"></p>
@@ -33,147 +24,9 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
   <script src="/web/assets/js/md.js"></script>
-  <script>
-    var API = '';
-    var cursor = null;
-    var categoryId = null;
-    var uncategorized = false;
-    var loadingPosts = false;
-
-    function el(tag, text) {
-      var e = document.createElement(tag);
-      if (text) e.textContent = text;
-      return e;
-    }
-
-    function authorLabel(obj) {
-      var n = obj && obj.user_name != null ? String(obj.user_name).trim() : '';
-      if (n) return n;
-      return '用户 ' + obj.user_id;
-    }
-
-    function loadCategories() {
-      fetch(API + '/api/categories', { credentials: 'include' })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var wrap = document.getElementById('cats');
-          wrap.innerHTML = '';
-          var all = el('button', '全部');
-          all.className = categoryId === null && !uncategorized ? 'active' : '';
-          all.onclick = function () {
-            categoryId = null;
-            uncategorized = false;
-            resetList();
-            loadPosts(true);
-            loadCategories();
-          };
-          wrap.appendChild(all);
-          var uncat = el('button', '未分类');
-          uncat.className = uncategorized ? 'active' : '';
-          uncat.onclick = function () {
-            categoryId = null;
-            uncategorized = true;
-            resetList();
-            loadPosts(true);
-            loadCategories();
-          };
-          wrap.appendChild(uncat);
-          (d.categories || []).forEach(function (c) {
-            var b = el('button', c.name);
-            b.className = String(categoryId) === String(c.id) ? 'active' : '';
-            b.onclick = function () {
-              categoryId = String(c.id);
-              uncategorized = false;
-              resetList();
-              loadPosts(true);
-              loadCategories();
-            };
-            wrap.appendChild(b);
-          });
-        })
-        .catch(function (e) {
-          document.getElementById('err').textContent = String(e);
-        });
-    }
-
-    function resetList() {
-      cursor = null;
-      loadingPosts = false;
-      var moreBtn = document.getElementById('more');
-      moreBtn.hidden = true;
-      moreBtn.disabled = false;
-      document.getElementById('list').innerHTML = '';
-    }
-
-    function loadPosts(reset) {
-      if (loadingPosts) return;
-      if (!reset && (cursor == null || cursor === '')) return;
-      loadingPosts = true;
-      var moreBtn = document.getElementById('more');
-      moreBtn.disabled = true;
-      document.getElementById('err').textContent = '';
-      var q = 'limit=15';
-      if (categoryId != null) q += '&category_id=' + encodeURIComponent(categoryId);
-      if (uncategorized) q += '&uncategorized=1';
-      if (cursor != null && cursor !== '' && !reset) q += '&cursor=' + encodeURIComponent(cursor);
-      if (reset) cursor = null;
-      fetch(API + '/api/posts?' + q, { credentials: 'include' })
-        .then(function (r) {
-          if (!r.ok) throw new Error('加载失败 ' + r.status);
-          return r.json();
-        })
-        .then(function (d) {
-          var list = document.getElementById('list');
-          (d.posts || []).forEach(function (p) {
-            var art = document.createElement('article');
-            art.className = 'feed-item';
-            var h = el('h2');
-            var link = el('a', BlinkMD.plainSnippet(p.body, 80));
-            link.href = '/web/post.html?id=' + encodeURIComponent(p.id);
-            h.appendChild(link);
-            art.appendChild(h);
-            var meta = el('div', '帖子 #' + p.id + ' · ' + authorLabel(p));
-            meta.className = 'meta';
-            art.appendChild(meta);
-            if (p.images && p.images.length) {
-              var postHref = '/web/post.html?id=' + encodeURIComponent(p.id);
-              var thumbs = document.createElement('div');
-              thumbs.className = 'feed-thumbs';
-              p.images.forEach(function (url) {
-                if (!url) return;
-                var a = document.createElement('a');
-                a.className = 'feed-thumb-link';
-                a.href = postHref;
-                var img = document.createElement('img');
-                img.src = url;
-                img.alt = '';
-                img.loading = 'lazy';
-                a.appendChild(img);
-                thumbs.appendChild(a);
-              });
-              if (thumbs.childNodes.length) art.appendChild(thumbs);
-            }
-            list.appendChild(art);
-          });
-                   cursor = d.next_cursor != null && d.next_cursor !== '' ? d.next_cursor : null;
-          moreBtn.hidden = !cursor || (d.posts || []).length === 0;
-        })
-        .catch(function (e) {
-          document.getElementById('err').textContent = String(e);
-        })
-        .then(function () {
-          loadingPosts = false;
-          moreBtn.disabled = false;
-        });
-    }
-
-    document.getElementById('more').onclick = function () {
-      loadPosts(false);
-    };
-
-    loadCategories();
-    loadPosts(true);
-  </script>
-  <script src="/web/nav.js"></script>
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/ui.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
+  <script src="/web/assets/js/pages/feed.js"></script>
 </body>
 </html>
