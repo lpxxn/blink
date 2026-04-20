@@ -257,9 +257,38 @@
           list.forEach(function (x) {
             byId[sid(x.id)] = x;
           });
+          // Build tree so a reply always appears right under its parent,
+          // regardless of creation order.
+          var children = {};
+          var roots = [];
+          list.forEach(function (x) {
+            var pid = x.parent_reply_id;
+            if (pid != null && pid !== '' && byId[sid(pid)]) {
+              var key = sid(pid);
+              (children[key] = children[key] || []).push(x);
+            } else {
+              roots.push(x);
+            }
+          });
+          var byIdAsc = function (a, b) {
+            var ai = Number(a.id), bi = Number(b.id);
+            if (!isNaN(ai) && !isNaN(bi)) return ai - bi;
+            return sid(a.id) < sid(b.id) ? -1 : sid(a.id) > sid(b.id) ? 1 : 0;
+          };
+          roots.sort(byIdAsc);
+          Object.keys(children).forEach(function (k) { children[k].sort(byIdAsc); });
+          var ordered = [];
+          (function dfs(nodes) {
+            nodes.forEach(function (n) {
+              ordered.push(n);
+              var kids = children[sid(n.id)];
+              if (kids && kids.length) dfs(kids);
+            });
+          })(roots);
+
           var box = document.getElementById('replies');
           box.innerHTML = '';
-          list.forEach(function (x) {
+          ordered.forEach(function (x) {
             var depth = replyDepth(x, byId);
             var r = document.createElement('div');
             r.className = 'reply' + (depth > 0 ? ' reply-nested' : '');
