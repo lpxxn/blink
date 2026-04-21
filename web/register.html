@@ -20,6 +20,14 @@
           <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
         </div>
         <div class="field">
+          <label for="code">邮箱验证码</label>
+          <div style="display:flex;gap:.5rem;align-items:stretch">
+            <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="6 位数字" style="flex:1" />
+            <button type="button" id="send-code" class="btn">发送验证码</button>
+          </div>
+          <p class="field-hint">我们会给你的邮箱发送一个 6 位验证码，10 分钟内有效。</p>
+        </div>
+        <div class="field">
           <label for="password">密码</label>
           <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="至少 8 位" />
           <p class="field-hint">至少 8 个字符。</p>
@@ -32,7 +40,7 @@
           <button type="submit" class="btn btn-primary">注册并进入</button>
         </div>
       </form>
-      <p class="auth-footer">已有账号？<a href="/web/index.html">返回首页登录</a></p>
+      <p class="auth-footer">已有账号？<a href="/web/login.html">去登录</a> · <a href="/web/forgot.html">忘记密码</a></p>
     </main>
   </div>
 

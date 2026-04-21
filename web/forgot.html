@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>找回密码 — Blink</title>
+  <link rel="stylesheet" href="/web/common.css" />
+</head>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <blink-nav active=""></blink-nav>
+
+    <main class="card auth-card">
+      <h1 class="page-title" style="font-size:1.35rem;margin-top:0">找回密码</h1>
+      <p class="page-lead" style="margin-bottom:1rem">使用邮箱接收验证码后重置密码。</p>
+      <p id="msg" class="err" role="alert"></p>
+      <form id="forgot" novalidate>
+        <div class="field">
+          <label for="email">邮箱</label>
+          <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label for="code">邮箱验证码</label>
+          <div style="display:flex;gap:.5rem;align-items:stretch">
+            <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="6 位数字" style="flex:1" />
+            <button type="button" id="send-code" class="btn">发送验证码</button>
+          </div>
+          <p class="field-hint">为防止账号枚举，无论邮箱是否已注册，接口都返回成功；请确认邮箱正确。</p>
+        </div>
+        <div class="field">
+          <label for="new-password">新密码</label>
+          <input id="new-password" name="new-password" type="password" autocomplete="new-password" required minlength="8" placeholder="至少 8 位" />
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary">重置密码</button>
+        </div>
+      </form>
+      <p class="auth-footer"><a href="/web/login.html">返回登录</a></p>
+    </main>
+  </div>
+
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/ui.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
+  <script src="/web/assets/js/pages/forgot.js"></script>
+</body>
+</html>

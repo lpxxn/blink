@@ -16,11 +16,17 @@ type registerBody struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Name     string `json:"name"`
+	Code     string `json:"code"`
 }
 
 func (h *RegisterHandler) canRegisterWithSession() bool {
 	s := h.Svc
 	return s != nil && s.Tx != nil && s.Sessions != nil && s.SessionTTL > 0
+}
+
+func (h *RegisterHandler) emailCodeRequired() bool {
+	s := h.Svc
+	return s != nil && s.Codes != nil
 }
 
 func (h *RegisterHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -38,9 +44,18 @@ func (h *RegisterHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var uid int64
 	var sessionToken string
 	var err error
-	if h.canRegisterWithSession() {
+	// When the verifier is wired we MUST take a code-verifying path; never
+	// silently fall back to the no-code branches. This is the fail-closed
+	// guard that keeps a broken wiring (e.g. session store missing while
+	// codes are configured) from turning registration into a bypass.
+	switch {
+	case h.emailCodeRequired() && h.canRegisterWithSession():
+		uid, sessionToken, err = h.Svc.RegisterWithSessionVerified(ctx, body.Email, body.Password, body.Name, body.Code, r.RemoteAddr, r.UserAgent())
+	case h.emailCodeRequired():
+		uid, err = h.Svc.RegisterWithPasswordVerified(ctx, body.Email, body.Password, body.Name, body.Code)
+	case h.canRegisterWithSession():
 		uid, sessionToken, err = h.Svc.RegisterWithSession(ctx, body.Email, body.Password, body.Name, r.RemoteAddr, r.UserAgent())
-	} else {
+	default:
 		uid, err = h.Svc.RegisterWithPassword(ctx, body.Email, body.Password, body.Name)
 	}
 	if err != nil {
@@ -51,6 +66,8 @@ func (h *RegisterHandler) Register(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "password too short", http.StatusBadRequest)
 		case errors.Is(err, auth.ErrInvalidEmail):
 			http.Error(w, "invalid email", http.StatusBadRequest)
+		case errors.Is(err, auth.ErrInvalidCode):
+			http.Error(w, "invalid or expired verification code", http.StatusBadRequest)
 		default:
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}

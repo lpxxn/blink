@@ -55,6 +55,11 @@
     // ---- settings ----
     getSensitivePostMode: () => API.get('/admin/api/settings/sensitive_post_mode'),
     setSensitivePostMode: (mode) => API.put('/admin/api/settings/sensitive_post_mode', { mode }),
+
+    // ---- SMTP ----
+    getSMTPSettings: () => API.get('/admin/api/settings/smtp'),
+    setSMTPSettings: (body) => API.put('/admin/api/settings/smtp', body),
+    testSMTP: (to) => API.post('/admin/api/settings/smtp/test', { to }),
   };
 
   // ---- enum labels ----

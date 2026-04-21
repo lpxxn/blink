@@ -21,6 +21,7 @@ type Server struct {
 	Admin         *appadmin.Service
 	CategoryCount func(context.Context) (int64, error)
 	Users         domainuser.Repository
+	SMTP          *appadmin.SMTPSettings
 }
 
 func (s *Server) Overview(c *gin.Context) {

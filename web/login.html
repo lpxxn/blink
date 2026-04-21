@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>登录 — Blink</title>
+  <link rel="stylesheet" href="/web/common.css" />
+</head>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <blink-nav active="login"></blink-nav>
+
+    <main class="card auth-card">
+      <h1 class="page-title" style="font-size:1.35rem;margin-top:0">登录</h1>
+      <p class="page-lead" style="margin-bottom:1rem">使用邮箱 + 密码登录。</p>
+      <p id="msg" class="err" role="alert"></p>
+      <form id="login" novalidate>
+        <div class="field">
+          <label for="email">邮箱</label>
+          <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8" />
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary">登录</button>
+        </div>
+      </form>
+      <p class="auth-footer">还没有账号？<a href="/web/register.html">去注册</a> · <a href="/web/forgot.html">忘记密码</a></p>
+    </main>
+  </div>
+
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/ui.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
+  <script src="/web/assets/js/pages/login.js"></script>
+</body>
+</html>

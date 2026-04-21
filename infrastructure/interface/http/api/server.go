@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	appauth "github.com/lpxxn/blink/application/auth"
 	appeventing "github.com/lpxxn/blink/application/eventing"
 	appnotification "github.com/lpxxn/blink/application/notification"
 	apppost "github.com/lpxxn/blink/application/post"
@@ -19,6 +20,7 @@ type Server struct {
 	Categories    domaincategory.Repository
 	Users         domainuser.Repository
 	Sessions      domainsession.Store
+	Passwords     *appauth.PasswordService
 	UploadRoot    string
 	UploadURLPath string
 }

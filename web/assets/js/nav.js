@@ -13,7 +13,8 @@
 
   const LINKS = [
     { key: 'home',     href: '/web/index.html',    label: '首页' },
-    { key: 'register', href: '/web/register.html', label: '注册' },
+    { key: 'register', href: '/web/register.html', label: '注册', guestOnly: true },
+    { key: 'login',    href: '/web/login.html',    label: '登录', guestOnly: true },
     { key: 'feed',     href: '/web/feed.html',     label: '帖子流' },
     { key: 'compose',  href: '/web/compose.html',  label: '发帖' },
     { key: 'mine',     href: '/web/mine.html',     label: '我的' },
@@ -48,6 +49,10 @@
     document.querySelectorAll('[data-blink-nav="admin"]').forEach((el) => {
       el.hidden = !isSuper;
     });
+    const isLogged = !!(me && me.user_id);
+    document.querySelectorAll('[data-blink-nav="guest"]').forEach((el) => {
+      el.hidden = isLogged;
+    });
   }
 
   class BlinkNav extends HTMLElement {
@@ -70,6 +75,8 @@
         if (link.adminOnly) {
           a.dataset.blinkNav = 'admin';
           a.hidden = true;
+        } else if (link.guestOnly) {
+          a.dataset.blinkNav = 'guest';
         }
         nav.appendChild(a);
       }

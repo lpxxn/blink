@@ -29,12 +29,16 @@
     document.getElementById('me-name').value = d.name || '';
     document.getElementById('profile-guest').hidden = true;
     document.getElementById('profile-user').hidden = false;
+    const pwCard = document.getElementById('password-card');
+    if (pwCard) pwCard.hidden = false;
   }
 
   function showGuest() {
     me = null;
     document.getElementById('profile-guest').hidden = false;
     document.getElementById('profile-user').hidden = true;
+    const pwCard = document.getElementById('password-card');
+    if (pwCard) pwCard.hidden = true;
     const list = document.getElementById('list');
     clear(list);
     list.appendChild(el('p', {
@@ -139,6 +143,55 @@
     window.location.href = '/web/index.html';
   }
 
+  // ---------- Change password ----------
+  let pwTimer = null;
+  function pwMsg(text, ok) { flash('pw-msg', text || '', ok ? 'ok' : 'err'); }
+  function startPwCountdown(btn, seconds) {
+    let n = seconds;
+    btn.disabled = true;
+    btn.textContent = `${n}s 后可重发`;
+    pwTimer = setInterval(() => {
+      n -= 1;
+      if (n <= 0) {
+        clearInterval(pwTimer); pwTimer = null;
+        btn.disabled = false; btn.textContent = '发送验证码';
+        return;
+      }
+      btn.textContent = `${n}s 后可重发`;
+    }, 1000);
+  }
+  async function sendPwCode() {
+    pwMsg('', true);
+    const btn = document.getElementById('pw-send');
+    btn.disabled = true;
+    try {
+      await BlinkAPI.post('/api/me/password/send_code', {});
+      pwMsg('验证码已发送到你的邮箱（未配置 SMTP 时写入服务日志）', true);
+      startPwCountdown(btn, 60);
+    } catch (err) {
+      btn.disabled = false;
+      pwMsg(err && err.status === 429 ? '发送过于频繁，请稍后再试' : errorText(err) || '发送失败', false);
+    }
+  }
+  async function submitPw() {
+    pwMsg('', true);
+    const code = document.getElementById('pw-code').value.trim();
+    const np = document.getElementById('pw-new').value;
+    if (!/^\d{6}$/.test(code)) return pwMsg('请输入 6 位验证码', false);
+    if (np.length < 8) return pwMsg('新密码至少 8 位', false);
+    try {
+      await BlinkAPI.post('/api/me/password', { code, new_password: np });
+      pwMsg('密码已修改，即将跳转登录…', true);
+      setTimeout(() => { window.location.href = '/web/login.html'; }, 800);
+    } catch (err) {
+      const raw = errorText(err) || '';
+      const m = raw.indexOf('verification code') !== -1 ? '验证码无效或已过期'
+              : raw.indexOf('password too short') !== -1 ? '新密码至少 8 位'
+              : raw || '修改失败';
+      pwMsg(m, false);
+    }
+  }
+
   // ---------- Init ----------
   async function loadProfile() {
     showProfileMsg('', true);
@@ -164,6 +217,10 @@
     });
     document.getElementById('save-name').addEventListener('click', saveName);
     document.getElementById('logout').addEventListener('click', doLogout);
+    const pwSend = document.getElementById('pw-send');
+    const pwSubmit = document.getElementById('pw-submit');
+    if (pwSend) pwSend.addEventListener('click', sendPwCode);
+    if (pwSubmit) pwSubmit.addEventListener('click', submitPw);
     loadProfile();
   }
 

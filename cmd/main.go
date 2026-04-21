@@ -24,6 +24,7 @@ import (
 	appauth "github.com/lpxxn/blink/application/auth"
 	appbootstrap "github.com/lpxxn/blink/application/bootstrap"
 	appcategory "github.com/lpxxn/blink/application/category"
+	appemailcode "github.com/lpxxn/blink/application/emailcode"
 	appidp "github.com/lpxxn/blink/application/idp"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	appnotification "github.com/lpxxn/blink/application/notification"
@@ -38,6 +39,7 @@ import (
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 	httpidp "github.com/lpxxn/blink/infrastructure/interface/http/idp"
 	httpoauth "github.com/lpxxn/blink/infrastructure/interface/http/oauth"
+	"github.com/lpxxn/blink/infrastructure/mail"
 	"github.com/lpxxn/blink/infrastructure/messaging"
 	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
 	"github.com/lpxxn/blink/internal/migrator"
@@ -208,6 +210,37 @@ func main() {
 		SensitiveWordsPublisher: sensitiveWordsPub,
 	}
 
+	// ---- email / mailer / verification codes ----
+	// All mail config (host, port, credentials, display name) lives in the
+	// app_settings table and is editable from the admin UI; no env config.
+	mailer := &mail.ConfigurableMailer{
+		Settings: settingsRepo,
+		Fallback: &mail.LogMailer{},
+	}
+	emailCodeStore := &redisstore.EmailCodeStore{Client: rdb}
+	emailCodeSvc := &appemailcode.Service{
+		Store:  emailCodeStore,
+		Mailer: mailer,
+		// ProductName is sourced from app_settings smtp.from_name so admins
+		// can change the branding on verification emails without a restart.
+		ProductNameFn: func(ctx context.Context) string {
+			v, _ := settingsRepo.GetString(ctx, mail.SettingFromName)
+			return v
+		},
+	}
+	loginLockout := &redisstore.LoginLockoutStore{Client: rdb}
+	passwordSvc := &appauth.PasswordService{
+		Users:    userRepo,
+		Sessions: sessStore,
+		Codes:    emailCodeSvc,
+	}
+	loginSvc := &appauth.LoginService{
+		Users:      userRepo,
+		Sessions:   sessStore,
+		SessionTTL: 7 * 24 * time.Hour,
+		Lockout:    loginLockout,
+	}
+
 	// Post sensitive-scan consumer (recommended on all instances)
 	if strings.TrimSpace(getenv("BLINK_DISABLE_POST_SENSITIVE_SCAN_CONSUMER", "")) == "" {
 		wmSubscriber, err := redisstream.NewSubscriber(redisstream.SubscriberConfig{
@@ -241,6 +274,7 @@ func main() {
 		Categories:    catRepo,
 		Users:         userRepo,
 		Sessions:      sessStore,
+		Passwords:     passwordSvc,
 		UploadRoot:    uploadRoot,
 		UploadURLPath: "/uploads",
 	}
@@ -248,6 +282,10 @@ func main() {
 		Admin:         adminSvc,
 		CategoryCount: catRepo.Count,
 		Users:         userRepo,
+		SMTP: &appadmin.SMTPSettings{
+			Settings: settingsRepo,
+			Mailer:   mailer,
+		},
 	}
 
 	providers := map[string]appoauth.OAuth2Provider{}
@@ -276,7 +314,11 @@ func main() {
 		Tx:         &gormdb.TxRunner{DB: gdb},
 		Sessions:   sessStore,
 		SessionTTL: 7 * 24 * time.Hour,
+		Codes:      emailCodeSvc,
 	}}
+	regCodeHTTP := &httpauth.RegisterCodeHandler{Codes: emailCodeSvc, Users: userRepo}
+	loginHTTP := &httpauth.LoginHandler{Svc: loginSvc}
+	pwResetHTTP := &httpauth.PasswordResetHandler{Svc: passwordSvc}
 
 	publicBase := strings.TrimSpace(getenv("BLINK_PUBLIC_BASE_URL", ""))
 	publicBase = strings.TrimRight(publicBase, "/")
@@ -340,6 +382,10 @@ func main() {
 	oauthG := r.Group("/auth/oauth")
 	h.Mount(oauthG)
 	r.POST("/auth/register", gin.WrapF(regHTTP.Register))
+	r.POST("/auth/register/send_code", gin.WrapF(regCodeHTTP.Send))
+	r.POST("/auth/login", gin.WrapF(loginHTTP.Login))
+	r.POST("/auth/password/send_code", gin.WrapF(pwResetHTTP.SendCode))
+	r.POST("/auth/password/reset", gin.WrapF(pwResetHTTP.Reset))
 	if idpHTTP != nil {
 		idpHTTP.Mount(r.Group("/auth/idp"))
 	}
@@ -361,6 +407,8 @@ func main() {
 	authed.Use(httpauth.RequireActiveUser(sessStore, userRepo))
 	authed.GET("/me", apiSrv.GetMe)
 	authed.PATCH("/me", apiSrv.PatchMe)
+	authed.POST("/me/password/send_code", apiSrv.SendChangePasswordCode)
+	authed.POST("/me/password", apiSrv.ChangePassword)
 	authed.POST("/posts", apiSrv.CreatePost)
 	authed.PATCH("/posts/:id", apiSrv.PatchPost)
 	authed.DELETE("/posts/:id", apiSrv.DeletePost)
@@ -388,6 +436,9 @@ func main() {
 	adminG.GET("/posts/:id/replies", adminSrv.ListPostReplies)
 	adminG.GET("/settings/sensitive_post_mode", adminSrv.GetSensitivePostMode)
 	adminG.PUT("/settings/sensitive_post_mode", adminSrv.SetSensitivePostMode)
+	adminG.GET("/settings/smtp", adminSrv.GetSMTPSettings)
+	adminG.PUT("/settings/smtp", adminSrv.PutSMTPSettings)
+	adminG.POST("/settings/smtp/test", adminSrv.TestSMTP)
 	adminG.GET("/sensitive_words", adminSrv.ListSensitiveWords)
 	adminG.POST("/sensitive_words", adminSrv.CreateSensitiveWord)
 	adminG.PATCH("/sensitive_words/:id", adminSrv.PatchSensitiveWord)

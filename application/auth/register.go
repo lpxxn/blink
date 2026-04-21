@@ -16,6 +16,14 @@ import (
 
 const minPasswordLen = 8
 
+// CodeVerifier is the minimal subset of emailcode.Service needed to check a
+// one-time verification code. Keeping it here avoids an application->application
+// import cycle: register.go does not care how the code is stored, only that it
+// can be validated for a given purpose+email.
+type CodeVerifier interface {
+	Verify(ctx context.Context, purpose, email, code string) error
+}
+
 type RegisterService struct {
 	Users      domainuser.Repository
 	Identities domainoauth.Repository
@@ -25,6 +33,8 @@ type RegisterService struct {
 	// Sessions + SessionTTL 非 nil 时 RegisterWithSession 可在注册成功后签发会话（通常在事务提交之后写 Redis）。
 	Sessions   session.Store
 	SessionTTL time.Duration
+	// Codes 非 nil 时，*Verified 方法会在建号前校验邮箱验证码 (purpose=emailcode.PurposeRegister)。
+	Codes CodeVerifier
 }
 
 var ErrSessionNotConfigured = errors.New("auth: session store or tx not configured for register-with-session")
@@ -41,6 +51,33 @@ func (s *RegisterService) RegisterWithPassword(ctx context.Context, email, passw
 		return e
 	})
 	return uid, err
+}
+
+// RegisterWithSessionVerified first validates an email verification code, then
+// runs RegisterWithSession. Returns ErrCodesNotConfigured if s.Codes is nil and
+// ErrInvalidCode if the code check fails.
+func (s *RegisterService) RegisterWithSessionVerified(ctx context.Context, email, password, name, code, ip, ua string) (userID int64, sessionToken string, err error) {
+	if s.Codes == nil {
+		return 0, "", ErrCodesNotConfigured
+	}
+	if err := s.Codes.Verify(ctx, purposeRegister, email, code); err != nil {
+		return 0, "", ErrInvalidCode
+	}
+	return s.RegisterWithSession(ctx, email, password, name, ip, ua)
+}
+
+// RegisterWithPasswordVerified verifies the email code and then creates the
+// user WITHOUT issuing a session. Used as a fail-closed fallback when the
+// session store is not configured but codes are — we still refuse to create
+// an account unless the code is valid.
+func (s *RegisterService) RegisterWithPasswordVerified(ctx context.Context, email, password, name, code string) (int64, error) {
+	if s.Codes == nil {
+		return 0, ErrCodesNotConfigured
+	}
+	if err := s.Codes.Verify(ctx, purposeRegister, email, code); err != nil {
+		return 0, ErrInvalidCode
+	}
+	return s.RegisterWithPassword(ctx, email, password, name)
 }
 
 // RegisterWithSession runs registration in one DB transaction, then creates a Redis-backed session so the client
