@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	appadmin "github.com/lpxxn/blink/application/admin"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
@@ -13,7 +14,6 @@ import (
 	domainuser "github.com/lpxxn/blink/domain/user"
 	httpapi "github.com/lpxxn/blink/infrastructure/interface/http/api"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
-	"github.com/gin-gonic/gin"
 )
 
 // Server exposes /admin/api JSON handlers.
@@ -31,9 +31,9 @@ func (s *Server) Overview(c *gin.Context) {
 		return
 	}
 	ov := httpapi.OverviewJSON{
-		UserCount:   o.UserCount,
-		PostCount:   o.PostCount,
-		PostsToday:  o.PostsToday,
+		UserCount:  o.UserCount,
+		PostCount:  o.PostCount,
+		PostsToday: o.PostsToday,
 	}
 	if s.CategoryCount != nil {
 		if n, err := s.CategoryCount(c.Request.Context()); err == nil {

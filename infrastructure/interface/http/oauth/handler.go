@@ -3,8 +3,8 @@ package httpoauth
 import (
 	"net/http"
 
-	appoauth "github.com/lpxxn/blink/application/oauth"
 	"github.com/gin-gonic/gin"
+	appoauth "github.com/lpxxn/blink/application/oauth"
 )
 
 // Handler wires OAuth2 login/callback to LoginService.

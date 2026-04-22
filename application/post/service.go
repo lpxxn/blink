@@ -28,10 +28,10 @@ var (
 const maxAppealMessageLen = 4000
 
 type Service struct {
-	Posts        domainpost.Repository
-	Categories   domaincategory.Repository
-	NewID        func() int64
-	NotifyEvents appeventing.NotificationPublisher // optional; appeal / moderation requests
+	Posts         domainpost.Repository
+	Categories    domaincategory.Repository
+	NewID         func() int64
+	NotifyEvents  appeventing.NotificationPublisher      // optional; appeal / moderation requests
 	SensitiveScan appeventing.PostSensitiveScanPublisher // optional; async scan after publish
 }
 

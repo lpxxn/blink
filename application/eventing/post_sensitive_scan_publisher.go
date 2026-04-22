@@ -6,4 +6,3 @@ import "context"
 type PostSensitiveScanPublisher interface {
 	PublishPostSensitiveScan(ctx context.Context, postID, authorID int64, postUpdatedAtUnixNano int64, kind string) error
 }
-

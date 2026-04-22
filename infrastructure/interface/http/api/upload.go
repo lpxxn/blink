@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	appupload "github.com/lpxxn/blink/application/upload"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
-	"github.com/gin-gonic/gin"
 )
 
 func (s *Server) UploadImage(c *gin.Context) {

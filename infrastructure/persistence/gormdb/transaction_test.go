@@ -115,7 +115,7 @@ func seedUserAndOAuth(ctx context.Context, db *gorm.DB, uid, oid int64, email, s
 	users := &UserRepository{DB: db}
 	oauth := &OAuthRepository{DB: db}
 	if err := users.Create(ctx, &domainuser.User{
-		SnowflakeID:  uid, Email: email, Name: "H", PasswordHash: "x",
+		SnowflakeID: uid, Email: email, Name: "H", PasswordHash: "x",
 		Status: domainuser.StatusActive, Role: "user",
 	}); err != nil {
 		return err

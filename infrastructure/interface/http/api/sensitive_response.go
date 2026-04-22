@@ -3,8 +3,8 @@ package httpapi
 import (
 	"errors"
 
-	appmoderation "github.com/lpxxn/blink/application/moderation"
 	"github.com/gin-gonic/gin"
+	appmoderation "github.com/lpxxn/blink/application/moderation"
 )
 
 // SensitiveContentPayload builds a 400 JSON body for blocked sensitive text.

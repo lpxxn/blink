@@ -13,21 +13,21 @@ import (
 
 // PostJSON is the API wire shape: snowflake IDs use json ",string" so browsers do not lose precision.
 type PostJSON struct {
-	ID              int64   `json:"id,string"`
-	UserID          int64   `json:"user_id,string"`
-	UserName        string  `json:"user_name"`
-	PostType        int     `json:"post_type"`
-	Visibility      int     `json:"visibility"`
-	Body            string  `json:"body"`
-	Images          []string `json:"images"`
-	Status          int     `json:"status"`
-	ModerationFlag  int     `json:"moderation_flag"`
-	ModerationNote  string  `json:"moderation_note"`
-	AppealBody      string  `json:"appeal_body"`
-	AppealStatus    int     `json:"appeal_status"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at"`
-	CategoryID      *int64 `json:"category_id,string"`
+	ID             int64    `json:"id,string"`
+	UserID         int64    `json:"user_id,string"`
+	UserName       string   `json:"user_name"`
+	PostType       int      `json:"post_type"`
+	Visibility     int      `json:"visibility"`
+	Body           string   `json:"body"`
+	Images         []string `json:"images"`
+	Status         int      `json:"status"`
+	ModerationFlag int      `json:"moderation_flag"`
+	ModerationNote string   `json:"moderation_note"`
+	AppealBody     string   `json:"appeal_body"`
+	AppealStatus   int      `json:"appeal_status"`
+	CreatedAt      string   `json:"created_at"`
+	UpdatedAt      string   `json:"updated_at"`
+	CategoryID     *int64   `json:"category_id,string"`
 }
 
 // PostToJSON maps a domain post to the JSON response (IDs as strings in JSON).
@@ -127,15 +127,15 @@ func NextCursorString(id int64) *string {
 
 // AdminUserJSON is the wire shape for GET /admin/api/users rows.
 type AdminUserJSON struct {
-	SnowflakeID       int64   `json:"id,string"`
-	Email             string  `json:"email"`
-	Name              string  `json:"name"`
-	Status            int     `json:"status"`
-	Role              string  `json:"role"`
-	LastLoginAt       *string `json:"last_login_at,omitempty"`
-	LastLoginIP       string  `json:"last_login_ip"`
-	LastLoginDevice   string  `json:"last_login_device"`
-	CreatedAt         string  `json:"created_at"`
+	SnowflakeID     int64   `json:"id,string"`
+	Email           string  `json:"email"`
+	Name            string  `json:"name"`
+	Status          int     `json:"status"`
+	Role            string  `json:"role"`
+	LastLoginAt     *string `json:"last_login_at,omitempty"`
+	LastLoginIP     string  `json:"last_login_ip"`
+	LastLoginDevice string  `json:"last_login_device"`
+	CreatedAt       string  `json:"created_at"`
 }
 
 // AdminUserToJSON maps an admin list entry.
@@ -195,14 +195,14 @@ type AdminUsersResponse struct {
 
 // NotificationJSON is GET /api/me/notifications.
 type NotificationJSON struct {
-	ID         int64   `json:"id,string"`
-	Type       string  `json:"type"`
-	Title      string  `json:"title"`
-	Body       string  `json:"body"`
-	RefPostID  *int64  `json:"ref_post_id,string,omitempty"`
-	RefReplyID *int64  `json:"ref_reply_id,string,omitempty"`
-	Read       bool    `json:"read"`
-	CreatedAt  string  `json:"created_at"`
+	ID         int64  `json:"id,string"`
+	Type       string `json:"type"`
+	Title      string `json:"title"`
+	Body       string `json:"body"`
+	RefPostID  *int64 `json:"ref_post_id,string,omitempty"`
+	RefReplyID *int64 `json:"ref_reply_id,string,omitempty"`
+	Read       bool   `json:"read"`
+	CreatedAt  string `json:"created_at"`
 }
 
 // NotificationsPageJSON lists notifications.
@@ -214,14 +214,14 @@ type NotificationsPageJSON struct {
 // NotificationToJSON maps domain notification.
 func NotificationToJSON(n *domainnotification.Notification) NotificationJSON {
 	j := NotificationJSON{
-		ID:        n.ID,
-		Type:      n.Type,
-		Title:     n.Title,
-		Body:      n.Body,
-		RefPostID: n.RefPostID,
+		ID:         n.ID,
+		Type:       n.Type,
+		Title:      n.Title,
+		Body:       n.Body,
+		RefPostID:  n.RefPostID,
 		RefReplyID: n.RefReplyID,
-		Read:      n.ReadAt != nil,
-		CreatedAt: n.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+		Read:       n.ReadAt != nil,
+		CreatedAt:  n.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 	}
 	return j
 }

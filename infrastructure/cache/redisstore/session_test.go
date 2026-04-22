@@ -39,7 +39,7 @@ func TestSessionStore_CreateGetDelete(t *testing.T) {
 	if err := s.Delete(ctx, tok); err != nil {
 		t.Fatal(err)
 	}
-		_, err = s.Get(ctx, tok)
+	_, err = s.Get(ctx, tok)
 	if err != domainsession.ErrNotFound {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}

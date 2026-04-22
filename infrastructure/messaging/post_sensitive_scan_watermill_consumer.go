@@ -106,4 +106,3 @@ func handlePostSensitiveScan(ctx context.Context, admin *appadmin.Service, paylo
 		return err
 	}
 }
-

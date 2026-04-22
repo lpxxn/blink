@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	domainuser "github.com/lpxxn/blink/domain/user"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
-	"github.com/gin-gonic/gin"
 )
 
 const maxProfileNameLen = 80

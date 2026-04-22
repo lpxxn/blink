@@ -33,8 +33,8 @@ type createPostTestPostRepo struct {
 	byID        map[int64]*domainpost.Post
 }
 
-func (createPostTestPostRepo) Update(context.Context, *domainpost.Post) error   { panic("ni") }
-func (createPostTestPostRepo) SoftDelete(context.Context, int64) error            { panic("ni") }
+func (createPostTestPostRepo) Update(context.Context, *domainpost.Post) error { panic("ni") }
+func (createPostTestPostRepo) SoftDelete(context.Context, int64) error        { panic("ni") }
 func (r *createPostTestPostRepo) GetByID(_ context.Context, id int64) (*domainpost.Post, error) {
 	if r.byID == nil || r.byID[id] == nil {
 		return nil, domainpost.ErrNotFound
@@ -97,10 +97,10 @@ func TestCreatePost_singleImage(t *testing.T) {
 	r.POST("/api/posts", injectTestUserID(42), srv.CreatePost)
 
 	body := map[string]any{
-		"body":         "hello single",
-		"category_id":  "0",
-		"images":       []string{"/uploads/a.jpg"},
-		"draft":        false,
+		"body":        "hello single",
+		"category_id": "0",
+		"images":      []string{"/uploads/a.jpg"},
+		"draft":       false,
 	}
 	raw, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/api/posts", bytes.NewReader(raw))
@@ -133,10 +133,10 @@ func TestCreatePost_multipleImages(t *testing.T) {
 
 	want := []string{"/uploads/1.png", "/uploads/2.png", "/uploads/3.png"}
 	body := map[string]any{
-		"body":         "hello multi",
-		"category_id":  "0",
-		"images":       want,
-		"draft":        false,
+		"body":        "hello multi",
+		"category_id": "0",
+		"images":      want,
+		"draft":       false,
 	}
 	raw, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/api/posts", bytes.NewReader(raw))

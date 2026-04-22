@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	domainoauth "github.com/lpxxn/blink/domain/oauth"
-	domainuser "github.com/lpxxn/blink/domain/user"
-	"github.com/lpxxn/blink/domain/session"
 	"github.com/bwmarrin/snowflake"
+	domainoauth "github.com/lpxxn/blink/domain/oauth"
+	"github.com/lpxxn/blink/domain/session"
+	domainuser "github.com/lpxxn/blink/domain/user"
 	"golang.org/x/crypto/bcrypt"
 )
 

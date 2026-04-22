@@ -31,10 +31,10 @@ const (
 )
 
 var (
-	ErrInvalidEmail = errors.New("emailcode: invalid email")
-	ErrInvalidCode  = errors.New("emailcode: invalid or expired code")
-	ErrCoolingDown  = errors.New("emailcode: please wait before requesting again")
-	ErrTooMany      = errors.New("emailcode: too many requests, try later")
+	ErrInvalidEmail   = errors.New("emailcode: invalid email")
+	ErrInvalidCode    = errors.New("emailcode: invalid or expired code")
+	ErrCoolingDown    = errors.New("emailcode: please wait before requesting again")
+	ErrTooMany        = errors.New("emailcode: too many requests, try later")
 	ErrUnknownPurpose = errors.New("emailcode: unknown purpose")
 )
 

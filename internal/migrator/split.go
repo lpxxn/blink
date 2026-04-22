@@ -3,7 +3,7 @@ package migrator
 import "strings"
 
 // splitSQLStatements splits a migration script into statements at top-level semicolons.
-// It skips semicolons inside single-quoted strings ('' = escaped quote) and
+// It skips semicolons inside single-quoted strings (” = escaped quote) and
 // treats -- line comments and /* */ block comments as non-code.
 func splitSQLStatements(s string) []string {
 	s = strings.TrimSpace(s)
