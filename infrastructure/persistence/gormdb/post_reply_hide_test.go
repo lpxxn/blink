@@ -14,7 +14,7 @@ func TestPostReplyRepository_HideSubtree(t *testing.T) {
 	ctx := context.Background()
 	postID := int64(100)
 	root := &domainpostreply.Reply{
-		ID:    1,
+		ID:     1,
 		PostID: postID,
 		UserID: 10,
 		Body:   "root",
@@ -61,7 +61,7 @@ func TestPostReplyRepository_ListByPostIDAllStatuses_And_UnhideSubtree(t *testin
 	ctx := context.Background()
 	postID := int64(101)
 	root := &domainpostreply.Reply{
-		ID:    11,
+		ID:     11,
 		PostID: postID,
 		UserID: 10,
 		Body:   "root",

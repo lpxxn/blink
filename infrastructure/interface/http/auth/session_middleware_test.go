@@ -131,4 +131,3 @@ func TestOptionalSession_noUserWhenNoToken(t *testing.T) {
 		t.Fatalf("status=%d", rr.Code)
 	}
 }
-

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/lpxxn/blink/application/emailcode"
 	domainuser "github.com/lpxxn/blink/domain/user"
@@ -14,8 +15,9 @@ import (
 // actually send (while still returning 200) when the address is already
 // registered, so the endpoint cannot be used to enumerate accounts.
 type RegisterCodeHandler struct {
-	Codes *emailcode.Service
-	Users domainuser.Repository
+	Codes    *emailcode.Service
+	Users    domainuser.Repository
+	Settings registerEmailVerificationSettings
 }
 
 type registerCodeBody struct {
@@ -37,6 +39,21 @@ func (h *RegisterCodeHandler) Send(w http.ResponseWriter, r *http.Request) {
 	if email == "" {
 		http.Error(w, "invalid email", http.StatusBadRequest)
 		return
+	}
+	if h.Settings != nil {
+		required, err := h.Settings.GetRegisterEmailVerificationRequired(ctx)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		if !required {
+			respondOK(w)
+			return
+		}
+		if h.Codes == nil {
+			http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+			return
+		}
 	}
 	if h.Users != nil {
 		if _, err := h.Users.FindByEmail(ctx, email); err == nil {
@@ -72,7 +89,10 @@ func respondOK(w http.ResponseWriter) {
 // falls back to RemoteAddr.
 func clientIPKey(r *http.Request) string {
 	if v := r.Header.Get("X-Forwarded-For"); v != "" {
-		return v
+		if first, _, ok := strings.Cut(v, ","); ok {
+			return strings.TrimSpace(first)
+		}
+		return strings.TrimSpace(v)
 	}
 	return r.RemoteAddr
 }

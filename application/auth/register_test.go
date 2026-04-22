@@ -9,9 +9,9 @@ import (
 
 	"github.com/bwmarrin/snowflake"
 
+	domainsession "github.com/lpxxn/blink/domain/session"
 	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
 	"github.com/lpxxn/blink/internal/testutil"
-	domainsession "github.com/lpxxn/blink/domain/session"
 )
 
 // stubSessionStore avoids importing redisstore (would cycle via application/idp).

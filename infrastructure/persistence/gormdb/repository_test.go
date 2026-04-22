@@ -239,13 +239,13 @@ func TestOAuthRepository_DuplicateProviderSubject(t *testing.T) {
 	oauthRepo := &OAuthRepository{DB: db}
 	ctx := context.Background()
 	if err := userRepo.Create(ctx, &domainuser.User{
-		SnowflakeID:  9501, Email: "u1@example.com", Name: "U1",
+		SnowflakeID: 9501, Email: "u1@example.com", Name: "U1",
 		PasswordHash: "h", Status: domainuser.StatusActive, Role: "user",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := userRepo.Create(ctx, &domainuser.User{
-		SnowflakeID:  9502, Email: "u2@example.com", Name: "U2",
+		SnowflakeID: 9502, Email: "u2@example.com", Name: "U2",
 		PasswordHash: "h", Status: domainuser.StatusActive, Role: "user",
 	}); err != nil {
 		t.Fatal(err)
@@ -270,7 +270,7 @@ func TestOAuthRepository_SoftDelete_Hidden(t *testing.T) {
 	oauthRepo := &OAuthRepository{DB: db}
 	ctx := context.Background()
 	if err := userRepo.Create(ctx, &domainuser.User{
-		SnowflakeID:  9601, Email: "soft-oauth@example.com", Name: "SO",
+		SnowflakeID: 9601, Email: "soft-oauth@example.com", Name: "SO",
 		PasswordHash: "h", Status: domainuser.StatusActive, Role: "user",
 	}); err != nil {
 		t.Fatal(err)

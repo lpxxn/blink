@@ -315,8 +315,9 @@ func main() {
 		Sessions:   sessStore,
 		SessionTTL: 7 * 24 * time.Hour,
 		Codes:      emailCodeSvc,
-	}}
-	regCodeHTTP := &httpauth.RegisterCodeHandler{Codes: emailCodeSvc, Users: userRepo}
+	}, Settings: adminSvc}
+	regCodeHTTP := &httpauth.RegisterCodeHandler{Codes: emailCodeSvc, Users: userRepo, Settings: adminSvc}
+	regConfigHTTP := &httpauth.RegisterConfigHandler{Settings: adminSvc}
 	loginHTTP := &httpauth.LoginHandler{Svc: loginSvc}
 	pwResetHTTP := &httpauth.PasswordResetHandler{Svc: passwordSvc}
 
@@ -383,6 +384,7 @@ func main() {
 	h.Mount(oauthG)
 	r.POST("/auth/register", gin.WrapF(regHTTP.Register))
 	r.POST("/auth/register/send_code", gin.WrapF(regCodeHTTP.Send))
+	r.GET("/auth/register/config", gin.WrapF(regConfigHTTP.Get))
 	r.POST("/auth/login", gin.WrapF(loginHTTP.Login))
 	r.POST("/auth/password/send_code", gin.WrapF(pwResetHTTP.SendCode))
 	r.POST("/auth/password/reset", gin.WrapF(pwResetHTTP.Reset))
@@ -436,6 +438,8 @@ func main() {
 	adminG.GET("/posts/:id/replies", adminSrv.ListPostReplies)
 	adminG.GET("/settings/sensitive_post_mode", adminSrv.GetSensitivePostMode)
 	adminG.PUT("/settings/sensitive_post_mode", adminSrv.SetSensitivePostMode)
+	adminG.GET("/settings/register_email_verification", adminSrv.GetRegisterEmailVerificationRequired)
+	adminG.PUT("/settings/register_email_verification", adminSrv.SetRegisterEmailVerificationRequired)
 	adminG.GET("/settings/smtp", adminSrv.GetSMTPSettings)
 	adminG.PUT("/settings/smtp", adminSrv.PutSMTPSettings)
 	adminG.POST("/settings/smtp/test", adminSrv.TestSMTP)

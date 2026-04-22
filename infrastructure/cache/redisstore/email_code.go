@@ -22,11 +22,11 @@ const (
 	emailCodeFailPrefix = "email_code_fail:"
 )
 
-func codeKey(purpose, email string) string     { return emailCodePrefix + purpose + ":" + email }
-func coolKey(purpose, email string) string     { return emailCodeCoolPrefix + purpose + ":" + email }
-func emailRLKey(purpose, email string) string  { return emailCodeEmailRL + purpose + ":" + email }
-func actorRLKey(purpose, actor string) string  { return emailCodeActorRL + purpose + ":" + actor }
-func failKey(purpose, email string) string     { return emailCodeFailPrefix + purpose + ":" + email }
+func codeKey(purpose, email string) string    { return emailCodePrefix + purpose + ":" + email }
+func coolKey(purpose, email string) string    { return emailCodeCoolPrefix + purpose + ":" + email }
+func emailRLKey(purpose, email string) string { return emailCodeEmailRL + purpose + ":" + email }
+func actorRLKey(purpose, actor string) string { return emailCodeActorRL + purpose + ":" + actor }
+func failKey(purpose, email string) string    { return emailCodeFailPrefix + purpose + ":" + email }
 
 // IsCoolingDown returns true if the caller must wait before sending again.
 func (s *EmailCodeStore) IsCoolingDown(ctx context.Context, purpose, email string) (bool, error) {

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 	"github.com/gin-gonic/gin"
+	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 	"gorm.io/gorm"
 )
 

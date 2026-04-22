@@ -1,6 +1,7 @@
 package httpauth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -8,8 +9,13 @@ import (
 	"github.com/lpxxn/blink/application/auth"
 )
 
+type registerEmailVerificationSettings interface {
+	GetRegisterEmailVerificationRequired(context.Context) (bool, error)
+}
+
 type RegisterHandler struct {
-	Svc *auth.RegisterService
+	Svc      *auth.RegisterService
+	Settings registerEmailVerificationSettings
 }
 
 type registerBody struct {
@@ -24,9 +30,15 @@ func (h *RegisterHandler) canRegisterWithSession() bool {
 	return s != nil && s.Tx != nil && s.Sessions != nil && s.SessionTTL > 0
 }
 
-func (h *RegisterHandler) emailCodeRequired() bool {
-	s := h.Svc
-	return s != nil && s.Codes != nil
+func (h *RegisterHandler) emailCodeRequired(ctx context.Context) (bool, error) {
+	if h.Settings == nil {
+		return true, nil
+	}
+	required, err := h.Settings.GetRegisterEmailVerificationRequired(ctx)
+	if err != nil {
+		return false, err
+	}
+	return required, nil
 }
 
 func (h *RegisterHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -44,14 +56,15 @@ func (h *RegisterHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var uid int64
 	var sessionToken string
 	var err error
-	// When the verifier is wired we MUST take a code-verifying path; never
-	// silently fall back to the no-code branches. This is the fail-closed
-	// guard that keeps a broken wiring (e.g. session store missing while
-	// codes are configured) from turning registration into a bypass.
+	required, err := h.emailCodeRequired(ctx)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 	switch {
-	case h.emailCodeRequired() && h.canRegisterWithSession():
+	case required && h.canRegisterWithSession():
 		uid, sessionToken, err = h.Svc.RegisterWithSessionVerified(ctx, body.Email, body.Password, body.Name, body.Code, r.RemoteAddr, r.UserAgent())
-	case h.emailCodeRequired():
+	case required:
 		uid, err = h.Svc.RegisterWithPasswordVerified(ctx, body.Email, body.Password, body.Name, body.Code)
 	case h.canRegisterWithSession():
 		uid, sessionToken, err = h.Svc.RegisterWithSession(ctx, body.Email, body.Password, body.Name, r.RemoteAddr, r.UserAgent())
@@ -68,6 +81,8 @@ func (h *RegisterHandler) Register(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid email", http.StatusBadRequest)
 		case errors.Is(err, auth.ErrInvalidCode):
 			http.Error(w, "invalid or expired verification code", http.StatusBadRequest)
+		case errors.Is(err, auth.ErrCodesNotConfigured):
+			http.Error(w, "email verification required but not configured", http.StatusServiceUnavailable)
 		default:
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}

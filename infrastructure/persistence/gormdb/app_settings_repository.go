@@ -40,4 +40,3 @@ func (r *AppSettingsRepository) SetString(ctx context.Context, key, value string
 		DoUpdates: clause.AssignmentColumns([]string{"value", "updated_at"}),
 	}).Create(m).Error
 }
-

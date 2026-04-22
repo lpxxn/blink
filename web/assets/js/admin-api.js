@@ -55,6 +55,9 @@
     // ---- settings ----
     getSensitivePostMode: () => API.get('/admin/api/settings/sensitive_post_mode'),
     setSensitivePostMode: (mode) => API.put('/admin/api/settings/sensitive_post_mode', { mode }),
+    getRegisterEmailVerification: () => API.get('/admin/api/settings/register_email_verification'),
+    setRegisterEmailVerification: (required) =>
+      API.put('/admin/api/settings/register_email_verification', { required: !!required }),
 
     // ---- SMTP ----
     getSMTPSettings: () => API.get('/admin/api/settings/smtp'),

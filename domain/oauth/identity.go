@@ -3,10 +3,10 @@ package oauth
 import "context"
 
 type Identity struct {
-	SnowflakeID       int64
-	Provider          string
-	ProviderSubject   string
-	UserID            int64
+	SnowflakeID     int64
+	Provider        string
+	ProviderSubject string
+	UserID          int64
 }
 
 type Repository interface {

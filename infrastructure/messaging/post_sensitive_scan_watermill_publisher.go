@@ -24,11 +24,11 @@ var _ eventing.PostSensitiveScanPublisher = (*PostSensitiveScanWatermillPublishe
 func (p *PostSensitiveScanWatermillPublisher) PublishPostSensitiveScan(ctx context.Context, postID, authorID int64, postUpdatedAtUnixNano int64, kind string) error {
 	_ = ctx
 	payload := struct {
-		PostID     int64  `json:"post_id,string"`
-		AuthorID   int64  `json:"author_id,string"`
-		UpdatedAt  int64  `json:"post_updated_at_unix_nano"`
-		Kind       string `json:"kind"`
-		EventVer   int    `json:"event_ver"`
+		PostID    int64  `json:"post_id,string"`
+		AuthorID  int64  `json:"author_id,string"`
+		UpdatedAt int64  `json:"post_updated_at_unix_nano"`
+		Kind      string `json:"kind"`
+		EventVer  int    `json:"event_ver"`
 	}{PostID: postID, AuthorID: authorID, UpdatedAt: postUpdatedAtUnixNano, Kind: kind, EventVer: 1}
 	b, err := json.Marshal(payload)
 	if err != nil {
@@ -37,4 +37,3 @@ func (p *PostSensitiveScanWatermillPublisher) PublishPostSensitiveScan(ctx conte
 	msg := message.NewMessage(uuid.NewString(), b)
 	return p.inner.Publish(TopicPostSensitiveScan, msg)
 }
-

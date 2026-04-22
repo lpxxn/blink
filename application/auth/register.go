@@ -9,8 +9,8 @@ import (
 
 	"github.com/bwmarrin/snowflake"
 	domainoauth "github.com/lpxxn/blink/domain/oauth"
-	domainuser "github.com/lpxxn/blink/domain/user"
 	"github.com/lpxxn/blink/domain/session"
+	domainuser "github.com/lpxxn/blink/domain/user"
 	"golang.org/x/crypto/bcrypt"
 )
 

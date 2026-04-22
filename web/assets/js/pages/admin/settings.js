@@ -1,8 +1,9 @@
 /**
  * Admin — settings.
  *
- * Currently exposes the sensitive-post-mode toggle. Uses a radio card so
- * semantics of each option are inline.
+ * Currently exposes the sensitive-post-mode toggle, the registration email
+ * verification toggle, and SMTP settings. Uses inline cards so the semantics
+ * of each option are easy to scan.
  */
 (function () {
   'use strict';
@@ -26,6 +27,12 @@
   async function mount(container, ctx) {
     const errEl = el('p', { class: 'err', role: 'alert' });
     const okEl = el('p', { class: 'ok' });
+
+    function field(label, input, hint) {
+      const wrap = el('div', { class: 'field' }, [el('label', {}, label), input]);
+      if (hint) wrap.appendChild(el('p', { class: 'field-hint' }, hint));
+      return wrap;
+    }
 
     const card = el('div', { class: 'admin-form-card' }, [
       el('h2', {}, '发布后敏感词处理模式'),
@@ -95,6 +102,66 @@
 
     await load();
 
+    // ----- registration email verification -----
+    const regErr = el('p', { class: 'err', role: 'alert' });
+    const regOk = el('p', { class: 'ok' });
+    const regCard = el('div', { class: 'admin-form-card' }, [
+      el('h2', {}, '注册邮箱验证'),
+      el('p', { class: 'admin-subtitle' },
+        '开启后，新用户注册必须先完成邮箱验证码验证。'),
+    ]);
+    const regRequired = el('input', { type: 'checkbox' });
+    regCard.appendChild(field(
+      '强制邮箱验证',
+      el('label', { class: 'modal-radio', style: { padding: '.4rem 0' } }, [
+        regRequired,
+        el('span', {}, '开启后才允许提交注册'),
+      ]),
+      '关闭后注册流程会直接创建账号。',
+    ));
+    const regHint = el('p', { class: 'admin-subtitle' }, '加载中…');
+    regCard.appendChild(regHint);
+    container.appendChild(regErr);
+    container.appendChild(regOk);
+    container.appendChild(regCard);
+
+    function regShowErr(err) { regErr.textContent = err ? errorText(err) : ''; regOk.textContent = ''; }
+    function regShowOk(msg) { regErr.textContent = ''; regOk.textContent = msg || ''; }
+
+    function regReflect(required) {
+      regRequired.checked = !!required;
+      regHint.textContent = '当前状态：' + (required ? '开启' : '关闭');
+    }
+
+    async function loadRegisterEmailVerification() {
+      try {
+        const d = await AdminAPI.getRegisterEmailVerification();
+        regReflect(d && d.required);
+      } catch (err) {
+        regHint.textContent = '';
+        regShowErr(err);
+      }
+    }
+
+    async function saveRegisterEmailVerification(required) {
+      regShowOk(null);
+      regRequired.disabled = true;
+      try {
+        await AdminAPI.setRegisterEmailVerification(required);
+        regShowOk('已保存：' + (required ? '开启' : '关闭'));
+        await loadRegisterEmailVerification();
+      } catch (err) {
+        regShowErr(err);
+        await loadRegisterEmailVerification();
+      } finally {
+        regRequired.disabled = false;
+      }
+    }
+
+    regRequired.addEventListener('change', () => saveRegisterEmailVerification(!!regRequired.checked));
+
+    await loadRegisterEmailVerification();
+
     // ----- SMTP settings panel -----
     const smtpErr = el('p', { class: 'err', role: 'alert' });
     const smtpOk = el('p', { class: 'ok' });
@@ -104,11 +171,7 @@
         '注册与找回密码邮件通过此 SMTP 发送。关闭后邮件会写入服务日志以便本地联调。'),
     ]);
 
-    function field(label, input, hint) {
-      const wrap = el('div', { class: 'field' }, [el('label', {}, label), input]);
-      if (hint) wrap.appendChild(el('p', { class: 'field-hint' }, hint));
-      return wrap;
-    }
+
     const smtpEnabled = el('input', { type: 'checkbox' });
     const smtpHost = el('input', { type: 'text', placeholder: 'smtp.example.com' });
     const smtpPort = el('input', { type: 'number', min: '1', max: '65535', placeholder: '465' });

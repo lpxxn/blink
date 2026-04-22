@@ -24,7 +24,7 @@ func (s *stubCatRepo) GetByID(context.Context, int64) (*domaincategory.Category,
 	return &domaincategory.Category{ID: 1}, nil
 }
 func (s *stubCatRepo) ListActive(context.Context) ([]*domaincategory.Category, error) { panic("ni") }
-func (s *stubCatRepo) Count(context.Context) (int64, error) { panic("ni") }
+func (s *stubCatRepo) Count(context.Context) (int64, error)                           { panic("ni") }
 
 type stubPostRepo struct {
 	created *domainpost.Post
@@ -32,7 +32,7 @@ type stubPostRepo struct {
 }
 
 func (r *stubPostRepo) Update(context.Context, *domainpost.Post) error { panic("ni") }
-func (stubPostRepo) SoftDelete(context.Context, int64) error          { panic("ni") }
+func (stubPostRepo) SoftDelete(context.Context, int64) error           { panic("ni") }
 func (r *stubPostRepo) GetByID(_ context.Context, id int64) (*domainpost.Post, error) {
 	if r.byID == nil {
 		return nil, domainpost.ErrNotFound
@@ -52,7 +52,7 @@ func (stubPostRepo) ListByUserID(context.Context, int64, bool, *int64, int) ([]*
 func (stubPostRepo) AdminList(context.Context, domainpost.AdminListFilters, int, int) ([]*domainpost.Post, int64, error) {
 	panic("ni")
 }
-func (stubPostRepo) Count(context.Context) (int64, error)         { panic("ni") }
+func (stubPostRepo) Count(context.Context) (int64, error) { panic("ni") }
 func (stubPostRepo) CountCreatedSince(context.Context, time.Time) (int64, error) {
 	panic("ni")
 }
@@ -121,8 +121,8 @@ func (r *modReqPostRepo) Update(_ context.Context, p *domainpost.Post) error {
 	r.p = &cp
 	return nil
 }
-func (modReqPostRepo) Create(context.Context, *domainpost.Post) error         { panic("ni") }
-func (modReqPostRepo) SoftDelete(context.Context, int64) error              { panic("ni") }
+func (modReqPostRepo) Create(context.Context, *domainpost.Post) error { panic("ni") }
+func (modReqPostRepo) SoftDelete(context.Context, int64) error        { panic("ni") }
 func (modReqPostRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
 }

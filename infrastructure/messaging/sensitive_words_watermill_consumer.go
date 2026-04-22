@@ -38,4 +38,3 @@ func RunSensitiveWordsWatermillRouter(ctx context.Context, sub message.Subscribe
 	<-router.Running()
 	return router, nil
 }
-
