@@ -61,6 +61,58 @@ curl -sS http://127.0.0.1:11110/health
 go run ./cmd/migrate
 ```
 
+## 使用 Git worktree 并行开发
+
+当你想同时维护 `master` 和一个功能分支，或避免在当前工作目录来回切分支时，可以使用 `git worktree`。
+
+### 创建 worktree
+
+在仓库根目录执行，例如为 `feature/register-email-verification` 创建一个独立工作目录：
+
+```bash
+mkdir -p .worktrees
+git worktree add .worktrees/register-email-verification -b feature/register-email-verification
+```
+
+如果分支已经存在，可去掉 `-b`：
+
+```bash
+git worktree add .worktrees/register-email-verification feature/register-email-verification
+```
+
+### 查看当前 worktree
+
+```bash
+git worktree list
+```
+
+### 在 worktree 中运行 Blink
+
+进入新目录后，命令与主工作区一致：
+
+```bash
+cd .worktrees/register-email-verification
+mkdir -p data
+go run ./cmd
+```
+
+如果你不希望与主工作区共用数据库文件，建议显式指定一个独立的 SQLite 文件：
+
+```bash
+BLINK_DATABASE_DSN='file:./data/register-email-verification.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)' go run ./cmd
+```
+
+### 删除 worktree
+
+当分支已经合并、不再需要该工作目录时：
+
+```bash
+git worktree remove .worktrees/register-email-verification
+git branch -d feature/register-email-verification
+```
+
+如果只是想移除工作目录、暂时保留分支，可只执行第一条命令。
+
 ## 与 VS Code / Cursor 调试
 
 使用仓库内 [`.vscode/launch.json`](../.vscode/launch.json) 中的 **「Blink: API Server」** 配置即可在 IDE 中启动（`cwd` 已为仓库根目录，便于 `./data` 等相对路径生效）。该配置已带 **`GIN_MODE=release`**（避免 Gin 默认 debug 刷屏），以及 **`BLINK_PUBLIC_BASE_URL` / `BLINK_OAUTH_CLIENT_SECRET`** 的本地占位值，便于直接启用 **自建 IdP** 与 **`builtin` 登录**；生产或共享仓库前请改为强随机密钥，勿使用默认字面量。

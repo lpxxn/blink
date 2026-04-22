@@ -10,7 +10,7 @@ mkdir -p data
 go run ./cmd
 ```
 
-See [docs/run-local.md](docs/run-local.md) for environment variables, health checks, migrations, and IDE launch notes.
+See [docs/run-local.md](docs/run-local.md) for environment variables, health checks, migrations, Git worktree usage, and IDE launch notes.
 
 Architecture (layers, HTTP vs notification flow): [docs/architecture.md](docs/architecture.md).
 
