@@ -15,3 +15,4 @@ See [docs/run-local.md](docs/run-local.md) for environment variables, health che
 Architecture (layers, HTTP vs notification flow): [docs/architecture.md](docs/architecture.md).
 
 HTTP 契约与 OpenAPI：规范在 [`api/openapi/openapi.yaml`](api/openapi/openapi.yaml)；修改后按 [docs/oapi-codegen.md](docs/oapi-codegen.md) 中的命令重新生成 `api/gen/apigen.gen.go`。
+后台用 golang，后台管理用 html写了一些页面，前端打算用 flutter 进行编写
