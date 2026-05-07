@@ -88,6 +88,6 @@ go run ./cmd/migrate
 - `platform/db/`：SQL migrations
 - `web/`：静态 HTML（管理/页面资源）
 
-## Roadmap（非承诺）
+## Roadmap（实现中）
 
 - 前端计划：Flutter 客户端（仓库内会逐步补齐对应实现与文档）
