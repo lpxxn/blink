@@ -1,0 +1,25 @@
+---
+description: Flutter 客户端分层与目录结构约定（Clean-ish + feature 化）
+globs: **/*.dart
+alwaysApply: false
+---
+
+# 分层约定
+
+- **UI 层（presentation）**：只做渲染与交互绑定（读 provider、触发 action），不直接写网络/DB。
+- **应用层（application）**：用例编排（登录后预加载、发帖链路等），便于测试与复用。
+- **数据层（data）**：API/DTO/mapper/repository impl；对外只暴露 repository 接口或领域模型。
+
+# 目录结构（推荐）
+
+- `lib/app/`：启动、路由、主题、全局 providers
+- `lib/core/`：network/error/logging/storage/widgets 等通用能力
+- `lib/features/<feature>/`
+  - `data/`、`application/`、`presentation/`（可选 `domain/`）
+
+# 规则
+
+- **禁止跨层 new 具体实现**：依赖组装在 `app/providers/`（或 feature 的 providers）完成。
+- **DTO 不出 data**：UI 不直接依赖 DTO；必须在 repository/usecase 边界完成映射。
+- **命名**：`*Repository`（接口/实现）、`*Api`（retrofit client）、`*Notifier`（状态），文件名 snake_case。
+

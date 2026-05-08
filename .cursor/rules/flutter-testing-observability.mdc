@@ -1,0 +1,18 @@
+---
+description: Flutter 测试与可观测性（日志/崩溃/埋点）约定
+globs: **/*.dart
+alwaysApply: false
+---
+
+# 测试
+
+- Repository/usecase 必须可单测（禁止依赖 Flutter UI）。
+- Widget test：用 provider overrides 注入 fake/mock repository，验证 loading/error/data 三态。
+- 关键链路（后续）：集成测试覆盖登录 -> 浏览 feed -> 发帖/上传 -> 评论。
+
+# 可观测性
+
+- 日志：使用统一 logger（分级）；debug 才打印网络 body。
+- 崩溃：接入 Crash/Sentry（统一上报入口），禁止在 catch 中静默吞错。
+- 埋点：抽象 `AnalyticsService`，通过 provider 注入具体实现，业务只调用接口不绑 SDK。
+

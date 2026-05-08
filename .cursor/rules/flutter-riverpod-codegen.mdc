@@ -1,0 +1,22 @@
+---
+description: Flutter + Riverpod（codegen）状态管理规范
+globs: **/*.dart
+alwaysApply: false
+---
+
+# Riverpod（codegen）规范
+
+- **必须使用 codegen**：业务状态只能用 `@riverpod`（`riverpod_generator`）生成 provider；禁止手写 `Provider(...)` / `StateProvider(...)` 作为业务入口。
+- **Provider 选择**
+  - **读取型异步**：`@riverpod` 返回 `Future<T>` / `Stream<T>`，UI 消费 `AsyncValue<T>`。
+  - **可变同步状态**：`Notifier`（`class X extends _$X`）。
+  - **可变异步状态**：`AsyncNotifier`（提交/登录/分页/刷新等）。
+- **错误与加载**：优先使用 `AsyncValue` 表达 loading/error/data；避免自造 `isLoading + errorMessage` 套件。
+- **副作用位置**：导航、toast、dialog 等副作用必须放在 `ref.listen(...)`；禁止在 `build()` 内触发副作用。
+- **依赖注入**：Dio/Repository/Service 等依赖通过 provider 暴露与组合，不引入额外 DI 框架。
+
+# 生成命令（必须一致）
+
+- `dart run build_runner build -d`
+- `dart run build_runner watch -d`
+

@@ -91,3 +91,4 @@ go run ./cmd/migrate
 ## Roadmap（实现中）
 
 - 前端计划：Flutter 客户端（仓库内会逐步补齐对应实现与文档）
+  - 规划文档：`docs/flutter-client-plan.md`

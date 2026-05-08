@@ -1,0 +1,22 @@
+---
+description: Flutter 网络层、会话与错误处理约定（Dio + Repository）
+globs: **/*.dart
+alwaysApply: false
+---
+
+# 网络层约定（Dio）
+
+- 统一由 `dioProvider` 提供配置完毕的 Dio（baseUrl、超时、拦截器、日志）。
+- 拦截器职责：认证信息注入（Cookie/Token）、401 处理、错误映射、调试日志（仅 debug）。
+- 禁止在 Widget/Notifier 内直接拼 URL、写 header；必须走 `ApiClient/Repository`。
+
+# 错误模型
+
+- Data 层把 DioException/解析错误/业务错误映射为统一 `AppError`（或同等抽象）。
+- Presentation 层只把 `AppError` 映射为文案与 UI（空态/重试/toast/dialog），不解析底层异常。
+
+# 会话（对接 Blink）
+
+- 以“服务端会话 Cookie”为准管理登录态；401/未授权必须驱动 auth provider 变更与路由重定向。
+- 上传（multipart）封装到 `UploadRepository`，支持进度回调与失败重试策略（按业务需要启用）。
+
