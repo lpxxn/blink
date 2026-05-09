@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/application/auth_state_provider.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/auth/presentation/me_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import 'auth_router_refresh.dart';
 
@@ -28,9 +29,18 @@ GoRouter goRouter(GoRouterRef ref) {
     initialLocation: '/',
     redirect: (BuildContext context, GoRouterState state) {
       final auth = ProviderScope.containerOf(context).read(authStateProvider);
-      if (auth == AuthStatus.authenticated &&
-          state.matchedLocation == '/login') {
+      final String loc = state.matchedLocation;
+
+      if (auth == AuthStatus.authenticated && loc == '/login') {
         return '/';
+      }
+
+      const Set<String> protectedPaths = {'/me'};
+      if (auth == AuthStatus.unknown && protectedPaths.contains(loc)) {
+        return '/';
+      }
+      if (protectedPaths.contains(loc) && auth == AuthStatus.guest) {
+        return '/login';
       }
       return null;
     },
@@ -45,6 +55,12 @@ GoRouter goRouter(GoRouterRef ref) {
         path: '/login',
         builder: (BuildContext context, GoRouterState state) {
           return const LoginPage();
+        },
+      ),
+      GoRoute(
+        path: '/me',
+        builder: (BuildContext context, GoRouterState state) {
+          return const MePage();
         },
       ),
     ],

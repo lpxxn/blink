@@ -6,7 +6,7 @@ part of 'go_router_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$authRouterRefreshHash() => r'e7c580493b69c9fcf3a225f5acb09b22ed9aa9b5';
+String _$authRouterRefreshHash() => r'd387c7daf83cc3aef6fce35faf1dc503169d2d7e';
 
 /// See also [authRouterRefresh].
 @ProviderFor(authRouterRefresh)
@@ -23,7 +23,7 @@ final authRouterRefreshProvider = Provider<AuthRouterRefresh>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthRouterRefreshRef = ProviderRef<AuthRouterRefresh>;
-String _$goRouterHash() => r'56c6662a7c805ced4f9a603dd9f5d273a2c4632b';
+String _$goRouterHash() => r'79d6fcb8cd14f506aeac835b952a5ac43622e05d';
 
 /// See also [goRouter].
 @ProviderFor(goRouter)

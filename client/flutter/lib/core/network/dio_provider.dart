@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/application/auth_state_provider.dart';
+import 'blink_cookie_jar_provider.dart';
 import '../env/app_env_provider.dart';
 
 part 'dio_provider.g.dart';
@@ -21,6 +23,8 @@ Dio dio(DioRef ref) {
       },
     ),
   );
+
+  dio.interceptors.add(CookieManager(ref.watch(blinkCookieJarProvider)));
 
   if (kDebugMode) {
     dio.interceptors.add(

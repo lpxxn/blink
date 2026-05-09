@@ -9,16 +9,28 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:blink_client/app/app.dart';
+import 'package:blink_client/features/auth/application/auth_hydration_provider.dart';
+import 'package:blink_client/features/auth/application/auth_state_provider.dart';
 
 void main() {
   testWidgets('App boot smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: BlinkApp(),
+      ProviderScope(
+        overrides: [
+          // Avoid real HTTP + pending Dio timers in widget tests.
+          authHydrationProvider.overrideWith((ref) async {
+            ref.read(authStateProvider.notifier).setGuest();
+          }),
+        ],
+        child: const BlinkApp(),
       ),
     );
 
+    await tester.pumpAndSettle();
+
     expect(find.text('Blink'), findsNWidgets(2)); // AppBar + body
+    expect(find.text('Session: guest'), findsOneWidget);
     expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
   });
 }

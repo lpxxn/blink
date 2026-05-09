@@ -16,7 +16,7 @@ enum AuthStatus {
 @riverpod
 class AuthState extends _$AuthState {
   @override
-  AuthStatus build() => AuthStatus.guest;
+  AuthStatus build() => AuthStatus.unknown;
 
   void setUnknown() => state = AuthStatus.unknown;
   void setGuest() => state = AuthStatus.guest;

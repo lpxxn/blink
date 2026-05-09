@@ -1,26 +1,26 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'auth_state_provider.dart';
+part of 'login_submit_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$authStateHash() => r'84498399f31733c32872a4f5eaa1c76615912393';
+String _$loginSubmitHash() => r'ef2f2d45b12a247675b104a75fd76f094bfa185d';
 
-/// See also [AuthState].
-@ProviderFor(AuthState)
-final authStateProvider =
-    AutoDisposeNotifierProvider<AuthState, AuthStatus>.internal(
-      AuthState.new,
-      name: r'authStateProvider',
+/// See also [LoginSubmit].
+@ProviderFor(LoginSubmit)
+final loginSubmitProvider =
+    AutoDisposeNotifierProvider<LoginSubmit, AsyncValue<void>>.internal(
+      LoginSubmit.new,
+      name: r'loginSubmitProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
-          : _$authStateHash,
+          : _$loginSubmitHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
 
-typedef _$AuthState = AutoDisposeNotifier<AuthStatus>;
+typedef _$LoginSubmit = AutoDisposeNotifier<AsyncValue<void>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
