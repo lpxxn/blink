@@ -170,6 +170,11 @@ flutter run \
 
 未指定时默认 `ENV=dev`、`API_BASE_URL=http://127.0.0.1:11110`。
 
+## Feed（首页已实现）
+
+- `GET /api/categories` + `GET /api/posts`（`category_id` / `uncategorized` / `cursor` / `limit`）由 `SocialRepository` 调用；时间线状态为 `publicFeedProvider`（codegen `AsyncNotifier`，支持加载更多），筛选为 `publicFeedQueryProvider`（record 相等性）。
+- 帖子内相对图片路径通过 `resolveMediaUrl` 拼到 `API_BASE_URL` 同主机。
+
 ## 里程碑计划
 
 ### 阶段 A：骨架（1–3 天）

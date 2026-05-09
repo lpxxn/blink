@@ -5,22 +5,44 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:blink_client/app/app.dart';
 import 'package:blink_client/features/auth/application/auth_hydration_provider.dart';
 import 'package:blink_client/features/auth/application/auth_state_provider.dart';
+import 'package:blink_client/features/feed/data/feed_models.dart';
+import 'package:blink_client/features/feed/data/social_repository.dart';
+import 'package:blink_client/features/feed/data/social_repository_provider.dart';
+
+class _StubSocialRepository extends SocialRepository {
+  _StubSocialRepository() : super(Dio());
+
+  @override
+  Future<List<FeedCategory>> fetchCategories() async => const [];
+
+  @override
+  Future<PostsPage> fetchPosts({
+    String? categoryId,
+    bool uncategorized = false,
+    String? cursor,
+    int limit = 20,
+  }) async =>
+      const PostsPage(posts: []);
+}
 
 void main() {
   testWidgets('App boot smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          // Avoid real HTTP + pending Dio timers in widget tests.
           authHydrationProvider.overrideWith((ref) async {
             ref.read(authStateProvider.notifier).setGuest();
           }),
+          socialRepositoryProvider.overrideWith(
+            (ref) => _StubSocialRepository(),
+          ),
         ],
         child: const BlinkApp(),
       ),
@@ -28,9 +50,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Blink'), findsNWidgets(2)); // AppBar + body
+    expect(find.text('Blink'), findsOneWidget);
     expect(find.text('Session: guest'), findsOneWidget);
     expect(find.text('Login'), findsOneWidget);
-    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Me'), findsOneWidget);
   });
 }

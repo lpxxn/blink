@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 
 import 'feed_models.dart';
 
-final class SocialRepository {
+class SocialRepository {
   SocialRepository(this._dio);
 
   final Dio _dio;

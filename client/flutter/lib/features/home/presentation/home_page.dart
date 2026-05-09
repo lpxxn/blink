@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/env/app_env.dart';
 import '../../../core/env/app_env_provider.dart';
 import '../../../core/network/media_url.dart';
 import '../../auth/application/auth_state_provider.dart';
@@ -105,7 +106,7 @@ class HomePage extends ConsumerWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-              error: (Object _, StackTrace __) => const SizedBox.shrink(),
+              error: (Object e, StackTrace _) => const SizedBox.shrink(),
             ),
           ),
           const Divider(height: 1),
@@ -135,21 +136,22 @@ class HomePage extends ConsumerWidget {
                         ],
                       );
                     }
-                    final AppEnv = ref.watch(appEnvProvider);
+                    final AppEnv env = ref.watch(appEnvProvider);
                     return ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
                       itemCount: posts.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (BuildContext context, int index) =>
+                          const Divider(height: 1),
                       itemBuilder: (BuildContext context, int i) {
                         final FeedPost p = posts[i];
-                        return _PostTile(env: AppEnv, post: p);
+                        return _PostTile(env: env, post: p);
                       },
                     );
                   },
                   loading: () => const Center(
                     child: CircularProgressIndicator(),
                   ),
-                  error: (Object e, StackTrace _) => ListView(
+                  error: (Object e, StackTrace stackTrace) => ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
                       const SizedBox(height: 48),
@@ -181,12 +183,11 @@ class HomePage extends ConsumerWidget {
 class _PostTile extends StatelessWidget {
   const _PostTile({required this.env, required this.post});
 
-  final dynamic env;
+  final AppEnv env;
   final FeedPost post;
 
   @override
   Widget build(BuildContext context) {
-    final AppEnv typed = env as AppEnv;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
@@ -206,11 +207,12 @@ class _PostTile extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                resolveMediaUrl(typed, post.images.first),
+                resolveMediaUrl(env, post.images.first),
                 height: 160,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorBuilder: (BuildContext context, Object error, _) =>
+                    const SizedBox.shrink(),
               ),
             ),
           ],
