@@ -157,6 +157,19 @@ CI 必须包含生成校验（避免本地忘记生成导致 CI/打包失败）�
 - 依赖治理：定期 `flutter pub outdated`，按节奏升级
 - 多环境：`--dart-define=ENV=staging` 等注入 baseUrl 与开关
 
+## 本地运行（多环境）
+
+在 `client/flutter/` 下通过 `--dart-define` 注入环境名与 API 基址（与 `lib/core/env/app_env_provider.dart` 一致）：
+
+```bash
+cd client/flutter
+flutter run \
+  --dart-define=ENV=dev \
+  --dart-define=API_BASE_URL=http://127.0.0.1:11110
+```
+
+未指定时默认 `ENV=dev`、`API_BASE_URL=http://127.0.0.1:11110`。
+
 ## 里程碑计划
 
 ### 阶段 A：骨架（1–3 天）

@@ -18,6 +18,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Blink'), findsOneWidget);
+    expect(find.text('Blink'), findsNWidgets(2)); // AppBar + body
+    expect(find.text('Login'), findsOneWidget);
   });
 }

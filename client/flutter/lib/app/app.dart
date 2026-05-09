@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'router/app_router.dart';
+import 'router/go_router_provider.dart';
 
-class BlinkApp extends StatelessWidget {
+class BlinkApp extends ConsumerWidget {
   const BlinkApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final GoRouter router = createRouter();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(goRouterProvider);
 
     return MaterialApp.router(
       title: 'Blink',
