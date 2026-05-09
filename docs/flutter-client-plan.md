@@ -170,6 +170,11 @@ flutter run \
 
 未指定时默认 `ENV=dev`、`API_BASE_URL=http://127.0.0.1:11110`。
 
+### Flutter Web 与登录
+
+- **不要用 `dio_cookie_manager` 在 Web 上**：已在客户端用条件编译改为 Web 使用 `BrowserHttpClientAdapter(withCredentials: true)`，由浏览器处理 `Set-Cookie` / 携带 Cookie。
+- **后端 CORS**：`infrastructure/interface/http/cors` 中间件对带 `Origin` 的请求回显该 Origin，并设置 `Access-Control-Allow-Credentials: true` 及常用 Methods/Headers；`OPTIONS` 预检返回 204。公网部署时请按需收紧策略。
+
 ## Feed（首页已实现）
 
 - `GET /api/categories` + `GET /api/posts`（`category_id` / `uncategorized` / `cursor` / `limit`）由 `SocialRepository` 调用；时间线状态为 `publicFeedProvider`（codegen `AsyncNotifier`，支持加载更多），筛选为 `publicFeedQueryProvider`（record 相等性）。

@@ -37,6 +37,7 @@ import (
 	httpadmin "github.com/lpxxn/blink/infrastructure/interface/http/admin"
 	httpapi "github.com/lpxxn/blink/infrastructure/interface/http/api"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
+	"github.com/lpxxn/blink/infrastructure/interface/http/cors"
 	httpidp "github.com/lpxxn/blink/infrastructure/interface/http/idp"
 	httpoauth "github.com/lpxxn/blink/infrastructure/interface/http/oauth"
 	"github.com/lpxxn/blink/infrastructure/mail"
@@ -376,6 +377,7 @@ func main() {
 
 	gin.SetMode(gin.DebugMode)
 	r := gin.New()
+	r.Use(cors.Middleware())
 	apigen.RegisterHandlers(r, openapiServer{})
 	r.GET("/healthz", func(c *gin.Context) {
 		c.String(http.StatusOK, "ok")

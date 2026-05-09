@@ -47,7 +47,13 @@ final class AuthRepository {
     }
   }
 
+  /// Clears server session cookie (`POST /api/logout`) and local jar (non-web).
   Future<void> logout() async {
+    try {
+      await _dio.post<void>('/api/logout');
+    } on DioException {
+      // Still clear local cookies; web relies on Set-Cookie from this response.
+    }
     await _cookieJar.deleteAll();
   }
 }

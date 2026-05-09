@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/application/auth_state_provider.dart';
 import 'blink_cookie_jar_provider.dart';
+import 'configure_dio_http.dart';
 import '../env/app_env_provider.dart';
 
 part 'dio_provider.g.dart';
@@ -24,7 +25,13 @@ Dio dio(DioRef ref) {
     ),
   );
 
-  dio.interceptors.add(CookieManager(ref.watch(blinkCookieJarProvider)));
+  // dio_cookie_manager asserts on web; the browser stores/sends cookies when
+  // [BrowserHttpClientAdapter.withCredentials] is true (see configure_dio_http_web.dart).
+  if (kIsWeb) {
+    configureDioHttpAdapter(dio);
+  } else {
+    dio.interceptors.add(CookieManager(ref.watch(blinkCookieJarProvider)));
+  }
 
   if (kDebugMode) {
     dio.interceptors.add(
