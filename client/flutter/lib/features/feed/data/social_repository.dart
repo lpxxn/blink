@@ -58,4 +58,46 @@ class SocialRepository {
         nc == null ? null : (nc is String ? nc : nc.toString());
     return PostsPage(posts: posts, nextCursor: nextCursor);
   }
+
+  /// GET `/api/posts/:id` — same shape as feed post.
+  Future<FeedPost> fetchPost(String id) async {
+    final Response<Map<String, dynamic>> res =
+        await _dio.get<Map<String, dynamic>>('/api/posts/$id');
+    final data = res.data;
+    if (data == null) {
+      throw StateError('Empty post response');
+    }
+    return FeedPost.fromJson(data);
+  }
+
+  /// GET `/api/posts/:id/replies` — `cursor` is last reply id for pagination.
+  Future<RepliesPage> fetchReplies(
+    String postId, {
+    String? cursor,
+    int limit = 50,
+  }) async {
+    final Map<String, dynamic> q = <String, dynamic>{'limit': limit};
+    if (cursor != null && cursor.isNotEmpty) {
+      q['cursor'] = cursor;
+    }
+    final Response<Map<String, dynamic>> res =
+        await _dio.get<Map<String, dynamic>>(
+      '/api/posts/$postId/replies',
+      queryParameters: q,
+    );
+    final data = res.data;
+    if (data == null) {
+      throw StateError('Empty replies response');
+    }
+    final raw = data['replies'];
+    final List<FeedReply> replies = raw is List<dynamic>
+        ? raw
+            .map((e) => FeedReply.fromJson(e as Map<String, dynamic>))
+            .toList()
+        : const [];
+    final dynamic nc = data['next_cursor'];
+    final String? nextCursor =
+        nc == null ? null : (nc is String ? nc : nc.toString());
+    return RepliesPage(replies: replies, nextCursor: nextCursor);
+  }
 }

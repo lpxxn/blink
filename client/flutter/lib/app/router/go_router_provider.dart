@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../features/auth/application/auth_state_provider.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/me_page.dart';
+import '../../features/feed/presentation/post_detail_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import 'auth_router_refresh.dart';
 
@@ -61,6 +62,13 @@ GoRouter goRouter(GoRouterRef ref) {
         path: '/me',
         builder: (BuildContext context, GoRouterState state) {
           return const MePage();
+        },
+      ),
+      GoRoute(
+        path: '/posts/:postId',
+        builder: (BuildContext context, GoRouterState state) {
+          final String id = state.pathParameters['postId'] ?? '';
+          return PostDetailPage(postId: id);
         },
       ),
     ],

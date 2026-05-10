@@ -30,6 +30,24 @@ class _StubSocialRepository extends SocialRepository {
     int limit = 20,
   }) async =>
       const PostsPage(posts: []);
+
+  @override
+  Future<FeedPost> fetchPost(String id) async => FeedPost(
+        id: id,
+        userId: '0',
+        userName: 'stub',
+        body: 'stub',
+        images: const [],
+        createdAt: '',
+      );
+
+  @override
+  Future<RepliesPage> fetchReplies(
+    String postId, {
+    String? cursor,
+    int limit = 50,
+  }) async =>
+      const RepliesPage(replies: []);
 }
 
 void main() {

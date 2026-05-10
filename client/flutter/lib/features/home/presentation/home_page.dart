@@ -144,7 +144,10 @@ class HomePage extends ConsumerWidget {
                           const Divider(height: 1),
                       itemBuilder: (BuildContext context, int i) {
                         final FeedPost p = posts[i];
-                        return _PostTile(env: env, post: p);
+                        return InkWell(
+                          onTap: () => context.push('/posts/${p.id}'),
+                          child: _PostTile(env: env, post: p),
+                        );
                       },
                     );
                   },

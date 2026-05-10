@@ -65,6 +65,46 @@ final class PostsPage {
   final String? nextCursor;
 }
 
+/// GET `/api/posts/:id/replies` item.
+final class FeedReply {
+  const FeedReply({
+    required this.id,
+    required this.postId,
+    required this.userId,
+    required this.userName,
+    required this.body,
+    required this.createdAt,
+    this.parentReplyId,
+  });
+
+  final String id;
+  final String postId;
+  final String userId;
+  final String userName;
+  final String body;
+  final String createdAt;
+  final String? parentReplyId;
+
+  factory FeedReply.fromJson(Map<String, dynamic> json) {
+    return FeedReply(
+      id: _idToString(json['id']),
+      postId: _idToString(json['post_id']),
+      userId: _idToString(json['user_id']),
+      userName: json['user_name'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      createdAt: json['created_at'] as String? ?? '',
+      parentReplyId: _optionalId(json['parent_reply_id']),
+    );
+  }
+}
+
+final class RepliesPage {
+  const RepliesPage({required this.replies, this.nextCursor});
+
+  final List<FeedReply> replies;
+  final String? nextCursor;
+}
+
 String _idToString(Object? value) {
   if (value == null) {
     return '';
