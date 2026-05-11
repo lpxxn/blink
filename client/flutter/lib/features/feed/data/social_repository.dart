@@ -100,4 +100,26 @@ class SocialRepository {
         nc == null ? null : (nc is String ? nc : nc.toString());
     return RepliesPage(replies: replies, nextCursor: nextCursor);
   }
+
+  /// POST `/api/posts/:id/replies` — requires session. Returns created reply JSON.
+  Future<FeedReply> createReply({
+    required String postId,
+    required String body,
+    String? parentReplyId,
+  }) async {
+    final Map<String, dynamic> data = <String, dynamic>{'body': body};
+    if (parentReplyId != null && parentReplyId.isNotEmpty) {
+      data['parent_reply_id'] = parentReplyId;
+    }
+    final Response<Map<String, dynamic>> res =
+        await _dio.post<Map<String, dynamic>>(
+      '/api/posts/$postId/replies',
+      data: data,
+    );
+    final Map<String, dynamic>? json = res.data;
+    if (json == null) {
+      throw StateError('Empty create reply response');
+    }
+    return FeedReply.fromJson(json);
+  }
 }

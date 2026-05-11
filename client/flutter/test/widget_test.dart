@@ -12,7 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:blink_client/app/app.dart';
 import 'package:blink_client/features/auth/application/auth_hydration_provider.dart';
 import 'package:blink_client/features/auth/application/auth_state_provider.dart';
-import 'package:blink_client/features/feed/data/feed_models.dart';
+import 'package:blink_client/features/feed/data/feed_models.dart'
+    show FeedCategory, FeedPost, FeedReply, PostsPage, RepliesPage;
 import 'package:blink_client/features/feed/data/social_repository.dart';
 import 'package:blink_client/features/feed/data/social_repository_provider.dart';
 
@@ -48,6 +49,22 @@ class _StubSocialRepository extends SocialRepository {
     int limit = 50,
   }) async =>
       const RepliesPage(replies: []);
+
+  @override
+  Future<FeedReply> createReply({
+    required String postId,
+    required String body,
+    String? parentReplyId,
+  }) async =>
+      FeedReply(
+        id: '0',
+        postId: postId,
+        userId: '0',
+        userName: 'stub',
+        body: body,
+        createdAt: '',
+        parentReplyId: parentReplyId,
+      );
 }
 
 void main() {

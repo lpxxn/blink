@@ -180,6 +180,7 @@ flutter run \
 - `GET /api/categories` + `GET /api/posts`（`category_id` / `uncategorized` / `cursor` / `limit`）由 `SocialRepository` 调用；时间线状态为 `publicFeedProvider`（codegen `AsyncNotifier`，支持加载更多），筛选为 `publicFeedQueryProvider`（record 相等性）。
 - 帖子内相对图片路径通过 `resolveMediaUrl` 拼到 `API_BASE_URL` 同主机。
 - 帖子详情：`GET /api/posts/:id` + `GET /api/posts/:id/replies`（`cursor` / `limit`），路由 `/posts/:postId`，`postDetailProvider` / `postRepliesProvider`（家族 + 加载更多）。
+- 发表评论：`POST /api/posts/:id/replies`（JSON `body`，可选 `parent_reply_id` 字符串），底部 `ReplyComposerBar`；未登录引导去 `/login`。
 
 ## 里程碑计划
 

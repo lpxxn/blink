@@ -8,6 +8,7 @@ import '../../../core/network/media_url.dart';
 import '../application/post_detail_provider.dart';
 import '../application/post_replies_provider.dart';
 import '../data/feed_models.dart';
+import 'reply_composer_bar.dart';
 
 class PostDetailPage extends ConsumerWidget {
   const PostDetailPage({super.key, required this.postId});
@@ -29,6 +30,7 @@ class PostDetailPage extends ConsumerWidget {
         ),
         title: const Text('Post'),
       ),
+      bottomNavigationBar: ReplyComposerBar(postId: postId),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(postDetailProvider(postId));
