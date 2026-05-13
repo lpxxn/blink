@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../auth/application/auth_state_provider.dart';
 import '../application/create_reply_submit_provider.dart';
+import '../application/reply_parent_target_provider.dart';
 
 class ReplyComposerBar extends ConsumerStatefulWidget {
   const ReplyComposerBar({super.key, required this.postId});
@@ -29,6 +30,8 @@ class _ReplyComposerBarState extends ConsumerState<ReplyComposerBar> {
     final AuthStatus auth = ref.watch(authStateProvider);
     final AsyncValue<void> submit =
         ref.watch(createReplySubmitProvider(widget.postId));
+    final ReplyParent? parent =
+        ref.watch(replyParentTargetProvider(widget.postId));
 
     ref.listen(createReplySubmitProvider(widget.postId),
         (AsyncValue<void>? previous, AsyncValue<void> next) {
@@ -53,6 +56,7 @@ class _ReplyComposerBarState extends ConsumerState<ReplyComposerBar> {
           next.hasValue &&
           previous?.isLoading == true) {
         _controller.clear();
+        ref.read(replyParentTargetProvider(widget.postId).notifier).clear();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Reply posted')),
         );
@@ -89,38 +93,58 @@ class _ReplyComposerBarState extends ConsumerState<ReplyComposerBar> {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  minLines: 1,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    hintText: 'Write a reply…',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+              if (parent != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InputChip(
+                    label: Text('Replying to ${parent.userName}'),
+                    onDeleted: () => ref
+                        .read(replyParentTargetProvider(widget.postId).notifier)
+                        .clear(),
                   ),
-                  textInputAction: TextInputAction.newline,
                 ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: submit.isLoading
-                    ? null
-                    : () async {
-                        await ref
-                            .read(createReplySubmitProvider(widget.postId).notifier)
-                            .submit(_controller.text);
-                      },
-                child: submit.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Send'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        hintText: 'Write a reply…',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      textInputAction: TextInputAction.newline,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: submit.isLoading
+                        ? null
+                        : () async {
+                            await ref
+                                .read(createReplySubmitProvider(widget.postId)
+                                    .notifier)
+                                .submit(
+                                  _controller.text,
+                                  parentReplyId: parent?.id,
+                                );
+                          },
+                    child: submit.isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Send'),
+                  ),
+                ],
               ),
             ],
           ),

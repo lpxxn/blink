@@ -65,6 +65,23 @@ class _StubSocialRepository extends SocialRepository {
         createdAt: '',
         parentReplyId: parentReplyId,
       );
+
+  @override
+  Future<FeedPost> createPost({
+    required String body,
+    required String categoryId,
+    List<String> images = const [],
+    bool draft = false,
+  }) async =>
+      FeedPost(
+        id: '99',
+        userId: '0',
+        userName: 'stub',
+        body: body,
+        images: images,
+        createdAt: '',
+        categoryId: categoryId,
+      );
 }
 
 void main() {

@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../features/auth/application/auth_state_provider.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/me_page.dart';
+import '../../features/feed/presentation/compose_post_page.dart';
 import '../../features/feed/presentation/post_detail_page.dart';
 import '../../features/home/presentation/home_page.dart';
 import 'auth_router_refresh.dart';
@@ -36,7 +37,7 @@ GoRouter goRouter(GoRouterRef ref) {
         return '/';
       }
 
-      const Set<String> protectedPaths = {'/me'};
+      const Set<String> protectedPaths = {'/me', '/compose'};
       if (auth == AuthStatus.unknown && protectedPaths.contains(loc)) {
         return '/';
       }
@@ -62,6 +63,12 @@ GoRouter goRouter(GoRouterRef ref) {
         path: '/me',
         builder: (BuildContext context, GoRouterState state) {
           return const MePage();
+        },
+      ),
+      GoRoute(
+        path: '/compose',
+        builder: (BuildContext context, GoRouterState state) {
+          return const ComposePostPage();
         },
       ),
       GoRoute(

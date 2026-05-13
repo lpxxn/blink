@@ -23,7 +23,7 @@ final authRouterRefreshProvider = Provider<AuthRouterRefresh>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthRouterRefreshRef = ProviderRef<AuthRouterRefresh>;
-String _$goRouterHash() => r'f6f7c716b0c58436aa518f37f59b7c128cb66305';
+String _$goRouterHash() => r'695af09f431fd69020e982b8b5cbef3f537d8dae';
 
 /// See also [goRouter].
 @ProviderFor(goRouter)

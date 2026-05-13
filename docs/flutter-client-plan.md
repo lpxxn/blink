@@ -181,6 +181,8 @@ flutter run \
 - 帖子内相对图片路径通过 `resolveMediaUrl` 拼到 `API_BASE_URL` 同主机。
 - 帖子详情：`GET /api/posts/:id` + `GET /api/posts/:id/replies`（`cursor` / `limit`），路由 `/posts/:postId`，`postDetailProvider` / `postRepliesProvider`（家族 + 加载更多）。
 - 发表评论：`POST /api/posts/:id/replies`（JSON `body`，可选 `parent_reply_id` 字符串），底部 `ReplyComposerBar`；未登录引导去 `/login`。
+- 楼中楼：回复列表 **Reply** 设置 `replyParentTargetProvider(postId)`，输入栏展示「Replying to …」芯片并可清除。
+- 发帖：`/compose`（需登录），`POST /api/posts`（`body`、`category_id`、`images`、`draft`）；分类来自 `GET /api/categories`；成功后跳转新帖详情。首页 AppBar **New post** 图标进入。
 
 ## 里程碑计划
 

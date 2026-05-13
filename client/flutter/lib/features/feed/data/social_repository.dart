@@ -122,4 +122,28 @@ class SocialRepository {
     }
     return FeedReply.fromJson(json);
   }
+
+  /// POST `/api/posts` — requires session. [categoryId] must be a valid category snowflake string.
+  Future<FeedPost> createPost({
+    required String body,
+    required String categoryId,
+    List<String> images = const [],
+    bool draft = false,
+  }) async {
+    final Response<Map<String, dynamic>> res =
+        await _dio.post<Map<String, dynamic>>(
+      '/api/posts',
+      data: <String, dynamic>{
+        'body': body,
+        'category_id': categoryId,
+        'images': images,
+        'draft': draft,
+      },
+    );
+    final Map<String, dynamic>? json = res.data;
+    if (json == null) {
+      throw StateError('Empty create post response');
+    }
+    return FeedPost.fromJson(json);
+  }
 }

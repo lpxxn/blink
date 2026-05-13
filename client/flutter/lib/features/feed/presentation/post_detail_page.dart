@@ -7,6 +7,7 @@ import '../../../core/env/app_env_provider.dart';
 import '../../../core/network/media_url.dart';
 import '../application/post_detail_provider.dart';
 import '../application/post_replies_provider.dart';
+import '../application/reply_parent_target_provider.dart';
 import '../data/feed_models.dart';
 import 'reply_composer_bar.dart';
 
@@ -95,6 +96,15 @@ class PostDetailPage extends ConsumerWidget {
                                 style: Theme.of(context).textTheme.titleSmall,
                               ),
                               subtitle: Text(r.body),
+                              trailing: TextButton(
+                                onPressed: () {
+                                  ref
+                                      .read(replyParentTargetProvider(postId)
+                                          .notifier)
+                                      .setParent(r.id, r.userName);
+                                },
+                                child: const Text('Reply'),
+                              ),
                             ),
                           ],
                         );

@@ -26,6 +26,11 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Blink'),
         actions: [
+          IconButton(
+            tooltip: 'New post',
+            icon: const Icon(Icons.post_add),
+            onPressed: () => context.push('/compose'),
+          ),
           TextButton(
             onPressed: () => context.push('/login'),
             child: const Text('Login'),
