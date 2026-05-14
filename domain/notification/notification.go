@@ -11,6 +11,8 @@ const (
 	TypeAppealSubmittedAdmin = "appeal_submitted_admin"
 	TypeSensitiveHitAdmin    = "sensitive_hit_admin"
 	TypeAppealResult         = "appeal_result"
+	TypeFeedbackAdmin        = "feedback_admin"
+	TypeFeedbackReply        = "feedback_reply"
 	TypeSystem               = "system"
 )
 

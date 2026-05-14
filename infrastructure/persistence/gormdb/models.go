@@ -142,3 +142,32 @@ type AppSettingModel struct {
 func (AppSettingModel) TableName() string {
 	return "app_settings"
 }
+
+// FeedbackThreadModel maps feedback_threads.
+type FeedbackThreadModel struct {
+	ID             int64     `gorm:"column:id;primaryKey"`
+	UserID         int64     `gorm:"column:user_id;not null;index:idx_feedback_threads_user_last"`
+	Status         string    `gorm:"column:status;type:varchar(32);not null"`
+	UserReplyCount int       `gorm:"column:user_reply_count;not null"`
+	CreatedAt      time.Time `gorm:"column:created_at"`
+	UpdatedAt      time.Time `gorm:"column:updated_at"`
+	LastMessageAt  time.Time `gorm:"column:last_message_at;index:idx_feedback_threads_last"`
+}
+
+func (FeedbackThreadModel) TableName() string {
+	return "feedback_threads"
+}
+
+// FeedbackMessageModel maps feedback_messages.
+type FeedbackMessageModel struct {
+	ID         int64     `gorm:"column:id;primaryKey"`
+	FeedbackID int64     `gorm:"column:feedback_id;not null;index:idx_feedback_messages_feedback_created"`
+	SenderID   int64     `gorm:"column:sender_id;not null"`
+	SenderType string    `gorm:"column:sender_type;type:varchar(16);not null"`
+	Body       string    `gorm:"column:body;type:text;not null"`
+	CreatedAt  time.Time `gorm:"column:created_at;index:idx_feedback_messages_feedback_created"`
+}
+
+func (FeedbackMessageModel) TableName() string {
+	return "feedback_messages"
+}

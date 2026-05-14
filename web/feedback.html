@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>意见反馈 — Blink</title>
+  <link rel="stylesheet" href="/web/common.css" />
+</head>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <blink-nav active="feedback"></blink-nav>
+
+    <h1 class="page-title">意见反馈</h1>
+    <p class="page-lead">写下你对 Blink 的建议或问题，管理员会在站内消息中回复你。管理员回复后，你最多可以继续补充 2 次。</p>
+    <p id="feedback-msg" class="err" role="alert"></p>
+
+    <div class="card">
+      <form id="feedback-form">
+        <div class="field">
+          <label for="feedback-body">新的反馈</label>
+          <textarea id="feedback-body" maxlength="4000" required placeholder="请描述你的意见、遇到的问题或希望改进的地方"></textarea>
+          <p class="field-hint">最多 4000 字符。</p>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="feedback-submit">提交反馈</button>
+        </div>
+      </form>
+    </div>
+
+    <h2 class="section-title">我的反馈</h2>
+    <div class="card" style="padding:0.75rem 1.25rem 1rem">
+      <div id="feedback-list"></div>
+      <p style="margin-top:0.75rem;margin-bottom:0">
+        <button type="button" class="btn btn-secondary" id="feedback-more" hidden>加载更多</button>
+      </p>
+    </div>
+  </div>
+
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/ui.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
+  <script src="/web/assets/js/pages/feedback.js"></script>
+</body>
+</html>

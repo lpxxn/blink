@@ -57,6 +57,16 @@
         href: '/web/post.html?id=' + encodeURIComponent(String(n.ref_post_id)),
         style: { display: 'inline-block', marginTop: '0.5rem', fontSize: '0.9rem' },
       }, '查看帖子'));
+    } else if (n.type === 'feedback_reply') {
+      wrap.appendChild(el('a', {
+        href: '/web/feedback.html',
+        style: { display: 'inline-block', marginTop: '0.5rem', fontSize: '0.9rem' },
+      }, '查看反馈'));
+    } else if (n.type === 'feedback_admin') {
+      wrap.appendChild(el('a', {
+        href: '/web/admin.html#feedback',
+        style: { display: 'inline-block', marginTop: '0.5rem', fontSize: '0.9rem' },
+      }, '进入反馈管理'));
     }
 
     let readBtn = null;

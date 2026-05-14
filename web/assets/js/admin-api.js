@@ -40,6 +40,12 @@
     listPostReplies: (postId, params) =>
       API.get('/admin/api/posts/' + encodeURIComponent(postId) + '/replies' + qs(params || {})),
 
+    // ---- feedback ----
+    listFeedback: (params) => API.get('/admin/api/feedback' + qs(params || { limit: 50, offset: 0 })),
+    getFeedback: (id) => API.get('/admin/api/feedback/' + encodeURIComponent(id)),
+    replyFeedback: (id, body) =>
+      API.post('/admin/api/feedback/' + encodeURIComponent(id) + '/replies', { body }),
+
     // ---- replies ----
     patchReply: (id, body) => API.patch('/admin/api/replies/' + encodeURIComponent(id), body),
     hideReplyCascade: (id) => API.patch('/admin/api/replies/' + encodeURIComponent(id), { hidden: true }),

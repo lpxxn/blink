@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	domaincategory "github.com/lpxxn/blink/domain/category"
+	domainfeedback "github.com/lpxxn/blink/domain/feedback"
 	domainnotification "github.com/lpxxn/blink/domain/notification"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
@@ -250,4 +251,60 @@ func AdminSensitiveWordToJSON(w *domainsensitiveword.Word) AdminSensitiveWordJSO
 type AdminSensitiveWordsPageJSON struct {
 	Words []AdminSensitiveWordJSON `json:"words"`
 	Total int64                    `json:"total"`
+}
+
+type FeedbackThreadJSON struct {
+	ID             int64  `json:"id,string"`
+	UserID         int64  `json:"user_id,string"`
+	UserName       string `json:"user_name,omitempty"`
+	Status         string `json:"status"`
+	UserReplyCount int    `json:"user_reply_count"`
+	CanUserReply   bool   `json:"can_user_reply"`
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
+	LastMessageAt  string `json:"last_message_at"`
+}
+
+type FeedbackMessageJSON struct {
+	ID         int64  `json:"id,string"`
+	FeedbackID int64  `json:"feedback_id,string"`
+	SenderID   int64  `json:"sender_id,string"`
+	SenderType string `json:"sender_type"`
+	Body       string `json:"body"`
+	CreatedAt  string `json:"created_at"`
+}
+
+type FeedbackThreadPageJSON struct {
+	Feedback   []FeedbackThreadJSON `json:"feedback"`
+	NextCursor *string              `json:"next_cursor,omitempty"`
+	Total      int64                `json:"total,omitempty"`
+}
+
+type FeedbackDetailJSON struct {
+	Thread   FeedbackThreadJSON    `json:"thread"`
+	Messages []FeedbackMessageJSON `json:"messages"`
+}
+
+func FeedbackThreadToJSON(t *domainfeedback.Thread) FeedbackThreadJSON {
+	return FeedbackThreadJSON{
+		ID:             t.ID,
+		UserID:         t.UserID,
+		Status:         t.Status,
+		UserReplyCount: t.UserReplyCount,
+		CanUserReply:   t.Status == domainfeedback.StatusOpen && t.UserReplyCount < 2,
+		CreatedAt:      t.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt:      t.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+		LastMessageAt:  t.LastMessageAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+	}
+}
+
+func FeedbackMessageToJSON(m *domainfeedback.Message) FeedbackMessageJSON {
+	return FeedbackMessageJSON{
+		ID:         m.ID,
+		FeedbackID: m.FeedbackID,
+		SenderID:   m.SenderID,
+		SenderType: m.SenderType,
+		Body:       m.Body,
+		CreatedAt:  m.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+	}
 }

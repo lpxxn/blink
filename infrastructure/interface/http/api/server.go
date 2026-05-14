@@ -3,6 +3,7 @@ package httpapi
 import (
 	appauth "github.com/lpxxn/blink/application/auth"
 	appeventing "github.com/lpxxn/blink/application/eventing"
+	appfeedback "github.com/lpxxn/blink/application/feedback"
 	appnotification "github.com/lpxxn/blink/application/notification"
 	apppost "github.com/lpxxn/blink/application/post"
 	apppostreply "github.com/lpxxn/blink/application/postreply"
@@ -16,6 +17,7 @@ type Server struct {
 	Posts         *apppost.Service
 	Replies       *apppostreply.Service
 	Notifications *appnotification.Service
+	Feedback      *appfeedback.Service
 	NotifyEvents  appeventing.NotificationPublisher
 	Categories    domaincategory.Repository
 	Users         domainuser.Repository

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	appadmin "github.com/lpxxn/blink/application/admin"
+	appfeedback "github.com/lpxxn/blink/application/feedback"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
 	domainsensitiveword "github.com/lpxxn/blink/domain/sensitiveword"
@@ -20,6 +21,7 @@ import (
 type Server struct {
 	Admin         *appadmin.Service
 	CategoryCount func(context.Context) (int64, error)
+	Feedback      *appfeedback.Service
 	Users         domainuser.Repository
 	SMTP          *appadmin.SMTPSettings
 }

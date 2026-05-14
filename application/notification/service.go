@@ -172,6 +172,25 @@ func (s *Service) OnAppealResolved(ctx context.Context, authorID, postID int64, 
 	return s.send(ctx, authorID, domainnotification.TypeAppealResult, title, body, &pid, nil)
 }
 
+func (s *Service) OnFeedbackForAdmin(ctx context.Context, adminID, feedbackID int64, title, body string) error {
+	if adminID == 0 {
+		return nil
+	}
+	return s.send(ctx, adminID, domainnotification.TypeFeedbackAdmin, title, body, nil, nil)
+}
+
+func (s *Service) OnFeedbackReply(ctx context.Context, userID, feedbackID int64, reply string) error {
+	if userID == 0 {
+		return nil
+	}
+	body := "管理员回复了你的意见反馈 #" + strconv.FormatInt(feedbackID, 10) + "。"
+	if strings.TrimSpace(reply) != "" {
+		body += "\n回复：" + strings.TrimSpace(reply)
+	}
+	body += "\n你可以在「意见反馈」页面继续补充（最多 2 次）。"
+	return s.send(ctx, userID, domainnotification.TypeFeedbackReply, "意见反馈有新回复", body, nil, nil)
+}
+
 func (s *Service) List(ctx context.Context, userID int64, beforeID *int64, limit int) ([]*domainnotification.Notification, error) {
 	return s.Repo.ListByUserID(ctx, userID, beforeID, limit)
 }

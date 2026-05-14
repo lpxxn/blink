@@ -19,6 +19,7 @@
     { key: 'compose',  href: '/web/compose.html',  label: '发帖' },
     { key: 'mine',     href: '/web/mine.html',     label: '我的' },
     { key: 'messages', href: '/web/messages.html', label: '消息' },
+    { key: 'feedback', href: '/web/feedback.html', label: '反馈' },
     { key: 'admin',    href: '/web/admin.html',    label: '管理', adminOnly: true },
   ];
 

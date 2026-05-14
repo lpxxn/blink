@@ -25,6 +25,7 @@ import (
 	appbootstrap "github.com/lpxxn/blink/application/bootstrap"
 	appcategory "github.com/lpxxn/blink/application/category"
 	appemailcode "github.com/lpxxn/blink/application/emailcode"
+	appfeedback "github.com/lpxxn/blink/application/feedback"
 	appidp "github.com/lpxxn/blink/application/idp"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	appnotification "github.com/lpxxn/blink/application/notification"
@@ -88,6 +89,7 @@ func main() {
 	postRepo := &gormdb.PostRepository{DB: gdb}
 	replyRepo := &gormdb.PostReplyRepository{DB: gdb}
 	notifRepo := &gormdb.NotificationRepository{DB: gdb}
+	feedbackRepo := &gormdb.FeedbackRepository{DB: gdb}
 	catRepo := &gormdb.CategoryRepository{DB: gdb}
 	sensitiveRepo := &gormdb.SensitiveWordRepository{DB: gdb}
 	settingsRepo := &gormdb.AppSettingsRepository{DB: gdb}
@@ -119,6 +121,12 @@ func main() {
 		Repo:  notifRepo,
 		NewID: func() int64 { return node.Generate().Int64() },
 		Users: userRepo,
+	}
+	feedbackSvc := &appfeedback.Service{
+		Repo:          feedbackRepo,
+		Users:         userRepo,
+		Notifications: notifSvc,
+		NewID:         func() int64 { return node.Generate().Int64() },
 	}
 
 	wmLogger := watermill.NewStdLogger(false, false)
@@ -271,6 +279,7 @@ func main() {
 		Posts:         postSvc,
 		Replies:       replySvc,
 		Notifications: notifSvc,
+		Feedback:      feedbackSvc,
 		NotifyEvents:  notifyEventBus,
 		Categories:    catRepo,
 		Users:         userRepo,
@@ -282,6 +291,7 @@ func main() {
 	adminSrv := &httpadmin.Server{
 		Admin:         adminSvc,
 		CategoryCount: catRepo.Count,
+		Feedback:      feedbackSvc,
 		Users:         userRepo,
 		SMTP: &appadmin.SMTPSettings{
 			Settings: settingsRepo,
@@ -422,6 +432,10 @@ func main() {
 	authed.GET("/me/notifications/unread_count", apiSrv.UnreadNotificationCount)
 	authed.POST("/me/notifications/:id/read", apiSrv.MarkNotificationRead)
 	authed.POST("/me/notifications/read_all", apiSrv.MarkAllNotificationsRead)
+	authed.POST("/feedback", apiSrv.CreateFeedback)
+	authed.GET("/me/feedback", apiSrv.ListMyFeedback)
+	authed.GET("/me/feedback/:id", apiSrv.GetMyFeedback)
+	authed.POST("/me/feedback/:id/replies", apiSrv.ReplyMyFeedback)
 	authed.POST("/posts/:id/replies", apiSrv.CreateReply)
 	authed.POST("/uploads", apiSrv.UploadImage)
 	authed.DELETE("/replies/:id", apiSrv.DeleteReply)
@@ -438,6 +452,9 @@ func main() {
 	adminG.PATCH("/posts/:id", adminSrv.PatchPost)
 	adminG.POST("/posts/:id/resolve_appeal", adminSrv.ResolveAppeal)
 	adminG.GET("/posts/:id/replies", adminSrv.ListPostReplies)
+	adminG.GET("/feedback", adminSrv.ListFeedback)
+	adminG.GET("/feedback/:id", adminSrv.GetFeedback)
+	adminG.POST("/feedback/:id/replies", adminSrv.ReplyFeedback)
 	adminG.GET("/settings/sensitive_post_mode", adminSrv.GetSensitivePostMode)
 	adminG.PUT("/settings/sensitive_post_mode", adminSrv.SetSensitivePostMode)
 	adminG.GET("/settings/register_email_verification", adminSrv.GetRegisterEmailVerificationRequired)
