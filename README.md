@@ -1,66 +1,68 @@
 # Blink
 
-Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/登录、帖子流、评论、图片上传、站内通知，以及一个简洁的超级管理员后台（静态 HTML）。后端采用 Go，并按 DDD 分层组织代码，接口契约以 OpenAPI 维护。
+English | [中文](README.zh-CN.md)
 
-## 功能
+Blink is a lightweight microblog backend: registration and login, post feeds, threaded replies, image uploads, in-app notifications, and a simple super-admin console (static HTML). The server is written in Go with DDD-style layering; HTTP contracts are maintained in OpenAPI.
 
-- **认证与会话**
-  - 邮箱密码注册：`POST /auth/register`（始终可用）
-  - OAuth2 授权码登录：第三方（如 Google）或自建 IdP（`builtin`）
-  - 会话 Cookie：`blink_session`（Redis 存储会话）
-- **社交内容**
-  - 分类：`GET /api/categories`（启动时空表会写入内置分类）
-  - 帖子流：`GET /api/posts`、`GET /api/posts/{id}`、`GET /api/me/posts`
-  - 评论/楼中楼：`GET /api/posts/{id}/replies`、发布评论（需登录）
-  - 图片上传：`POST /api/uploads`（multipart 字段 `file`），默认存储到 `data/uploads`，通过 `/uploads/...` 访问
-- **站内通知（异步）**
-  - Watermill + Redis Stream：业务成功后发布事件，消费者写入 `notifications` 表（可在未来独立成 worker）
-- **意见反馈**
-  - 登录用户提交反馈并可补充，管理员在后台回复，双方通过站内消息收到提醒
-- **内容治理与后台**
-  - 敏感词：命中则拒绝发布/评论；后台 CRUD 后通过 Redis Stream 广播刷新
-  - 超级管理员 JSON API：`/admin/api/*`（`users.role=super_admin`）
-  - 静态页面：`/web/*.html`（无 React 等框架，保持简单）
-- **工程约定**
-  - Snowflake ID 在 JSON 中统一用**字符串**传输，避免 JS 精度问题
+## Features
 
-## 快速开始（本地运行）
+- **Authentication & sessions**
+  - Email/password registration: `POST /auth/register` (always enabled)
+  - OAuth2 authorization-code login: third-party (e.g. Google) or built-in IdP (`builtin`)
+  - Session cookie: `blink_session` (sessions stored in Redis)
+- **Social content**
+  - Categories: `GET /api/categories` (built-in categories are seeded on startup when empty)
+  - Feeds: `GET /api/posts`, `GET /api/posts/{id}`, `GET /api/me/posts`
+  - Replies / nested comments: `GET /api/posts/{id}/replies`, create reply (login required)
+  - Image upload: `POST /api/uploads` (multipart field `file`); files default to `data/uploads`, served at `/uploads/...`
+- **In-app notifications (async)**
+  - Watermill + Redis Stream: publish events after successful operations; consumers persist rows in `notifications` (can be split into a dedicated worker later)
+- **Feedback**
+  - Logged-in users submit feedback and may follow up; admins reply in the console; both sides get in-app notification reminders
+- **Moderation & admin**
+  - Sensitive words: block publish/reply on hit; admin CRUD broadcasts reload via Redis Stream
+  - Super-admin JSON API: `/admin/api/*` (`users.role=super_admin`)
+  - Static pages: `/web/*.html` (vanilla JS, no React)
+- **Conventions**
+  - Snowflake IDs are serialized as **strings** in JSON to avoid JavaScript precision loss
 
-需要 **Go** 和 **Redis**（默认 `127.0.0.1:6379`）。在仓库根目录执行：
+## Quick start (local)
+
+You need **Go** and **Redis** (default `127.0.0.1:6379`). From the repo root:
 
 ```bash
 mkdir -p data
 go run ./cmd
 ```
 
-启动后可用健康检查确认：
+Verify with health checks:
 
 ```bash
 curl -sS http://127.0.0.1:11110/healthz
 curl -sS http://127.0.0.1:11110/health
 ```
 
-## 架构图
+## Architecture
 
 ```mermaid
 flowchart TB
-  subgraph Clients["客户端"]
-    Web["Web 静态页面<br/>/web/*.html + vanilla JS"]
-    Flutter["Flutter 客户端<br/>规划/实现中"]
+  subgraph Clients["Clients"]
+    Web["Web static pages<br/>/web/*.html + vanilla JS"]
+    Flutter["Flutter client<br/>planned / in progress"]
   end
 
-  subgraph API["Go API Server（Gin）"]
-    Auth["认证/会话<br/>auth + session middleware"]
-    HTTP["业务 HTTP API<br/>/api/* /admin/api/*"]
-    App["应用服务<br/>auth/post/reply/feedback/admin/notification"]
-    Domain["领域层<br/>domain/* 模型与仓储接口"]
+  subgraph API["Go API Server (Gin)"]
+    Auth["Auth & sessions<br/>auth + session middleware"]
+    HTTP["HTTP APIs<br/>/api/* /admin/api/*"]
+    App["Application services<br/>auth/post/reply/feedback/admin/notification"]
+    Domain["Domain layer<br/>domain/* models & repository ports"]
   end
 
-  subgraph Infra["基础设施"]
-    DB[("数据库<br/>SQLite / MySQL / PostgreSQL")]
-    Redis[("Redis<br/>session + stream")]
-    Uploads["本地上传目录<br/>/uploads"]
-    Watermill["Watermill Consumers<br/>通知落库/敏感词刷新"]
+  subgraph Infra["Infrastructure"]
+    DB[("Database<br/>SQLite / MySQL / PostgreSQL")]
+    Redis[("Redis<br/>sessions + streams")]
+    Uploads["Local upload dir<br/>/uploads"]
+    Watermill["Watermill consumers<br/>notifications + sensitive-word reload"]
   end
 
   Web --> HTTP
@@ -71,62 +73,63 @@ flowchart TB
   Domain --> DB
   Auth --> Redis
   App --> Uploads
-  App -- 发布通知/刷新事件 --> Redis
+  App -- publish notify/reload events --> Redis
   Redis --> Watermill
   Watermill --> DB
 ```
 
-## 配置（环境变量）
+## Configuration (environment variables)
 
-常用环境变量（均有默认值，可按需覆盖）：
+Common variables (all have defaults):
 
-- **`BLINK_HTTP_ADDR`**：监听地址（默认 `:11110`）
-- **`BLINK_DATABASE_DSN`**：数据库 DSN（默认 SQLite，文件在 `./data/blink.db`）
-- **`BLINK_REDIS_ADDR`**：Redis 地址（默认 `127.0.0.1:6379`）
-- **`BLINK_MIGRATIONS_DIR`**：迁移目录（默认 `platform/db`）
-- **`BLINK_UPLOAD_DIR`**：上传目录（默认 `data/uploads`）
-- **`BLINK_BOOTSTRAP_SUPER_ADMIN_EMAIL`**：启动时将指定邮箱用户提升为 `super_admin`（幂等）
+- **`BLINK_HTTP_ADDR`**: listen address (default `:11110`)
+- **`BLINK_DATABASE_DSN`**: database DSN (default SQLite at `./data/blink.db`)
+- **`BLINK_REDIS_ADDR`**: Redis address (default `127.0.0.1:6379`)
+- **`BLINK_MIGRATIONS_DIR`**: migrations directory (default `platform/db`)
+- **`BLINK_UPLOAD_DIR`**: upload directory (default `data/uploads`)
+- **`BLINK_BOOTSTRAP_SUPER_ADMIN_EMAIL`**: promote the user with this email to `super_admin` on startup (idempotent)
 
-自建 IdP（`builtin`）只在同时配置以下变量时启用（未配置时相关路由不挂载，不影响 `POST /auth/register`）：
+The built-in IdP (`builtin`) is enabled only when **both** are set (otherwise those routes are not mounted; `POST /auth/register` still works):
 
-- **`BLINK_PUBLIC_BASE_URL`**：对外基址，如 `http://localhost:11110`（无尾部 `/`）
-- **`BLINK_OAUTH_CLIENT_SECRET`**：第一方客户端密钥（生产请用强随机）
+- **`BLINK_PUBLIC_BASE_URL`**: public base URL, e.g. `http://localhost:11110` (no trailing `/`)
+- **`BLINK_OAUTH_CLIENT_SECRET`**: first-party client secret (use a strong random value in production)
 
-更完整列表与解释见 `docs/`。
+See `docs/` for a fuller list.
 
-## 数据库迁移
+## Database migrations
 
-默认 SQLite 迁移：
+Default SQLite migration:
 
 ```bash
 go run ./cmd/migrate
 ```
 
-该迁移 CLI 也支持 `postgres` / `mysql`，详见：
+The migrate CLI also supports `postgres` / `mysql`. See:
+
 - `platform/db/SCHEMA.md`
 - `cmd/migrate/README.md`
 
-## 文档与接口契约
+## Docs & API contract
 
-- **本地运行与健康检查**：`docs/run-local.md`
-- **架构（DDD 分层、HTTP vs 通知流）**：`docs/architecture.md`
-- **登录/注册与 OAuth 流程**：`docs/auth-login-registration.md`
-- **帖子流与管理后台**：`docs/social-feed-and-admin.md`
-- **站内通知（Watermill + Redis Stream）**：`docs/watermill-notifications.md`
-- **HTTP curl 示例**：`docs/http-curl-examples.md`
-- **OpenAPI**：`api/openapi/openapi.yaml`
-  - 若修改了 OpenAPI，并需要重新生成代码：见 `docs/oapi-codegen.md`（会生成/更新 `api/gen/apigen.gen.go`）
+- **Local run & health checks**: `docs/run-local.md`
+- **Architecture (DDD layers, HTTP vs notification pipeline)**: `docs/architecture.md`
+- **Login, registration & OAuth**: `docs/auth-login-registration.md`
+- **Feeds & admin console**: `docs/social-feed-and-admin.md`
+- **In-app notifications (Watermill + Redis Stream)**: `docs/watermill-notifications.md`
+- **HTTP curl examples**: `docs/http-curl-examples.md`
+- **OpenAPI**: `api/openapi/openapi.yaml`
+  - After changing OpenAPI and regenerating code: `docs/oapi-codegen.md` (updates `api/gen/apigen.gen.go`)
 
-## 目录结构（速览）
+## Repository layout (overview)
 
-- `cmd/`：入口（API Server、migrate 等）
-- `domain/`：领域模型、仓储接口、领域事件
-- `application/`：用例服务（post/admin/auth/notification/...）
-- `infrastructure/`：HTTP（Gin）、GORM 持久化、Redis/Watermill、OAuth 适配
-- `platform/db/`：SQL migrations
-- `web/`：静态 HTML（管理/页面资源）
+- `cmd/`: entrypoints (API server, migrate, …)
+- `domain/`: domain models, repository interfaces, domain events
+- `application/`: use-case services (post/admin/auth/notification/…)
+- `infrastructure/`: HTTP (Gin), GORM persistence, Redis/Watermill, OAuth adapters
+- `platform/db/`: SQL migrations
+- `web/`: static HTML (user pages & admin assets)
 
-## Roadmap（实现中）
+## Roadmap
 
-- 前端计划：Flutter 客户端（仓库内会逐步补齐对应实现与文档）
-  - 规划文档：`docs/flutter-client-plan.md`
+- **Flutter client** (implementation and docs will grow in-repo)
+  - Plan: `docs/flutter-client-plan.md`
