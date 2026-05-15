@@ -12,6 +12,7 @@ const (
 	TypeSensitiveHitAdmin    = "sensitive_hit_admin"
 	TypeAppealResult         = "appeal_result"
 	TypeFeedbackAdmin        = "feedback_admin"
+	TypeFeedbackSubmitted    = "feedback_submitted"
 	TypeFeedbackReply        = "feedback_reply"
 	TypeSystem               = "system"
 )

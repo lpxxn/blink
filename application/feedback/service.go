@@ -3,6 +3,7 @@ package feedback
 import (
 	"context"
 	"errors"
+	"log"
 	"strconv"
 	"strings"
 
@@ -70,6 +71,7 @@ func (s *Service) Create(ctx context.Context, userID int64, body string) (*domai
 		return nil, err
 	}
 	s.notifyAdmins(ctx, userID, t.ID, body)
+	s.notifyUserSubmitted(ctx, userID, t.ID)
 	return s.Repo.GetThreadByID(ctx, t.ID)
 }
 
@@ -128,7 +130,9 @@ func (s *Service) ReplyByAdmin(ctx context.Context, adminID, feedbackID int64, b
 		return nil, err
 	}
 	if s.Notifications != nil {
-		_ = s.Notifications.OnFeedbackReply(ctx, t.UserID, feedbackID, body)
+		if err := s.Notifications.OnFeedbackReply(ctx, t.UserID, feedbackID, body); err != nil {
+			log.Printf("feedback: notify user %d for feedback %d: %v", t.UserID, feedbackID, err)
+		}
 	}
 	return m, nil
 }
@@ -175,8 +179,9 @@ func (s *Service) notifyAdmins(ctx context.Context, userID, feedbackID int64, bo
 	if s.Notifications == nil || s.Users == nil {
 		return
 	}
-	ids, err := s.Users.ListSnowflakeIDsByRole(ctx, domainuser.RoleSuperAdmin)
+	ids, err := s.adminRecipientIDs(ctx)
 	if err != nil {
+		log.Printf("feedback: list admin recipients: %v", err)
 		return
 	}
 	title := "新的意见反馈"
@@ -186,6 +191,38 @@ func (s *Service) notifyAdmins(ctx context.Context, userID, feedbackID int64, bo
 		if adminID == userID {
 			continue
 		}
-		_ = s.Notifications.OnFeedbackForAdmin(ctx, adminID, feedbackID, title, msg)
+		if err := s.Notifications.OnFeedbackForAdmin(ctx, adminID, feedbackID, title, msg); err != nil {
+			log.Printf("feedback: notify admin %d for feedback %d: %v", adminID, feedbackID, err)
+		}
+	}
+}
+
+func (s *Service) adminRecipientIDs(ctx context.Context) ([]int64, error) {
+	superIDs, err := s.Users.ListSnowflakeIDsByRole(ctx, domainuser.RoleSuperAdmin)
+	if err != nil {
+		return nil, err
+	}
+	adminIDs, err := s.Users.ListSnowflakeIDsByRole(ctx, domainuser.RoleAdmin)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[int64]struct{}{}
+	out := make([]int64, 0, len(superIDs)+len(adminIDs))
+	for _, id := range append(superIDs, adminIDs...) {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out, nil
+}
+
+func (s *Service) notifyUserSubmitted(ctx context.Context, userID, feedbackID int64) {
+	if s.Notifications == nil {
+		return
+	}
+	if err := s.Notifications.OnFeedbackSubmitted(ctx, userID, feedbackID); err != nil {
+		log.Printf("feedback: notify submitter %d for feedback %d: %v", userID, feedbackID, err)
 	}
 }

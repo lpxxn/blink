@@ -57,7 +57,7 @@
         href: '/web/post.html?id=' + encodeURIComponent(String(n.ref_post_id)),
         style: { display: 'inline-block', marginTop: '0.5rem', fontSize: '0.9rem' },
       }, '查看帖子'));
-    } else if (n.type === 'feedback_reply') {
+    } else if (n.type === 'feedback_reply' || n.type === 'feedback_submitted') {
       wrap.appendChild(el('a', {
         href: '/web/feedback.html',
         style: { display: 'inline-block', marginTop: '0.5rem', fontSize: '0.9rem' },

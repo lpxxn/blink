@@ -179,6 +179,14 @@ func (s *Service) OnFeedbackForAdmin(ctx context.Context, adminID, feedbackID in
 	return s.send(ctx, adminID, domainnotification.TypeFeedbackAdmin, title, body, nil, nil)
 }
 
+func (s *Service) OnFeedbackSubmitted(ctx context.Context, userID, feedbackID int64) error {
+	if userID == 0 {
+		return nil
+	}
+	body := "你的意见反馈 #" + strconv.FormatInt(feedbackID, 10) + " 已提交，管理员会在这里回复。"
+	return s.send(ctx, userID, domainnotification.TypeFeedbackSubmitted, "意见反馈已提交", body, nil, nil)
+}
+
 func (s *Service) OnFeedbackReply(ctx context.Context, userID, feedbackID int64, reply string) error {
 	if userID == 0 {
 		return nil
