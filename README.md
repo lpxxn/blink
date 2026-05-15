@@ -15,6 +15,8 @@ Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/
   - 图片上传：`POST /api/uploads`（multipart 字段 `file`），默认存储到 `data/uploads`，通过 `/uploads/...` 访问
 - **站内通知（异步）**
   - Watermill + Redis Stream：业务成功后发布事件，消费者写入 `notifications` 表（可在未来独立成 worker）
+- **意见反馈**
+  - 登录用户提交反馈并可补充，管理员在后台回复，双方通过站内消息收到提醒
 - **内容治理与后台**
   - 敏感词：命中则拒绝发布/评论；后台 CRUD 后通过 Redis Stream 广播刷新
   - 超级管理员 JSON API：`/admin/api/*`（`users.role=super_admin`）
@@ -36,6 +38,42 @@ go run ./cmd
 ```bash
 curl -sS http://127.0.0.1:11110/healthz
 curl -sS http://127.0.0.1:11110/health
+```
+
+## 架构图
+
+```mermaid
+flowchart TB
+  subgraph Clients["客户端"]
+    Web["Web 静态页面<br/>/web/*.html + vanilla JS"]
+    Flutter["Flutter 客户端<br/>规划/实现中"]
+  end
+
+  subgraph API["Go API Server（Gin）"]
+    Auth["认证/会话<br/>auth + session middleware"]
+    HTTP["业务 HTTP API<br/>/api/* /admin/api/*"]
+    App["应用服务<br/>auth/post/reply/feedback/admin/notification"]
+    Domain["领域层<br/>domain/* 模型与仓储接口"]
+  end
+
+  subgraph Infra["基础设施"]
+    DB[("数据库<br/>SQLite / MySQL / PostgreSQL")]
+    Redis[("Redis<br/>session + stream")]
+    Uploads["本地上传目录<br/>/uploads"]
+    Watermill["Watermill Consumers<br/>通知落库/敏感词刷新"]
+  end
+
+  Web --> HTTP
+  Flutter --> HTTP
+  HTTP --> Auth
+  HTTP --> App
+  App --> Domain
+  Domain --> DB
+  Auth --> Redis
+  App --> Uploads
+  App -- 发布通知/刷新事件 --> Redis
+  Redis --> Watermill
+  Watermill --> DB
 ```
 
 ## 配置（环境变量）
