@@ -101,14 +101,18 @@
     return form;
   }
 
+  function statusLabel(thread) {
+    return thread.status === 'open' ? '处理中' : '已关闭';
+  }
+
   function renderThread(thread) {
-    const card = el('div', { class: 'notif-item' });
+    const card = el('div', { class: 'notif-item feedback-thread' });
     const title = '反馈 #' + thread.id;
     const meta = [
-      thread.status === 'open' ? '处理中' : thread.status,
       '用户补充 ' + (thread.user_reply_count || 0) + '/2',
       fmtTime(thread.last_message_at),
     ].filter(Boolean).join(' · ');
+    const open = thread.status === 'open';
     const toggle = el('button', {
       type: 'button',
       class: 'btn btn-ghost btn-sm',
@@ -116,10 +120,13 @@
     }, '展开');
     const detail = el('div', { 'data-feedback-detail': '1', hidden: true });
     toggle.addEventListener('click', () => openThread(card, thread));
-    card.appendChild(el('div', {
-      style: { display: 'flex', gap: '0.75rem', alignItems: 'baseline', flexWrap: 'wrap' },
-    }, [
-      el('strong', {}, title),
+    card.appendChild(el('div', { class: 'feedback-thread-head' }, [
+      el('div', { class: 'feedback-thread-title' }, [
+        el('strong', {}, title),
+        el('span', {
+          class: 'feedback-status' + (open ? ' feedback-status-open' : ' feedback-status-closed'),
+        }, statusLabel(thread)),
+      ]),
       el('span', { class: 'meta' }, meta),
     ]));
     card.appendChild(el('div', { class: 'btn-row', style: { marginTop: '0.45rem' } }, [toggle]));

@@ -352,6 +352,47 @@ article.feed-item a:hover {
   color: var(--text-muted);
 }
 
+/* Feedback list — title row + status badge */
+.feedback-thread-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.feedback-thread-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+}
+
+.feedback-thread-title strong {
+  min-width: 0;
+}
+
+.feedback-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.feedback-status-open {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.feedback-status-closed {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 .body-text {
   white-space: pre-wrap;
   margin: 1rem 0;

@@ -101,8 +101,10 @@
       const user = ((thread.user_name || '') + ' ' + thread.user_id).trim();
 
       card.appendChild(el('div', { class: 'admin-card-head' }, [
-        el('strong', {}, title),
-        el('span', { class: 'admin-subtitle' }, user),
+        el('div', { class: 'admin-card-head-main' }, [
+          el('strong', {}, title),
+          el('span', { class: 'admin-subtitle' }, user),
+        ]),
         isClosed
           ? el('span', { class: 'chip chip-muted' }, '已关闭')
           : el('span', { class: 'chip chip-warn' }, '进行中'),

@@ -361,14 +361,30 @@
 
 .admin-card-head {
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
 }
 
+.admin-card-head-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1 1 10rem;
+}
+
+.admin-card-head-main strong,
 .admin-card-head h3 {
   margin: 0;
   font-size: 1rem;
   line-height: 1.35;
+}
+
+.admin-card-head .chip {
+  flex: 0 0 auto;
+  align-self: flex-start;
 }
 
 .admin-card-head .admin-card-id {
