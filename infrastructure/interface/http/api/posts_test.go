@@ -23,10 +23,18 @@ func (createPostTestCatRepo) Create(context.Context, *domaincategory.Category) e
 func (createPostTestCatRepo) GetByID(_ context.Context, id int64) (*domaincategory.Category, error) {
 	return &domaincategory.Category{ID: id}, nil
 }
+func (createPostTestCatRepo) GetBySlug(context.Context, string) (*domaincategory.Category, error) {
+	panic("ni")
+}
 func (createPostTestCatRepo) ListActive(context.Context) ([]*domaincategory.Category, error) {
 	panic("ni")
 }
-func (createPostTestCatRepo) Count(context.Context) (int64, error) { panic("ni") }
+func (createPostTestCatRepo) ListAll(context.Context) ([]*domaincategory.Category, error) {
+	panic("ni")
+}
+func (createPostTestCatRepo) Update(context.Context, *domaincategory.Category) error { panic("ni") }
+func (createPostTestCatRepo) SoftDelete(context.Context, int64) error                { panic("ni") }
+func (createPostTestCatRepo) Count(context.Context) (int64, error)                   { panic("ni") }
 
 type createPostTestPostRepo struct {
 	lastCreated *domainpost.Post
@@ -48,6 +56,9 @@ func (createPostTestPostRepo) ListByUserID(context.Context, int64, bool, *int64,
 	panic("ni")
 }
 func (createPostTestPostRepo) AdminList(context.Context, domainpost.AdminListFilters, int, int) ([]*domainpost.Post, int64, error) {
+	panic("ni")
+}
+func (createPostTestPostRepo) CountAdmin(context.Context, domainpost.AdminListFilters) (int64, error) {
 	panic("ni")
 }
 func (createPostTestPostRepo) Count(context.Context) (int64, error) { panic("ni") }

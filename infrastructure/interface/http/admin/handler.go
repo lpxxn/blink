@@ -149,6 +149,14 @@ func (s *Server) ListPosts(c *gin.Context) {
 		}
 		f.CategoryID = &id
 	}
+	if v := c.Query("user_id"); v != "" {
+		id, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bad user_id"})
+			return
+		}
+		f.UserID = &id
+	}
 	if v := c.Query("moderation_flag"); v != "" {
 		mf, err := strconv.Atoi(v)
 		if err != nil {
@@ -162,6 +170,9 @@ func (s *Server) ListPosts(c *gin.Context) {
 	}
 	if c.Query("appeal_pending") == "1" || c.Query("appeal_pending") == "true" {
 		f.AppealPending = true
+	}
+	if c.Query("sensitive_hit_pending") == "1" || c.Query("sensitive_hit_pending") == "true" {
+		f.SensitiveHitPending = true
 	}
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
@@ -191,6 +202,11 @@ type patchAdminPostBody struct {
 }
 
 func (s *Server) PatchPost(c *gin.Context) {
+	actorID, ok := httpauth.UserIDFromContext(c)
+	if !ok {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
@@ -201,7 +217,7 @@ func (s *Server) PatchPost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	p, err := s.Admin.PatchPost(c.Request.Context(), id, body.ModerationFlag, body.ModerationNote, body.Status)
+	p, err := s.Admin.PatchPost(c.Request.Context(), actorID, id, body.ModerationFlag, body.ModerationNote, body.Status)
 	if err != nil {
 		if errors.Is(err, domainpost.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
@@ -231,6 +247,11 @@ type resolveAppealBody struct {
 }
 
 func (s *Server) ResolveAppeal(c *gin.Context) {
+	actorID, ok := httpauth.UserIDFromContext(c)
+	if !ok {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
@@ -241,7 +262,7 @@ func (s *Server) ResolveAppeal(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	p, err := s.Admin.ResolveAppeal(c.Request.Context(), id, body.Approve, body.Note)
+	p, err := s.Admin.ResolveAppeal(c.Request.Context(), actorID, id, body.Approve, body.Note)
 	if err != nil {
 		if errors.Is(err, domainpost.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})

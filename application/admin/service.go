@@ -278,3 +278,22 @@ func (s *Service) ResolveAppeal(ctx context.Context, actorID, postID int64, appr
 	s.logAudit(ctx, actorID, AuditPostAppeal, "post", &pid, detail)
 	return p, nil
 }
+
+func (s *Service) CloseFeedback(ctx context.Context, actorID, feedbackID int64) error {
+	if s.Feedback == nil {
+		return errors.New("admin: feedback not configured")
+	}
+	t, err := s.Feedback.GetThreadByID(ctx, feedbackID)
+	if err != nil {
+		return err
+	}
+	if t.Status == domainfeedback.StatusClosed {
+		return nil
+	}
+	if err := s.Feedback.UpdateStatus(ctx, feedbackID, domainfeedback.StatusClosed); err != nil {
+		return err
+	}
+	fid := feedbackID
+	s.logAudit(ctx, actorID, AuditFeedbackClose, "feedback", &fid, "")
+	return nil
+}

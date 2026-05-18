@@ -23,7 +23,13 @@ func (s *stubCatRepo) GetByID(context.Context, int64) (*domaincategory.Category,
 	}
 	return &domaincategory.Category{ID: 1}, nil
 }
+func (s *stubCatRepo) GetBySlug(context.Context, string) (*domaincategory.Category, error) {
+	panic("ni")
+}
 func (s *stubCatRepo) ListActive(context.Context) ([]*domaincategory.Category, error) { panic("ni") }
+func (s *stubCatRepo) ListAll(context.Context) ([]*domaincategory.Category, error)    { panic("ni") }
+func (s *stubCatRepo) Update(context.Context, *domaincategory.Category) error         { panic("ni") }
+func (s *stubCatRepo) SoftDelete(context.Context, int64) error                        { panic("ni") }
 func (s *stubCatRepo) Count(context.Context) (int64, error)                           { panic("ni") }
 
 type stubPostRepo struct {
@@ -50,6 +56,9 @@ func (stubPostRepo) ListByUserID(context.Context, int64, bool, *int64, int) ([]*
 	panic("ni")
 }
 func (stubPostRepo) AdminList(context.Context, domainpost.AdminListFilters, int, int) ([]*domainpost.Post, int64, error) {
+	panic("ni")
+}
+func (stubPostRepo) CountAdmin(context.Context, domainpost.AdminListFilters) (int64, error) {
 	panic("ni")
 }
 func (stubPostRepo) Count(context.Context) (int64, error) { panic("ni") }
@@ -86,6 +95,9 @@ func (patchStubPostRepo) ListByUserID(context.Context, int64, bool, *int64, int)
 	panic("ni")
 }
 func (patchStubPostRepo) AdminList(context.Context, domainpost.AdminListFilters, int, int) ([]*domainpost.Post, int64, error) {
+	panic("ni")
+}
+func (patchStubPostRepo) CountAdmin(context.Context, domainpost.AdminListFilters) (int64, error) {
 	panic("ni")
 }
 func (patchStubPostRepo) Count(context.Context) (int64, error) { panic("ni") }
@@ -130,6 +142,9 @@ func (modReqPostRepo) ListByUserID(context.Context, int64, bool, *int64, int) ([
 	panic("ni")
 }
 func (modReqPostRepo) AdminList(context.Context, domainpost.AdminListFilters, int, int) ([]*domainpost.Post, int64, error) {
+	panic("ni")
+}
+func (modReqPostRepo) CountAdmin(context.Context, domainpost.AdminListFilters) (int64, error) {
 	panic("ni")
 }
 func (modReqPostRepo) Count(context.Context) (int64, error) { panic("ni") }

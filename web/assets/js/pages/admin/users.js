@@ -1,9 +1,5 @@
 /**
- * Admin — users.
- *
- * Server returns at most `limit` users without a total count; we keep the
- * filter client-side (fuzzy match over email / name / id). Actions all
- * go through BlinkModal instead of window.prompt/confirm.
+ * Admin — users (server-side search + pagination).
  */
 (function () {
   'use strict';
@@ -37,34 +33,41 @@
   }
 
   async function mount(container, ctx) {
-    const state = { all: [], filtered: [], query: '', limit: PAGE_SIZE };
+    const state = { users: [], total: 0, offset: 0, q: '', limit: PAGE_SIZE };
 
     const errEl = el('p', { class: 'err', role: 'alert' });
-
     const searchInput = el('input', {
       type: 'search',
       placeholder: '按 邮箱 / 名称 / ID 搜索…',
       'aria-label': '搜索用户',
     });
-    const limitSelect = el('select', { 'aria-label': '加载数量' }, [
-      el('option', { value: '50' }, '加载 50'),
-      el('option', { value: '100' }, '加载 100'),
-      el('option', { value: '200' }, '加载 200'),
-    ]);
     const reloadBtn = el('button', {
       type: 'button', class: 'btn btn-secondary btn-sm',
-      onClick: () => load(),
+      onClick: () => { state.offset = 0; load(); },
     }, '刷新');
 
     const toolbar = el('div', { class: 'admin-toolbar' }, [
       searchInput,
       el('span', { class: 'admin-toolbar-spacer' }),
-      limitSelect,
       reloadBtn,
     ]);
 
     const tbody = el('tbody');
     const pager = el('div', { class: 'admin-pager' });
+    const pageMeta = el('span', {});
+    const prevBtn = el('button', {
+      type: 'button', class: 'btn btn-secondary btn-sm',
+      onClick: () => { if (state.offset > 0) { state.offset = Math.max(0, state.offset - state.limit); load(); } },
+    }, '上一页');
+    const nextBtn = el('button', {
+      type: 'button', class: 'btn btn-secondary btn-sm',
+      onClick: () => { if (state.offset + state.limit < state.total) { state.offset += state.limit; load(); } },
+    }, '下一页');
+    pager.appendChild(pageMeta);
+    pager.appendChild(el('span', { class: 'admin-pager-spacer' }));
+    pager.appendChild(prevBtn);
+    pager.appendChild(nextBtn);
+
     const tableWrap = el('div', { class: 'admin-table-wrap' }, [
       el('table', { class: 'admin-table' }, [
         el('thead', {}, el('tr', {}, [
@@ -91,29 +94,20 @@
 
     function render() {
       clear(tbody);
-      const q = state.query.trim().toLowerCase();
-      const items = q
-        ? state.all.filter((u) =>
-            String(u.id).toLowerCase().includes(q) ||
-            (u.email || '').toLowerCase().includes(q) ||
-            (u.name || '').toLowerCase().includes(q))
-        : state.all.slice();
-      state.filtered = items;
-
-      if (items.length === 0) {
+      if (!state.users.length) {
         tbody.appendChild(el('tr', {}, el('td', {
           colspan: '7',
           class: 'admin-empty',
-        }, state.all.length ? '没有匹配的用户' : '暂无用户数据')));
+        }, state.q ? '没有匹配的用户' : '暂无用户数据')));
       } else {
-        items.forEach((u) => tbody.appendChild(renderRow(u)));
+        state.users.forEach((u) => tbody.appendChild(renderRow(u)));
       }
-
-      pager.textContent = '';
-      pager.appendChild(el('span', {},
-        state.all.length
-          ? '已加载 ' + state.all.length + ' 条' + (q ? '，筛选后 ' + items.length + ' 条' : '')
-          : ''));
+      const end = Math.min(state.offset + state.limit, state.total);
+      pageMeta.textContent = state.total
+        ? '共 ' + state.total + ' 条 · 显示 ' + (state.offset + 1) + '–' + end
+        : '暂无数据';
+      prevBtn.disabled = state.offset <= 0;
+      nextBtn.disabled = state.offset + state.limit >= state.total;
     }
 
     function renderRow(u) {
@@ -177,7 +171,7 @@
           value: u.role || 'user',
           options: [
             { value: 'user',        label: 'user',        hint: '普通用户' },
-            { value: 'admin',       label: 'admin',       hint: '内容审核权限（规划中）' },
+            { value: 'admin',       label: 'admin',       hint: '后台管理权限' },
             { value: 'super_admin', label: 'super_admin', hint: '全部后台权限，谨慎授予' },
           ],
         }],
@@ -220,13 +214,25 @@
       } catch (err) { showErr(err); }
     }
 
+    let searchTimer = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        state.q = (searchInput.value || '').trim();
+        state.offset = 0;
+        load();
+      }, 300);
+    });
+
     async function load() {
       showErr(null);
-      state.limit = Number(limitSelect.value) || PAGE_SIZE;
       reloadBtn.disabled = true;
       try {
-        const d = await AdminAPI.listUsers({ limit: state.limit });
-        state.all = d.users || [];
+        const params = { limit: state.limit, offset: state.offset };
+        if (state.q) params.q = state.q;
+        const d = await AdminAPI.listUsers(params);
+        state.users = d.users || [];
+        state.total = typeof d.total === 'number' ? d.total : (Number(d.total) || state.users.length);
         render();
       } catch (err) {
         showErr(err);
@@ -235,14 +241,7 @@
       }
     }
 
-    searchInput.addEventListener('input', () => {
-      state.query = searchInput.value;
-      render();
-    });
-    limitSelect.addEventListener('change', () => load());
-
     await load();
-
     return { unmount() {} };
   }
 

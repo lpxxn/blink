@@ -19,7 +19,19 @@ func (s *Server) ListFeedback(c *gin.Context) {
 	}
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	list, total, err := s.Feedback.ListForAdmin(c.Request.Context(), offset, limit)
+	var f domainfeedback.ListFilters
+	if v := c.Query("status"); v != "" {
+		f.Status = &v
+	}
+	if v := c.Query("user_id"); v != "" {
+		id, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bad user_id"})
+			return
+		}
+		f.UserID = &id
+	}
+	list, total, err := s.Feedback.ListForAdmin(c.Request.Context(), f, offset, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -107,4 +119,26 @@ func (s *Server) ReplyFeedback(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, httpapi.FeedbackMessageToJSON(msg))
+}
+
+func (s *Server) CloseFeedback(c *gin.Context) {
+	actorID, ok := httpauth.UserIDFromContext(c)
+	if !ok {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
+		return
+	}
+	if err := s.Admin.CloseFeedback(c.Request.Context(), actorID, id); err != nil {
+		if errors.Is(err, domainfeedback.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.AbortWithStatus(http.StatusNoContent)
 }

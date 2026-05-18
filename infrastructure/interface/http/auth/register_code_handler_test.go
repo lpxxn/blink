@@ -43,8 +43,12 @@ func (s *stubRegisterCodeUsers) UpdateLastLogin(context.Context, int64, string, 
 	return nil
 }
 
-func (s *stubRegisterCodeUsers) ListForAdmin(context.Context, int, int) ([]domainuser.AdminListEntry, error) {
+func (s *stubRegisterCodeUsers) ListForAdmin(context.Context, string, int, int) ([]domainuser.AdminListEntry, error) {
 	return nil, nil
+}
+
+func (s *stubRegisterCodeUsers) CountForAdmin(context.Context, string) (int64, error) {
+	return 0, nil
 }
 
 func (s *stubRegisterCodeUsers) ListSnowflakeIDsByRole(context.Context, string) ([]int64, error) {

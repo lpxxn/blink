@@ -46,9 +46,9 @@
   }
 
   function applyAdminVisibility(me) {
-    const isSuper = !!(me && me.role === 'super_admin');
+    const isAdmin = !!(me && (me.role === 'super_admin' || me.role === 'admin'));
     document.querySelectorAll('[data-blink-nav="admin"]').forEach((el) => {
-      el.hidden = !isSuper;
+      el.hidden = !isAdmin;
     });
     const isLogged = !!(me && me.user_id);
     document.querySelectorAll('[data-blink-nav="guest"]').forEach((el) => {

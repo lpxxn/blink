@@ -1,8 +1,5 @@
 /**
  * Admin — dashboard.
- *
- * Shows KPI tiles from `/admin/api/overview`, a pending-appeals counter,
- * and shortcut links into the other admin views.
  */
 (function () {
   'use strict';
@@ -39,36 +36,21 @@
     actionsCard.appendChild(actionsRow);
     container.appendChild(actionsCard);
 
-    let appealsCount = 0;
-
-    function render() {
-      kpiWrap.textContent = '';
-      actionsRow.textContent = '';
-
-      // (Filled in below once we have data.)
-    }
-
-    render();
-
     try {
-      const [overview, appealsProbe] = await Promise.all([
-        AdminAPI.overview(),
-        AdminAPI.listPosts({ appeal_pending: 1, limit: 1, offset: 0 }).catch(() => ({ total: 0 })),
-      ]);
+      const overview = await AdminAPI.overview();
+      const appealsCount = num(overview.pending_appeals);
+      const sensitiveCount = num(overview.pending_sensitive_hits);
+      const feedbackCount = num(overview.open_feedback);
 
-      appealsCount = num(appealsProbe.total);
-      const userCount = num(overview.user_count);
-      const postCount = num(overview.post_count);
-      const postsToday = num(overview.posts_today);
-      const categoryCount = overview.category_count != null ? num(overview.category_count) : null;
-
-      kpiWrap.appendChild(kpi('用户总数', userCount.toLocaleString()));
-      kpiWrap.appendChild(kpi('帖子总数', postCount.toLocaleString()));
-      kpiWrap.appendChild(kpi('今日新发', postsToday.toLocaleString(), '过去 24 小时'));
-      if (categoryCount != null) {
-        kpiWrap.appendChild(kpi('分类数', categoryCount.toLocaleString()));
+      kpiWrap.appendChild(kpi('用户总数', num(overview.user_count).toLocaleString()));
+      kpiWrap.appendChild(kpi('帖子总数', num(overview.post_count).toLocaleString()));
+      kpiWrap.appendChild(kpi('今日新发', num(overview.posts_today).toLocaleString(), '过去 24 小时'));
+      if (overview.category_count != null) {
+        kpiWrap.appendChild(kpi('分类数', num(overview.category_count).toLocaleString()));
       }
       kpiWrap.appendChild(kpi('待处理申诉', appealsCount.toLocaleString(), '需要审核', appealsCount > 0));
+      kpiWrap.appendChild(kpi('敏感词待办', sensitiveCount.toLocaleString(), '命中敏感词', sensitiveCount > 0));
+      kpiWrap.appendChild(kpi('待处理反馈', feedbackCount.toLocaleString(), '未关闭工单', feedbackCount > 0));
 
       actionsRow.appendChild(el('button', {
         type: 'button',
@@ -77,24 +59,29 @@
       }, '处理申诉（' + appealsCount + '）'));
       actionsRow.appendChild(el('button', {
         type: 'button',
+        class: 'btn ' + (sensitiveCount > 0 ? 'btn-primary' : 'btn-secondary'),
+        onClick: () => ctx.navigate('posts', { sensitive_hit_pending: 1 }),
+      }, '敏感词待办（' + sensitiveCount + '）'));
+      actionsRow.appendChild(el('button', {
+        type: 'button',
+        class: 'btn ' + (feedbackCount > 0 ? 'btn-primary' : 'btn-secondary'),
+        onClick: () => ctx.navigate('feedback', { status: 'open' }),
+      }, '处理反馈（' + feedbackCount + '）'));
+      actionsRow.appendChild(el('button', {
+        type: 'button',
         class: 'btn btn-secondary',
         onClick: () => ctx.navigate('posts', { moderation_flag: 1 }),
       }, '查看违规帖子'));
       actionsRow.appendChild(el('button', {
         type: 'button',
-        class: 'btn btn-secondary',
-        onClick: () => ctx.navigate('posts', { moderation_flag: 2 }),
-      }, '查看已下架'));
+        class: 'btn btn-ghost',
+        onClick: () => ctx.navigate('categories'),
+      }, '分类管理'));
       actionsRow.appendChild(el('button', {
         type: 'button',
         class: 'btn btn-ghost',
-        onClick: () => ctx.navigate('sensitive'),
-      }, '敏感词管理'));
-      actionsRow.appendChild(el('button', {
-        type: 'button',
-        class: 'btn btn-ghost',
-        onClick: () => ctx.navigate('settings'),
-      }, '后台设置'));
+        onClick: () => ctx.navigate('audit'),
+      }, '审计日志'));
     } catch (err) {
       errEl.textContent = errorText(err);
     }

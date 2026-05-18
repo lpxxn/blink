@@ -90,6 +90,7 @@ func main() {
 	replyRepo := &gormdb.PostReplyRepository{DB: gdb}
 	notifRepo := &gormdb.NotificationRepository{DB: gdb}
 	feedbackRepo := &gormdb.FeedbackRepository{DB: gdb}
+	auditRepo := &gormdb.AdminAuditRepository{DB: gdb}
 	catRepo := &gormdb.CategoryRepository{DB: gdb}
 	sensitiveRepo := &gormdb.SensitiveWordRepository{DB: gdb}
 	settingsRepo := &gormdb.AppSettingsRepository{DB: gdb}
@@ -210,7 +211,10 @@ func main() {
 		Users:                   userRepo,
 		Posts:                   postRepo,
 		Replies:                 replyRepo,
+		Categories:              catRepo,
+		Feedback:                feedbackRepo,
 		Settings:                settingsRepo,
+		Audit:                   auditRepo,
 		Sessions:                sessStore,
 		NotifyEvents:            notifyEventBus,
 		SensitiveWords:          sensitiveRepo,
@@ -443,7 +447,7 @@ func main() {
 	adminG := r.Group("/admin/api")
 	adminG.Use(httpauth.RequireSession(sessStore))
 	adminG.Use(httpauth.RequireActiveUser(sessStore, userRepo))
-	adminG.Use(httpauth.RequireUserRole(userRepo, domainuser.RoleSuperAdmin))
+	adminG.Use(httpauth.RequireUserRole(userRepo, domainuser.RoleSuperAdmin, domainuser.RoleAdmin))
 	adminG.GET("/overview", adminSrv.Overview)
 	adminG.GET("/users", adminSrv.ListUsers)
 	adminG.PATCH("/users/:id", adminSrv.PatchUser)
@@ -455,6 +459,12 @@ func main() {
 	adminG.GET("/feedback", adminSrv.ListFeedback)
 	adminG.GET("/feedback/:id", adminSrv.GetFeedback)
 	adminG.POST("/feedback/:id/replies", adminSrv.ReplyFeedback)
+	adminG.POST("/feedback/:id/close", adminSrv.CloseFeedback)
+	adminG.GET("/categories", adminSrv.ListCategories)
+	adminG.POST("/categories", adminSrv.CreateCategory)
+	adminG.PATCH("/categories/:id", adminSrv.PatchCategory)
+	adminG.DELETE("/categories/:id", adminSrv.DeleteCategory)
+	adminG.GET("/audit_logs", adminSrv.ListAuditLogs)
 	adminG.GET("/settings/sensitive_post_mode", adminSrv.GetSensitivePostMode)
 	adminG.PUT("/settings/sensitive_post_mode", adminSrv.SetSensitivePostMode)
 	adminG.GET("/settings/register_email_verification", adminSrv.GetRegisterEmailVerificationRequired)

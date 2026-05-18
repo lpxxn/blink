@@ -15,10 +15,11 @@
   const LIMIT = 20;
 
   const FILTERS = [
-    { id: 'all',     label: '全部', params: {} },
-    { id: 'flagged', label: '违规', params: { moderation_flag: 1 } },
-    { id: 'removed', label: '已下架', params: { moderation_flag: 2 } },
-    { id: 'normal',  label: '正常', params: { moderation_flag: 0 } },
+    { id: 'all',       label: '全部', params: {} },
+    { id: 'sensitive', label: '敏感词待办', params: { sensitive_hit_pending: 1 } },
+    { id: 'flagged',   label: '违规', params: { moderation_flag: 1 } },
+    { id: 'removed',   label: '已下架', params: { moderation_flag: 2 } },
+    { id: 'normal',    label: '正常', params: { moderation_flag: 0 } },
   ];
 
   function fmtTime(s) {
@@ -55,7 +56,8 @@
   async function mount(container, ctx) {
     const params = ctx.params || new URLSearchParams();
     let activeFilter = 'all';
-    if (params.get('moderation_flag') === '1') activeFilter = 'flagged';
+    if (params.get('sensitive_hit_pending') === '1') activeFilter = 'sensitive';
+    else if (params.get('moderation_flag') === '1') activeFilter = 'flagged';
     else if (params.get('moderation_flag') === '2') activeFilter = 'removed';
     else if (params.get('moderation_flag') === '0') activeFilter = 'normal';
 

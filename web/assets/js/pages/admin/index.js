@@ -19,9 +19,11 @@
     { id: 'users',     label: '用户' },
     { id: 'posts',     label: '帖子' },
     { id: 'appeals',   label: '申诉', badgeKey: 'appeals' },
-    { id: 'feedback',  label: '反馈' },
+    { id: 'feedback',  label: '反馈', badgeKey: 'feedback' },
     { id: 'replies',   label: '评论' },
-    { id: 'sensitive', label: '敏感词' },
+    { id: 'sensitive', label: '敏感词', badgeKey: 'sensitive' },
+    { id: 'categories', label: '分类' },
+    { id: 'audit',     label: '审计' },
     { id: 'settings',  label: '设置' },
   ];
 
@@ -33,6 +35,8 @@
     feedback:  '查看用户意见反馈，并通过站内消息回复。',
     replies:   '按帖子或评论 ID 管理评论可见性。',
     sensitive: '敏感词词表，修改实时生效。',
+    categories: '管理帖子分类（slug、名称、排序）。',
+    audit:     '查看管理员操作记录。',
     settings:  '后台行为开关。',
   };
 
@@ -148,11 +152,21 @@
 
   async function refreshBadges() {
     try {
-      const d = await window.BlinkAdminAPI.listPosts({ appeal_pending: 1, limit: 1, offset: 0 });
-      const count = typeof d.total === 'number' ? d.total : (d.posts || []).length;
-      updateBadge('appeals', count);
+      const [appeals, sensitive, feedback] = await Promise.all([
+        window.BlinkAdminAPI.listPosts({ appeal_pending: 1, limit: 1, offset: 0 }),
+        window.BlinkAdminAPI.listPosts({ sensitive_hit_pending: 1, limit: 1, offset: 0 }),
+        window.BlinkAdminAPI.listFeedback({ status: 'open', limit: 1, offset: 0 }),
+      ]);
+      function badgeTotal(d) {
+        return typeof d.total === 'number' ? d.total : (Number(d.total) || 0);
+      }
+      updateBadge('appeals', badgeTotal(appeals));
+      updateBadge('sensitive', badgeTotal(sensitive));
+      updateBadge('feedback', badgeTotal(feedback));
     } catch (_) {
       updateBadge('appeals', 0);
+      updateBadge('sensitive', 0);
+      updateBadge('feedback', 0);
     }
   }
 

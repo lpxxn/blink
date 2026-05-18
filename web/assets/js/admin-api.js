@@ -24,13 +24,14 @@
     overview: () => API.get('/admin/api/overview'),
 
     // ---- users ----
-    listUsers: (params) => API.get('/admin/api/users' + qs(params || { limit: 50 })),
+    listUsers: (params) => API.get('/admin/api/users' + qs(params || { limit: 50, offset: 0 })),
     patchUser: (id, body) => API.patch('/admin/api/users/' + encodeURIComponent(id), body),
     resetUserPassword: (id, password) =>
       API.post('/admin/api/users/' + encodeURIComponent(id) + '/reset_password', { password }),
 
     // ---- posts ----
     listPosts: (params) => API.get('/admin/api/posts' + qs(params || { limit: 20, offset: 0 })),
+    countPosts: (params) => API.get('/admin/api/posts' + qs(Object.assign({ limit: 1, offset: 0 }, params || {}))),
     patchPost: (id, body) => API.patch('/admin/api/posts/' + encodeURIComponent(id), body),
     resolveAppeal: (id, approve, note) =>
       API.post('/admin/api/posts/' + encodeURIComponent(id) + '/resolve_appeal', {
@@ -45,6 +46,17 @@
     getFeedback: (id) => API.get('/admin/api/feedback/' + encodeURIComponent(id)),
     replyFeedback: (id, body) =>
       API.post('/admin/api/feedback/' + encodeURIComponent(id) + '/replies', { body }),
+    closeFeedback: (id) =>
+      API.post('/admin/api/feedback/' + encodeURIComponent(id) + '/close'),
+
+    // ---- categories ----
+    listCategories: () => API.get('/admin/api/categories'),
+    createCategory: (body) => API.post('/admin/api/categories', body),
+    patchCategory: (id, body) => API.patch('/admin/api/categories/' + encodeURIComponent(id), body),
+    deleteCategory: (id) => API.del('/admin/api/categories/' + encodeURIComponent(id)),
+
+    // ---- audit ----
+    listAuditLogs: (params) => API.get('/admin/api/audit_logs' + qs(params || { limit: 50, offset: 0 })),
 
     // ---- replies ----
     patchReply: (id, body) => API.patch('/admin/api/replies/' + encodeURIComponent(id), body),

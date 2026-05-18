@@ -24,7 +24,10 @@ func (roleStubUsers) FindByEmail(context.Context, string) (*domainuser.User, err
 func (roleStubUsers) UpdateLastLogin(context.Context, int64, string, string) error {
 	panic("unimplemented")
 }
-func (roleStubUsers) ListForAdmin(context.Context, int, int) ([]domainuser.AdminListEntry, error) {
+func (roleStubUsers) ListForAdmin(context.Context, string, int, int) ([]domainuser.AdminListEntry, error) {
+	panic("unimplemented")
+}
+func (roleStubUsers) CountForAdmin(context.Context, string) (int64, error) {
 	panic("unimplemented")
 }
 func (roleStubUsers) ListSnowflakeIDsByRole(context.Context, string) ([]int64, error) {

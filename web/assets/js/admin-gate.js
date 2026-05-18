@@ -46,8 +46,8 @@
       deny('请先登录后再访问管理后台。');
       return null;
     }
-    if (me.role !== 'super_admin') {
-      deny('当前账号不是超级管理员，无法使用此页面。');
+    if (me.role !== 'super_admin' && me.role !== 'admin') {
+      deny('当前账号没有管理权限，无法使用此页面。');
       return null;
     }
 

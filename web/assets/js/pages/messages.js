@@ -67,6 +67,11 @@
         href: '/web/admin.html#feedback',
         style: { display: 'inline-block', marginTop: '0.5rem', fontSize: '0.9rem' },
       }, '进入反馈管理'));
+    } else if (n.type === 'sensitive_hit_admin' && n.ref_post_id != null && n.ref_post_id !== '') {
+      wrap.appendChild(el('a', {
+        href: '/web/admin.html#posts?sensitive_hit_pending=1',
+        style: { display: 'inline-block', marginTop: '0.5rem', fontSize: '0.9rem' },
+      }, '查看敏感词待办'));
     }
 
     let readBtn = null;
