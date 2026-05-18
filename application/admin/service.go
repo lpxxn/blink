@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -10,6 +11,9 @@ import (
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
+	domainadminaudit "github.com/lpxxn/blink/domain/adminaudit"
+	domaincategory "github.com/lpxxn/blink/domain/category"
+	domainfeedback "github.com/lpxxn/blink/domain/feedback"
 	domainsettings "github.com/lpxxn/blink/domain/settings"
 	domainsensitiveword "github.com/lpxxn/blink/domain/sensitiveword"
 	domainsession "github.com/lpxxn/blink/domain/session"
@@ -36,7 +40,10 @@ type Service struct {
 	Users        domainuser.Repository
 	Posts        domainpost.Repository
 	Replies      domainpostreply.Repository // optional; hide comment subtree
+	Categories   domaincategory.Repository  // optional
+	Feedback     domainfeedback.Repository  // optional
 	Settings     domainsettings.Repository  // optional; admin settings
+	Audit        domainadminaudit.Repository
 	Sessions     domainsession.Store               // optional; used when banning users (session invalidation)
 	NotifyEvents appeventing.NotificationPublisher // optional; e.g. Watermill → Redis Stream
 
@@ -47,10 +54,13 @@ type Service struct {
 }
 
 type Overview struct {
-	UserCount     int64
-	PostCount     int64
-	PostsToday    int64
-	CategoryCount int64
+	UserCount              int64
+	PostCount              int64
+	PostsToday             int64
+	CategoryCount          int64
+	PendingAppeals         int64
+	PendingSensitiveHits   int64
+	OpenFeedback           int64
 }
 
 func (s *Service) Overview(ctx context.Context) (*Overview, error) {
@@ -67,7 +77,21 @@ func (s *Service) Overview(ctx context.Context) (*Overview, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Overview{UserCount: uc, PostCount: pc, PostsToday: pt}, nil
+	ov := &Overview{UserCount: uc, PostCount: pc, PostsToday: pt}
+	if s.Posts != nil {
+		ov.PendingAppeals, _ = s.Posts.CountAdmin(ctx, domainpost.AdminListFilters{AppealPending: true})
+		ov.PendingSensitiveHits, _ = s.Posts.CountAdmin(ctx, domainpost.AdminListFilters{SensitiveHitPending: true})
+	}
+	if s.Feedback != nil {
+		open := domainfeedback.StatusOpen
+		ov.OpenFeedback, _ = s.Feedback.Count(ctx, domainfeedback.ListFilters{Status: &open})
+	}
+	if s.Categories != nil {
+		if n, err := s.Categories.Count(ctx); err == nil {
+			ov.CategoryCount = n
+		}
+	}
+	return ov, nil
 }
 
 func validRole(r string) bool {
@@ -77,6 +101,24 @@ func validRole(r string) bool {
 	default:
 		return false
 	}
+}
+
+func (s *Service) ListUsers(ctx context.Context, query string, offset, limit int) ([]domainuser.AdminListEntry, int64, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	list, err := s.Users.ListForAdmin(ctx, query, offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.Users.CountForAdmin(ctx, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
 }
 
 func (s *Service) PatchUser(ctx context.Context, actorID, targetID int64, status *int, role *string) error {
@@ -93,6 +135,15 @@ func (s *Service) PatchUser(ctx context.Context, actorID, targetID int64, status
 		}
 	}
 	err := s.Users.UpdateStatusRole(ctx, targetID, status, role)
+	if err == nil {
+		tid := targetID
+		if status != nil {
+			s.logAudit(ctx, actorID, AuditUserStatus, "user", &tid, "status="+strconv.Itoa(*status))
+		}
+		if role != nil {
+			s.logAudit(ctx, actorID, AuditUserRole, "user", &tid, "role="+*role)
+		}
+	}
 	return s.patchUserAfterDB(ctx, targetID, status, err)
 }
 
@@ -113,7 +164,7 @@ func (s *Service) patchUserAfterDB(ctx context.Context, targetID int64, status *
 }
 
 // ResetUserPassword sets a new bcrypt password for the target user (builtin IdP login).
-func (s *Service) ResetUserPassword(ctx context.Context, targetID int64, newPassword string) error {
+func (s *Service) ResetUserPassword(ctx context.Context, actorID, targetID int64, newPassword string) error {
 	if len(newPassword) < resetPasswordMinLen {
 		return ErrWeakPassword
 	}
@@ -124,17 +175,12 @@ func (s *Service) ResetUserPassword(ctx context.Context, targetID int64, newPass
 	if err != nil {
 		return err
 	}
-	return s.Users.UpdatePasswordHash(ctx, targetID, string(hash))
-}
-
-func (s *Service) ListUsers(ctx context.Context, offset, limit int) ([]domainuser.AdminListEntry, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 50
+	if err := s.Users.UpdatePasswordHash(ctx, targetID, string(hash)); err != nil {
+		return err
 	}
-	if offset < 0 {
-		offset = 0
-	}
-	return s.Users.ListForAdmin(ctx, offset, limit)
+	tid := targetID
+	s.logAudit(ctx, actorID, AuditUserPassword, "user", &tid, "admin reset password")
+	return nil
 }
 
 func (s *Service) ListPosts(ctx context.Context, f domainpost.AdminListFilters, offset, limit int) ([]*domainpost.Post, int64, error) {
@@ -147,7 +193,7 @@ func (s *Service) ListPosts(ctx context.Context, f domainpost.AdminListFilters, 
 	return s.Posts.AdminList(ctx, f, offset, limit)
 }
 
-func (s *Service) PatchPost(ctx context.Context, postID int64, moderationFlag *int, moderationNote *string, status *int) (*domainpost.Post, error) {
+func (s *Service) PatchPost(ctx context.Context, actorID, postID int64, moderationFlag *int, moderationNote *string, status *int) (*domainpost.Post, error) {
 	p, err := s.Posts.GetByID(ctx, postID)
 	if err != nil {
 		return nil, err
@@ -188,11 +234,15 @@ func (s *Service) PatchPost(ctx context.Context, postID int64, moderationFlag *i
 	if s.NotifyEvents != nil && moderationFlag != nil && *moderationFlag == domainpost.ModerationFlagged && oldMod != domainpost.ModerationFlagged {
 		_ = s.NotifyEvents.PublishPostFlagged(ctx, p.UserID, p.ID, p.ModerationNote)
 	}
+	if moderationFlag != nil || moderationNote != nil || status != nil {
+		pid := postID
+		s.logAudit(ctx, actorID, AuditPostModerate, "post", &pid, p.ModerationNote)
+	}
 	return p, nil
 }
 
 // ResolveAppeal approves or rejects author moderation request (appeal / resubmit).
-func (s *Service) ResolveAppeal(ctx context.Context, postID int64, approve bool, adminNote string) (*domainpost.Post, error) {
+func (s *Service) ResolveAppeal(ctx context.Context, actorID, postID int64, approve bool, adminNote string) (*domainpost.Post, error) {
 	p, err := s.Posts.GetByID(ctx, postID)
 	if err != nil {
 		return nil, err
@@ -220,5 +270,11 @@ func (s *Service) ResolveAppeal(ctx context.Context, postID int64, approve bool,
 	if s.NotifyEvents != nil {
 		_ = s.NotifyEvents.PublishAppealResolved(ctx, p.UserID, p.ID, approve, adminNote)
 	}
+	pid := postID
+	detail := "approved=" + strconv.FormatBool(approve)
+	if adminNote != "" {
+		detail += "; " + adminNote
+	}
+	s.logAudit(ctx, actorID, AuditPostAppeal, "post", &pid, detail)
 	return p, nil
 }

@@ -7,11 +7,12 @@ import (
 
 // AdminListFilters optional filters for admin post listing.
 type AdminListFilters struct {
-	UserID         *int64
-	CategoryID     *int64
-	ModerationFlag *int
-	AppealPending  bool // true → appeal_status = AppealPending（待处理申诉/复核）
-	IncludeDeleted bool
+	UserID              *int64
+	CategoryID          *int64
+	ModerationFlag      *int
+	AppealPending       bool // true → appeal_status = AppealPending（待处理申诉/复核）
+	SensitiveHitPending bool // true → moderation_flag=违规 且备注为敏感词命中
+	IncludeDeleted      bool
 }
 
 type Repository interface {
@@ -22,6 +23,7 @@ type Repository interface {
 	ListPublicFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int) ([]*Post, error)
 	ListByUserID(ctx context.Context, userID int64, includeDraft bool, beforeID *int64, limit int) ([]*Post, error)
 	AdminList(ctx context.Context, f AdminListFilters, offset, limit int) ([]*Post, int64, error)
+	CountAdmin(ctx context.Context, f AdminListFilters) (int64, error)
 	Count(ctx context.Context) (int64, error)
 	CountCreatedSince(ctx context.Context, t time.Time) (int64, error)
 }

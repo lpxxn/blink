@@ -3,6 +3,7 @@ package gormdb
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	domainfeedback "github.com/lpxxn/blink/domain/feedback"
@@ -120,7 +121,18 @@ func (r *FeedbackRepository) ListByUserID(ctx context.Context, userID int64, bef
 	return out, nil
 }
 
-func (r *FeedbackRepository) ListPage(ctx context.Context, offset, limit int) ([]*domainfeedback.Thread, int64, error) {
+func feedbackListQuery(db *gorm.DB, f domainfeedback.ListFilters) *gorm.DB {
+	q := db.Model(&FeedbackThreadModel{})
+	if f.Status != nil && strings.TrimSpace(*f.Status) != "" {
+		q = q.Where("status = ?", strings.TrimSpace(*f.Status))
+	}
+	if f.UserID != nil {
+		q = q.Where("user_id = ?", *f.UserID)
+	}
+	return q
+}
+
+func (r *FeedbackRepository) ListPage(ctx context.Context, f domainfeedback.ListFilters, offset, limit int) ([]*domainfeedback.Thread, int64, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -128,11 +140,11 @@ func (r *FeedbackRepository) ListPage(ctx context.Context, offset, limit int) ([
 		offset = 0
 	}
 	var total int64
-	if err := r.DB.WithContext(ctx).Model(&FeedbackThreadModel{}).Count(&total).Error; err != nil {
+	if err := feedbackListQuery(r.DB.WithContext(ctx), f).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	var rows []FeedbackThreadModel
-	err := r.DB.WithContext(ctx).Model(&FeedbackThreadModel{}).
+	err := feedbackListQuery(r.DB.WithContext(ctx), f).
 		Order("last_message_at DESC, id DESC").Offset(offset).Limit(limit).Find(&rows).Error
 	if err != nil {
 		return nil, 0, err
@@ -142,6 +154,26 @@ func (r *FeedbackRepository) ListPage(ctx context.Context, offset, limit int) ([
 		out = append(out, feedbackThreadToDomain(&rows[i]))
 	}
 	return out, total, nil
+}
+
+func (r *FeedbackRepository) Count(ctx context.Context, f domainfeedback.ListFilters) (int64, error) {
+	var n int64
+	err := feedbackListQuery(r.DB.WithContext(ctx), f).Count(&n).Error
+	return n, err
+}
+
+func (r *FeedbackRepository) UpdateStatus(ctx context.Context, id int64, status string) error {
+	now := time.Now().UTC()
+	res := r.DB.WithContext(ctx).Model(&FeedbackThreadModel{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{"status": status, "updated_at": now})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return domainfeedback.ErrNotFound
+	}
+	return nil
 }
 
 func (r *FeedbackRepository) ListMessages(ctx context.Context, feedbackID int64) ([]*domainfeedback.Message, error) {

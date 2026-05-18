@@ -32,24 +32,21 @@ func (s *Server) Overview(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ov := httpapi.OverviewJSON{
-		UserCount:  o.UserCount,
-		PostCount:  o.PostCount,
-		PostsToday: o.PostsToday,
-	}
-	if s.CategoryCount != nil {
-		if n, err := s.CategoryCount(c.Request.Context()); err == nil {
-			nv := n
-			ov.CategoryCount = &nv
-		}
-	}
-	c.JSON(http.StatusOK, ov)
+	c.JSON(http.StatusOK, httpapi.OverviewJSON{
+		UserCount:            o.UserCount,
+		PostCount:            o.PostCount,
+		PostsToday:           o.PostsToday,
+		CategoryCount:        o.CategoryCount,
+		PendingAppeals:       o.PendingAppeals,
+		PendingSensitiveHits: o.PendingSensitiveHits,
+		OpenFeedback:         o.OpenFeedback,
+	})
 }
 
 func (s *Server) ListUsers(c *gin.Context) {
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	list, err := s.Admin.ListUsers(c.Request.Context(), offset, limit)
+	list, total, err := s.Admin.ListUsers(c.Request.Context(), c.Query("q"), offset, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -58,7 +55,7 @@ func (s *Server) ListUsers(c *gin.Context) {
 	for _, e := range list {
 		out = append(out, httpapi.AdminUserToJSON(e))
 	}
-	c.JSON(http.StatusOK, httpapi.AdminUsersResponse{Users: out})
+	c.JSON(http.StatusOK, gin.H{"users": out, "total": strconv.FormatInt(total, 10)})
 }
 
 type patchUserBody struct {
@@ -103,6 +100,11 @@ type resetPasswordBody struct {
 }
 
 func (s *Server) ResetUserPassword(c *gin.Context) {
+	actorID, ok := httpauth.UserIDFromContext(c)
+	if !ok {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 	targetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "bad id"})
@@ -113,7 +115,7 @@ func (s *Server) ResetUserPassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err = s.Admin.ResetUserPassword(c.Request.Context(), targetID, body.Password)
+	err = s.Admin.ResetUserPassword(c.Request.Context(), actorID, targetID, body.Password)
 	if err != nil {
 		if errors.Is(err, appadmin.ErrWeakPassword) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

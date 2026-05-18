@@ -165,14 +165,29 @@ func (s *Service) ListForUser(ctx context.Context, userID int64, beforeID *int64
 	return s.Repo.ListByUserID(ctx, userID, beforeID, limit)
 }
 
-func (s *Service) ListForAdmin(ctx context.Context, offset, limit int) ([]*domainfeedback.Thread, int64, error) {
+func (s *Service) ListForAdmin(ctx context.Context, f domainfeedback.ListFilters, offset, limit int) ([]*domainfeedback.Thread, int64, error) {
 	if offset < 0 {
 		offset = 0
 	}
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	return s.Repo.ListPage(ctx, offset, limit)
+	return s.Repo.ListPage(ctx, f, offset, limit)
+}
+
+func (s *Service) Count(ctx context.Context, f domainfeedback.ListFilters) (int64, error) {
+	return s.Repo.Count(ctx, f)
+}
+
+func (s *Service) CloseByAdmin(ctx context.Context, feedbackID int64) error {
+	t, err := s.Repo.GetThreadByID(ctx, feedbackID)
+	if err != nil {
+		return err
+	}
+	if t.Status == domainfeedback.StatusClosed {
+		return nil
+	}
+	return s.Repo.UpdateStatus(ctx, feedbackID, domainfeedback.StatusClosed)
 }
 
 func (s *Service) notifyAdmins(ctx context.Context, userID, feedbackID int64, body string) {

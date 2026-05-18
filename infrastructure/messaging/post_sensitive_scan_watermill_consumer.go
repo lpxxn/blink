@@ -98,11 +98,11 @@ func handlePostSensitiveScan(ctx context.Context, admin *appadmin.Service, paylo
 	switch mode {
 	case appadmin.SensitivePostModeAutoRemove:
 		flag := domainpost.ModerationRemoved
-		_, err := admin.PatchPost(ctx, p.ID, &flag, &note, nil)
+		_, err := admin.PatchPost(ctx, 0, p.ID, &flag, &note, nil)
 		return err
 	default:
 		flag := domainpost.ModerationFlagged
-		_, err := admin.PatchPost(ctx, p.ID, &flag, &note, nil)
+		_, err := admin.PatchPost(ctx, 0, p.ID, &flag, &note, nil)
 		return err
 	}
 }

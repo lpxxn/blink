@@ -171,3 +171,18 @@ type FeedbackMessageModel struct {
 func (FeedbackMessageModel) TableName() string {
 	return "feedback_messages"
 }
+
+// AdminAuditLogModel maps admin_audit_logs (platform/db/0010_admin_audit_logs.sql).
+type AdminAuditLogModel struct {
+	ID         int64     `gorm:"column:id;primaryKey"`
+	ActorID    int64     `gorm:"column:actor_id;not null;index:idx_admin_audit_actor"`
+	Action     string    `gorm:"column:action;type:varchar(64);not null"`
+	TargetType string    `gorm:"column:target_type;type:varchar(32);not null"`
+	TargetID   *int64    `gorm:"column:target_id"`
+	Detail     string    `gorm:"column:detail;type:text;not null"`
+	CreatedAt  time.Time `gorm:"column:created_at;index:idx_admin_audit_created"`
+}
+
+func (AdminAuditLogModel) TableName() string {
+	return "admin_audit_logs"
+}

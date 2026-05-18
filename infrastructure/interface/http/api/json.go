@@ -183,10 +183,13 @@ type AdminPostsPageJSON struct {
 
 // OverviewJSON is GET /admin/api/overview.
 type OverviewJSON struct {
-	UserCount     int64  `json:"user_count,string"`
-	PostCount     int64  `json:"post_count,string"`
-	PostsToday    int64  `json:"posts_today,string"`
-	CategoryCount *int64 `json:"category_count,string,omitempty"`
+	UserCount            int64 `json:"user_count,string"`
+	PostCount            int64 `json:"post_count,string"`
+	PostsToday           int64 `json:"posts_today,string"`
+	CategoryCount        int64 `json:"category_count,string"`
+	PendingAppeals       int64 `json:"pending_appeals,string"`
+	PendingSensitiveHits int64 `json:"pending_sensitive_hits,string"`
+	OpenFeedback         int64 `json:"open_feedback,string"`
 }
 
 // AdminUsersResponse is GET /admin/api/users.

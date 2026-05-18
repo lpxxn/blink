@@ -3,6 +3,7 @@ package gormdb
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	domainuser "github.com/lpxxn/blink/domain/user"
@@ -105,9 +106,25 @@ func (r *UserRepository) ListSnowflakeIDsByRole(ctx context.Context, role string
 	return ids, err
 }
 
-func (r *UserRepository) ListForAdmin(ctx context.Context, offset, limit int) ([]domainuser.AdminListEntry, error) {
+func (r *UserRepository) adminListQuery(ctx context.Context, query string) *gorm.DB {
+	q := r.DB.WithContext(ctx).Model(&UserModel{})
+	query = strings.TrimSpace(query)
+	if query != "" {
+		like := "%" + query + "%"
+		q = q.Where("email LIKE ? OR name LIKE ? OR CAST(snowflake_id AS TEXT) LIKE ?", like, like, like)
+	}
+	return q
+}
+
+func (r *UserRepository) ListForAdmin(ctx context.Context, query string, offset, limit int) ([]domainuser.AdminListEntry, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
 	var rows []UserModel
-	err := r.DB.WithContext(ctx).Model(&UserModel{}).Order("snowflake_id DESC").Offset(offset).Limit(limit).Find(&rows).Error
+	err := r.adminListQuery(ctx, query).Order("snowflake_id DESC").Offset(offset).Limit(limit).Find(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +143,12 @@ func (r *UserRepository) ListForAdmin(ctx context.Context, offset, limit int) ([
 		})
 	}
 	return out, nil
+}
+
+func (r *UserRepository) CountForAdmin(ctx context.Context, query string) (int64, error) {
+	var n int64
+	err := r.adminListQuery(ctx, query).Count(&n).Error
+	return n, err
 }
 
 func (r *UserRepository) Count(ctx context.Context) (int64, error) {

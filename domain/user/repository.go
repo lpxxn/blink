@@ -7,7 +7,8 @@ type Repository interface {
 	GetByID(ctx context.Context, id int64) (*User, error)
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	UpdateLastLogin(ctx context.Context, id int64, ip, device string) error
-	ListForAdmin(ctx context.Context, offset, limit int) ([]AdminListEntry, error)
+	ListForAdmin(ctx context.Context, query string, offset, limit int) ([]AdminListEntry, error)
+	CountForAdmin(ctx context.Context, query string) (int64, error)
 	// ListSnowflakeIDsByRole returns user ids with the given role (e.g. RoleSuperAdmin).
 	ListSnowflakeIDsByRole(ctx context.Context, role string) ([]int64, error)
 	Count(ctx context.Context) (int64, error)

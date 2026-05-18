@@ -43,6 +43,18 @@ func (r *CategoryRepository) Create(ctx context.Context, c *domaincategory.Categ
 	return r.DB.WithContext(ctx).Create(m).Error
 }
 
+func (r *CategoryRepository) GetBySlug(ctx context.Context, slug string) (*domaincategory.Category, error) {
+	var m CategoryModel
+	err := r.DB.WithContext(ctx).Where("slug = ? AND deleted_at IS NULL", slug).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, domaincategory.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return categoryModelToDomain(&m), nil
+}
+
 func (r *CategoryRepository) GetByID(ctx context.Context, id int64) (*domaincategory.Category, error) {
 	var m CategoryModel
 	err := r.DB.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&m).Error
@@ -53,6 +65,35 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id int64) (*domaincate
 		return nil, err
 	}
 	return categoryModelToDomain(&m), nil
+}
+
+func (r *CategoryRepository) ListAll(ctx context.Context) ([]*domaincategory.Category, error) {
+	var rows []CategoryModel
+	err := r.DB.WithContext(ctx).Unscoped().Order("sort_order ASC, id ASC").Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*domaincategory.Category, 0, len(rows))
+	for i := range rows {
+		out = append(out, categoryModelToDomain(&rows[i]))
+	}
+	return out, nil
+}
+
+func (r *CategoryRepository) Update(ctx context.Context, c *domaincategory.Category) error {
+	now := time.Now().UTC()
+	return r.DB.WithContext(ctx).Model(&CategoryModel{}).Where("id = ?", c.ID).
+		Updates(map[string]interface{}{
+			"slug":       c.Slug,
+			"name":       c.Name,
+			"sort_order": c.SortOrder,
+			"updated_at": now,
+			"deleted_at": nil,
+		}).Error
+}
+
+func (r *CategoryRepository) SoftDelete(ctx context.Context, id int64) error {
+	return r.DB.WithContext(ctx).Where("id = ?", id).Delete(&CategoryModel{}).Error
 }
 
 func (r *CategoryRepository) ListActive(ctx context.Context) ([]*domaincategory.Category, error) {

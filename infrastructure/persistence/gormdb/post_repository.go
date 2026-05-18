@@ -196,7 +196,17 @@ func (r *PostRepository) adminBaseQuery(ctx context.Context, f domainpost.AdminL
 	if f.AppealPending {
 		q = q.Where("appeal_status = ?", domainpost.AppealPending)
 	}
+	if f.SensitiveHitPending {
+		q = q.Where("moderation_flag = ?", domainpost.ModerationFlagged).
+			Where("(moderation_note LIKE ? OR moderation_note LIKE ?)", "有敏感词：%", "sensitive_hit:%")
+	}
 	return q
+}
+
+func (r *PostRepository) CountAdmin(ctx context.Context, f domainpost.AdminListFilters) (int64, error) {
+	var n int64
+	err := r.adminBaseQuery(ctx, f).Count(&n).Error
+	return n, err
 }
 
 func (r *PostRepository) AdminList(ctx context.Context, f domainpost.AdminListFilters, offset, limit int) ([]*domainpost.Post, int64, error) {
