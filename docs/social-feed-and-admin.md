@@ -21,11 +21,26 @@
 
 仍需：**Redis**（会话、Watermill Stream）、**数据库迁移**（含 `platform/db/0007_sensitive_words.sql` 等）。
 
-## 超级管理员
+## 管理后台权限
 
-- 库中 `users.role` 为 **`super_admin`** 时可访问 `/admin/api/*`（需有效 `blink_session` 或 `Authorization: Bearer`）。
-- 授予方式：SQL 更新 `role`，或配置 `BLINK_BOOTSTRAP_SUPER_ADMIN_EMAIL` 后重启进程。
-- 不可在接口中将自己的角色从 `super_admin` 改为其他值（会返回 403）。
+- 库中 `users.role` 为 **`admin`** 或 **`super_admin`** 时可访问 `/admin/api/*`（需有效 `blink_session` 或 `Authorization: Bearer`）。
+- 授予方式：SQL 更新 `role`，或由 `super_admin` 在后台「用户」页修改；亦可配置 `BLINK_BOOTSTRAP_SUPER_ADMIN_EMAIL` 将指定邮箱提升为 `super_admin`（幂等）。
+- `super_admin` 不可在接口中将自己的角色改为其他值（会返回 403）。
+- 静态管理页：`/web/admin.html`（侧栏含概览、用户、帖子、申诉、反馈、评论、敏感词、分类、审计、设置）。
+
+## 管理 API 补充（与 OpenAPI 对齐）
+
+| 能力 | 路径要点 |
+|------|----------|
+| 概览 KPI | `GET /admin/api/overview`（含 `pending_appeals`、`pending_sensitive_hits`、`open_feedback`） |
+| 用户搜索 | `GET /admin/api/users?q=&offset=&limit=`，响应含 `total` |
+| 帖子筛选 | `GET /admin/api/posts`，Query 含 `sensitive_hit_pending=1`（敏感词待办） |
+| 反馈 | `GET/POST …/feedback`、`POST …/feedback/:id/close` |
+| 分类 CRUD | `GET/POST /admin/api/categories`、`PATCH/DELETE …/:id` |
+| 审计 | `GET /admin/api/audit_logs` |
+| 设置 | `…/settings/sensitive_post_mode`、`register_email_verification`、`smtp` |
+
+完整路径见 `api/openapi/openapi.yaml` 与 `cmd/main.go`。
 
 ## 默认分类
 

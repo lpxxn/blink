@@ -2,12 +2,13 @@
 
 [English](README.md) | 中文
 
-Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/登录、帖子流、评论、图片上传、站内通知，以及一个简洁的超级管理员后台（静态 HTML）。后端采用 Go，并按 DDD 分层组织代码，接口契约以 OpenAPI 维护。
+Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/登录、帖子流、评论、图片上传、站内通知、意见反馈，以及管理后台（静态 HTML）。后端采用 Go，并按 DDD 分层组织代码，接口契约以 OpenAPI 维护。
 
 ## 功能
 
 - **认证与会话**
-  - 邮箱密码注册：`POST /auth/register`（始终可用）
+  - 邮箱密码注册：`POST /auth/register`（可配合 `POST /auth/register/send_code` 做邮箱验证）
+  - 邮箱密码登录：`POST /auth/login`；登录态改密 / 找回密码（验证码）
   - OAuth2 授权码登录：第三方（如 Google）或自建 IdP（`builtin`）
   - 会话 Cookie：`blink_session`（Redis 存储会话）
 - **社交内容**
@@ -21,7 +22,8 @@ Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/
   - 登录用户提交反馈并可补充，管理员在后台回复，双方通过站内消息收到提醒
 - **内容治理与后台**
   - 敏感词：命中则拒绝发布/评论；后台 CRUD 后通过 Redis Stream 广播刷新
-  - 超级管理员 JSON API：`/admin/api/*`（`users.role=super_admin`）
+  - 管理 JSON API：`/admin/api/*`（`users.role` 为 `admin` 或 `super_admin`，详见 OpenAPI）
+  - 分类 CRUD、审计日志、反馈管理、SMTP/后台设置
   - 静态页面：`/web/*.html`（无 React 等框架，保持简单）
 - **工程约定**
   - Snowflake ID 在 JSON 中统一用**字符串**传输，避免 JS 精度问题
@@ -114,6 +116,7 @@ go run ./cmd/migrate
 - **本地运行与健康检查**：`docs/run-local.md`
 - **架构（DDD 分层、HTTP vs 通知流）**：`docs/architecture.md`
 - **登录/注册与 OAuth 流程**：`docs/auth-login-registration.md`
+- **邮箱验证与 SMTP**：`docs/email-auth.md`
 - **帖子流与管理后台**：`docs/social-feed-and-admin.md`
 - **站内通知（Watermill + Redis Stream）**：`docs/watermill-notifications.md`
 - **HTTP curl 示例**：`docs/http-curl-examples.md`

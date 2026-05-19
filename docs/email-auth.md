@@ -36,9 +36,11 @@
 | F5 | 登录态修改密码 - 提交 | 会话 | `POST /api/me/password` |
 | F6 | 找回密码 - 发码 | 无 | `POST /auth/password/send_code` |
 | F7 | 找回密码 - 重置 | 无 | `POST /auth/password/reset` |
-| F8 | 读 SMTP 配置 | super_admin | `GET /admin/api/settings/smtp` |
-| F9 | 写 SMTP 配置 | super_admin | `PUT /admin/api/settings/smtp` |
-| F10 | 发测试邮件 | super_admin | `POST /admin/api/settings/smtp/test` |
+| F8 | 读 SMTP 配置 | admin / super_admin | `GET /admin/api/settings/smtp` |
+| F9 | 写 SMTP 配置 | admin / super_admin | `PUT /admin/api/settings/smtp` |
+| F10 | 发测试邮件 | admin / super_admin | `POST /admin/api/settings/smtp/test` |
+
+> 路由层：`admin` 与 `super_admin` 均可访问 `/admin/api/*`。生产环境建议仅向 `super_admin` 授予 SMTP 等高危设置权限（后续可做细粒度鉴权）。
 
 ---
 

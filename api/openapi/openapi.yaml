@@ -10,8 +10,10 @@ info:
 
     **代码生成**：仅带标签 `servergen` 的操作会由 oapi-codegen 生成 Gin 注册代码与 `ServerInterface` 方法；其余路径为手写路由，此处仅作文档。
 
-    **社交与管理**：`/api/*` 帖子与评论、`/admin/api/*` 超级管理员接口为手写路由（见 `cmd/main.go`），OpenAPI 中 `social` / `admin` 标签描述之。
-  version: 0.0.0
+    **社交与管理**：`/api/*`、`/admin/api/*` 为手写路由（见 `cmd/main.go`），OpenAPI 中 `social` / `admin` / `feedback` / `notifications` 标签描述之。
+
+    **管理权限**：`users.role` 为 `admin` 或 `super_admin` 时可访问 `/admin/api/*`（需有效会话）。部分能力（如 SMTP 配置）在实现上仍建议仅授予 `super_admin`。
+  version: 0.1.0
 servers:
   - url: http://127.0.0.1:11110
     description: 本地开发（默认 BLINK_HTTP_ADDR=:11110）
@@ -37,8 +39,12 @@ tags:
     description: 参与 oapi-codegen Gin 生成的操作（勿删此标签于已生成路径上）
   - name: social
     description: 帖子流、分类、评论、图片上传（手写路由，见 cmd/main.go）
+  - name: feedback
+    description: 意见反馈（用户侧与管理员侧）
+  - name: notifications
+    description: 站内通知（需登录）
   - name: admin
-    description: 超级管理员 JSON API（需会话且 users.role=super_admin）
+    description: 管理后台 JSON API（需会话且 users.role 为 admin 或 super_admin）
 
 paths:
   /health:
@@ -279,13 +285,47 @@ paths:
               schema:
                 type: string
 
+  /auth/register/send_code:
+    post:
+      operationId: registerSendCode
+      tags: [auth]
+      summary: 发送注册邮箱验证码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "204":
+          description: 已发送（或配置关闭验证时无操作）
+        "400":
+          description: 邮箱无效
+        "429":
+          description: 发送过于频繁
+
+  /auth/register/config:
+    get:
+      operationId: registerConfig
+      tags: [auth]
+      summary: 注册是否需要邮箱验证码
+      responses:
+        "200":
+          description: '`{ "email_verification_required": bool }`'
+
   /auth/register:
     post:
       operationId: registerUser
       tags: [auth]
       summary: 用户注册
       description: |
-        路由**始终挂载**。成功时 `201`；若进程内为 `RegisterService` 配置了事务与会话存储，会设置 Cookie `blink_session`，且 JSON 可含 `session_token`、`session_cookie` 字段。
+        路由**始终挂载**。当后台开启「注册邮箱验证」时，body 须含 `code`（先调 `POST /auth/register/send_code`）。
+        成功时 `201`；若配置了会话存储，会设置 Cookie `blink_session`，且 JSON 可含 `session_token`、`session_cookie`。
       requestBody:
         required: true
         content:
@@ -324,6 +364,78 @@ paths:
             text/plain:
               schema:
                 type: string
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: 邮箱 + 密码登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: 登录成功，Set-Cookie `blink_session`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    description: snowflake ID（字符串）
+        "401":
+          description: 凭据错误
+
+  /auth/password/send_code:
+    post:
+      operationId: passwordResetSendCode
+      tags: [auth]
+      summary: 找回密码 — 发送邮箱验证码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "204":
+          description: 已发送（邮箱不存在时也返回 204，防枚举）
+
+  /auth/password/reset:
+    post:
+      operationId: passwordReset
+      tags: [auth]
+      summary: 找回密码 — 验证码 + 新密码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "204":
+          description: 密码已更新
+        "400":
+          description: 验证码无效或密码过短
 
   /api/categories:
     get:
@@ -541,6 +653,271 @@ paths:
         "200":
           description: '`{ "url": "/uploads/{user_id}/{file}" }`'
 
+  /api/logout:
+    post:
+      operationId: logout
+      tags: [social]
+      summary: 退出登录（清除会话 Cookie）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "204":
+          description: 成功
+
+  /api/me:
+    get:
+      operationId: getMe
+      tags: [social]
+      summary: 当前登录用户
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: MeJSON（user_id 等为字符串）
+    patch:
+      operationId: patchMe
+      tags: [social]
+      summary: 修改当前用户资料
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          description: 更新后的 MeJSON
+
+  /api/me/password/send_code:
+    post:
+      operationId: sendChangePasswordCode
+      tags: [auth]
+      summary: 登录态修改密码 — 向当前邮箱发验证码
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "204":
+          description: 已发送
+
+  /api/me/password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: 登录态修改密码 — 验证码 + 新密码
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, password]
+              properties:
+                code:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "204":
+          description: 成功
+
+  /api/posts/{id}/moderation_request:
+    post:
+      operationId: submitModerationRequest
+      tags: [social]
+      summary: 提交申诉或复核请求（作者）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            description: 帖子 snowflake ID（字符串）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind:
+                  type: string
+                  description: 如 `appeal`、`resubmit`
+                message:
+                  type: string
+      responses:
+        "200":
+          description: 更新后的帖子 JSON
+
+  /api/me/notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: 站内通知列表
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: '`{ "notifications": [...], "next_cursor" }`'
+
+  /api/me/notifications/unread_count:
+    get:
+      operationId: unreadNotificationCount
+      tags: [notifications]
+      summary: 未读通知数量
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: '`{ "count": number }`'
+
+  /api/me/notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: 标记单条通知已读
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 成功
+
+  /api/me/notifications/read_all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: 全部标记已读
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "204":
+          description: 成功
+
+  /api/feedback:
+    post:
+      operationId: createFeedback
+      tags: [feedback]
+      summary: 提交意见反馈（首条消息）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  maxLength: 4000
+      responses:
+        "201":
+          description: 反馈工单 JSON
+
+  /api/me/feedback:
+    get:
+      operationId: listMyFeedback
+      tags: [feedback]
+      summary: 我的反馈列表
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: FeedbackThreadPageJSON
+
+  /api/me/feedback/{id}:
+    get:
+      operationId: getMyFeedback
+      tags: [feedback]
+      summary: 反馈详情（含消息列表）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: FeedbackDetailJSON
+
+  /api/me/feedback/{id}/replies:
+    post:
+      operationId: replyMyFeedback
+      tags: [feedback]
+      summary: 用户补充反馈（最多 2 次）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+      responses:
+        "201":
+          description: 新消息 JSON
+
   /admin/api/overview:
     get:
       operationId: adminOverview
@@ -551,19 +928,37 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: user_count, post_count, posts_today, category_count
+          description: |
+            OverviewJSON：`user_count`、`post_count`、`posts_today`、`category_count`、
+            `pending_appeals`、`pending_sensitive_hits`、`open_feedback`（大整数字段均为 JSON 字符串）
 
   /admin/api/users:
     get:
       operationId: adminListUsers
       tags: [admin]
-      summary: 用户列表
+      summary: 用户列表（服务端搜索 + 分页）
       security:
         - sessionCookie: []
         - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: 按邮箱 / 名称 / ID 模糊搜索
+          schema:
+            type: string
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
       responses:
         "200":
-          description: '`{ "users": [...] }`'
+          description: '`{ "users": [...], "total": string|number }`'
 
   /admin/api/users/{id}:
     patch:
@@ -632,7 +1027,9 @@ paths:
       security:
         - sessionCookie: []
         - bearerAuth: []
-      description: Query `user_id`、`category_id`、`moderation_flag`、`include_deleted`、`appeal_pending`、`offset`、`limit`。
+      description: |
+        Query：`user_id`、`category_id`、`moderation_flag`、`include_deleted`、
+        `appeal_pending`、`sensitive_hit_pending`（敏感词命中待办）、`offset`、`limit`。
       responses:
         "200":
           description: '`{ "posts": [...], "total" }`'
@@ -840,6 +1237,337 @@ paths:
         "503":
           description: replies not configured
 
+  /admin/api/posts/{id}/replies:
+    get:
+      operationId: adminListPostReplies
+      tags: [admin]
+      summary: 某帖下的评论列表（管理）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: '`{ "replies": [...], "total" }`'
+
+  /admin/api/feedback:
+    get:
+      operationId: adminListFeedback
+      tags: [admin, feedback]
+      summary: 反馈工单列表
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, closed]
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: '`{ "feedback": [...], "total" }`'
+
+  /admin/api/feedback/{id}:
+    get:
+      operationId: adminGetFeedback
+      tags: [admin, feedback]
+      summary: 反馈详情
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: FeedbackDetailJSON
+
+  /admin/api/feedback/{id}/replies:
+    post:
+      operationId: adminReplyFeedback
+      tags: [admin, feedback]
+      summary: 管理员回复反馈（用户收到站内通知）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+      responses:
+        "201":
+          description: 消息 JSON
+
+  /admin/api/feedback/{id}/close:
+    post:
+      operationId: adminCloseFeedback
+      tags: [admin, feedback]
+      summary: 关闭反馈工单
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 成功
+
+  /admin/api/categories:
+    get:
+      operationId: adminListCategories
+      tags: [admin]
+      summary: 全部分类（含未激活）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: '`{ "categories": [...] }`'
+    post:
+      operationId: adminCreateCategory
+      tags: [admin]
+      summary: 新增分类
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, name]
+              properties:
+                slug:
+                  type: string
+                name:
+                  type: string
+                sort_order:
+                  type: integer
+      responses:
+        "201":
+          description: CategoryJSON
+
+  /admin/api/categories/{id}:
+    patch:
+      operationId: adminPatchCategory
+      tags: [admin]
+      summary: 更新分类
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                slug:
+                  type: string
+                name:
+                  type: string
+                sort_order:
+                  type: integer
+      responses:
+        "200":
+          description: CategoryJSON
+    delete:
+      operationId: adminDeleteCategory
+      tags: [admin]
+      summary: 软删除分类
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 成功
+
+  /admin/api/audit_logs:
+    get:
+      operationId: adminListAuditLogs
+      tags: [admin]
+      summary: 管理员操作审计日志
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: '`{ "logs": [...], "total": string }`'
+
+  /admin/api/settings/sensitive_post_mode:
+    get:
+      operationId: adminGetSensitivePostMode
+      tags: [admin]
+      summary: 读取敏感词命中帖子的处理模式
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: '`{ "mode": "block"|"flag" }` 等'
+    put:
+      operationId: adminSetSensitivePostMode
+      tags: [admin]
+      summary: 设置敏感词命中帖子的处理模式
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode:
+                  type: string
+      responses:
+        "204":
+          description: 成功
+
+  /admin/api/settings/register_email_verification:
+    get:
+      operationId: adminGetRegisterEmailVerification
+      tags: [admin]
+      summary: 注册是否强制邮箱验证码
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: '`{ "required": bool }`'
+    put:
+      operationId: adminSetRegisterEmailVerification
+      tags: [admin]
+      summary: 开关注册邮箱验证
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                required:
+                  type: boolean
+      responses:
+        "204":
+          description: 成功
+
+  /admin/api/settings/smtp:
+    get:
+      operationId: adminGetSMTPSettings
+      tags: [admin]
+      summary: 读取 SMTP 配置（密码不回显）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: SMTP 配置 JSON（含 `has_password`）
+        "503":
+          description: SMTP 未配置
+    put:
+      operationId: adminPutSMTPSettings
+      tags: [admin]
+      summary: 更新 SMTP 配置
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: 更新后的配置
+        "503":
+          description: SMTP 未配置
+
+  /admin/api/settings/smtp/test:
+    post:
+      operationId: adminTestSMTP
+      tags: [admin]
+      summary: 发送测试邮件
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to:
+                  type: string
+                  format: email
+      responses:
+        "204":
+          description: 已发送
+
 components:
   securitySchemes:
     bearerAuth:
@@ -900,6 +1628,20 @@ components:
           format: password
         name:
           type: string
+        code:
+          type: string
+          description: 开启注册邮箱验证时必填
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
 
     RegisterResponse:
       type: object

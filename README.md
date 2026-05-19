@@ -2,12 +2,13 @@
 
 English | [中文](README.zh-CN.md)
 
-Blink is a lightweight microblog backend: registration and login, post feeds, threaded replies, image uploads, in-app notifications, and a simple super-admin console (static HTML). The server is written in Go with DDD-style layering; HTTP contracts are maintained in OpenAPI.
+Blink is a lightweight microblog backend: registration and login, post feeds, threaded replies, image uploads, in-app notifications, user feedback, and an admin console (static HTML). The server is written in Go with DDD-style layering; HTTP contracts are maintained in OpenAPI.
 
 ## Features
 
 - **Authentication & sessions**
-  - Email/password registration: `POST /auth/register` (always enabled)
+  - Email/password registration: `POST /auth/register` (optional email verification via `POST /auth/register/send_code`)
+  - Email/password login: `POST /auth/login`; password change / reset via verification codes
   - OAuth2 authorization-code login: third-party (e.g. Google) or built-in IdP (`builtin`)
   - Session cookie: `blink_session` (sessions stored in Redis)
 - **Social content**
@@ -21,7 +22,8 @@ Blink is a lightweight microblog backend: registration and login, post feeds, th
   - Logged-in users submit feedback and may follow up; admins reply in the console; both sides get in-app notification reminders
 - **Moderation & admin**
   - Sensitive words: block publish/reply on hit; admin CRUD broadcasts reload via Redis Stream
-  - Super-admin JSON API: `/admin/api/*` (`users.role=super_admin`)
+  - Admin JSON API: `/admin/api/*` (`users.role` is `admin` or `super_admin`; see OpenAPI)
+  - Categories CRUD, audit logs, feedback management, SMTP/settings
   - Static pages: `/web/*.html` (vanilla JS, no React)
 - **Conventions**
   - Snowflake IDs are serialized as **strings** in JSON to avoid JavaScript precision loss
@@ -114,6 +116,7 @@ The migrate CLI also supports `postgres` / `mysql`. See:
 - **Local run & health checks**: `docs/run-local.md`
 - **Architecture (DDD layers, HTTP vs notification pipeline)**: `docs/architecture.md`
 - **Login, registration & OAuth**: `docs/auth-login-registration.md`
+- **Email verification & SMTP**: `docs/email-auth.md`
 - **Feeds & admin console**: `docs/social-feed-and-admin.md`
 - **In-app notifications (Watermill + Redis Stream)**: `docs/watermill-notifications.md`
 - **HTTP curl examples**: `docs/http-curl-examples.md`
