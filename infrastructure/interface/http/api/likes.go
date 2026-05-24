@@ -37,6 +37,7 @@ func (s *Server) LikePost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	s.notifyPostLiked(postID, uid)
 	c.AbortWithStatus(http.StatusNoContent)
 }
 

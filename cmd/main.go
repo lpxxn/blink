@@ -129,8 +129,6 @@ func main() {
 		NewID: func() int64 { return node.Generate().Int64() },
 		Users: userRepo,
 	}
-	followSvc.Notifications = notifSvc
-	likeSvc.Notifications = notifSvc
 	feedbackSvc := &appfeedback.Service{
 		Repo:          feedbackRepo,
 		Users:         userRepo,

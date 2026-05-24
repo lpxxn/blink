@@ -3,9 +3,7 @@ package postlike
 import (
 	"context"
 	"errors"
-	"log"
 
-	appnotification "github.com/lpxxn/blink/application/notification"
 	apppost "github.com/lpxxn/blink/application/post"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostlike "github.com/lpxxn/blink/domain/postlike"
@@ -14,33 +12,18 @@ import (
 var ErrPostNotFound = errors.New("postlike: post not found")
 
 type Service struct {
-	Likes         domainpostlike.Repository
-	Posts         *apppost.Service
-	Notifications *appnotification.Service // optional; sync in-app notification on like
+	Likes domainpostlike.Repository
+	Posts *apppost.Service
 }
 
 func (s *Service) Like(ctx context.Context, userID, postID int64) error {
-	post, err := s.Posts.GetPublic(ctx, postID)
-	if err != nil {
+	if _, err := s.Posts.GetPublic(ctx, postID); err != nil {
 		if errors.Is(err, domainpost.ErrNotFound) {
 			return ErrPostNotFound
 		}
 		return err
 	}
-	if err := s.Likes.Like(ctx, userID, postID); err != nil {
-		return err
-	}
-	s.notifyPostLiked(ctx, post, userID, postID)
-	return nil
-}
-
-func (s *Service) notifyPostLiked(ctx context.Context, post *domainpost.Post, likerID, postID int64) {
-	if s.Notifications == nil || post == nil || post.UserID == likerID {
-		return
-	}
-	if err := s.Notifications.OnPostLiked(ctx, post.UserID, postID, likerID); err != nil {
-		log.Printf("postlike: notification: %v", err)
-	}
+	return s.Likes.Like(ctx, userID, postID)
 }
 
 func (s *Service) Unlike(ctx context.Context, userID, postID int64) error {

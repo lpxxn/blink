@@ -73,6 +73,7 @@ func (s *Server) FollowUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	s.notifyUserFollowed(followeeID, uid)
 	c.AbortWithStatus(http.StatusNoContent)
 }
 
