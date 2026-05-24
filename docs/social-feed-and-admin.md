@@ -2,8 +2,10 @@
 
 本仓库在原有 OAuth / 注册 / Redis 会话之上，提供：
 
-- **公开 API**：`GET /api/categories`、`GET /api/posts`（按 `category_id` 或 `uncategorized=1` 筛选）、`GET /api/posts/{id}`（可选登录，作者可看自己的草稿/非公开帖）、`GET /api/posts/{id}/replies`。
-- **需登录**：发帖与改删、`GET /api/me/posts`、评论、图片上传 `POST /api/uploads`（multipart 字段 `file`）。
+- **公开 API**：`GET /api/categories`、`GET /api/posts/{id}/replies`。
+- **可选登录**（Cookie / Bearer）：`GET /api/posts`（流中返回 `like_count`；登录时还返回 `liked`）、`GET /api/posts/{id}`（作者可看自己的草稿/非公开帖）、`GET /api/posts/{id}/likes`、`GET /api/users/{id}/follow-stats`。
+- **需登录**：发帖与改删、`GET /api/me/posts`、评论、**点赞**（`POST/DELETE /api/posts/{id}/like`）、**关注**（`POST/DELETE /api/users/{id}/follow`）、图片上传 `POST /api/uploads`（multipart 字段 `file`）。
+- **站内通知**：被关注、帖子被点赞时异步通知作者（Watermill → `notifications`）。
 - **静态页**：`/web/*.html`（`r.Static("/web", "./web")`）。
 - **JSON 与浏览器精度**：帖子、分类、评论、用户等 snowflake ID 在 JSON 中均为 **带引号的字符串**（Go 侧 `json:",string"`），`next_cursor` 亦为字符串，避免 JavaScript `Number` 丢精度。
 - **上传文件**：默认目录 `data/uploads`（`BLINK_UPLOAD_DIR`），通过 `GET /uploads/...` 访问。

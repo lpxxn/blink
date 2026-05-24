@@ -13,4 +13,6 @@ type NotificationPublisher interface {
 	PublishAppealSubmitted(ctx context.Context, authorID, postID int64, kind, message string) error
 	PublishAppealResolved(ctx context.Context, authorID, postID int64, approved bool, adminNote string) error
 	PublishUserBanned(ctx context.Context, userID int64) error
+	PublishUserFollowed(ctx context.Context, followeeID, followerID int64) error
+	PublishPostLiked(ctx context.Context, postAuthorID, postID, likerID int64) error
 }

@@ -29,6 +29,15 @@ type PostJSON struct {
 	CreatedAt      string   `json:"created_at"`
 	UpdatedAt      string   `json:"updated_at"`
 	CategoryID     *int64   `json:"category_id,string"`
+	LikeCount      int64    `json:"like_count,string"`
+	Liked          *bool    `json:"liked,omitempty"`
+}
+
+// PostLikeJSON is GET /api/posts/:id/likes.
+type PostLikeJSON struct {
+	PostID    int64 `json:"post_id,string"`
+	LikeCount int64 `json:"like_count,string"`
+	Liked     bool  `json:"liked,omitempty"`
 }
 
 // PostToJSON maps a domain post to the JSON response (IDs as strings in JSON).

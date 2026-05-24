@@ -15,6 +15,8 @@ const (
 	TypeFeedbackSubmitted    = "feedback_submitted"
 	TypeFeedbackReply        = "feedback_reply"
 	TypeSystem               = "system"
+	TypeUserFollowed         = "user_followed"
+	TypePostLiked            = "post_liked"
 )
 
 type Notification struct {

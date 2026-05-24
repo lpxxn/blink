@@ -119,6 +119,32 @@ func (PostReplyModel) TableName() string {
 	return "post_replies"
 }
 
+// UserFollowModel maps user_follows (platform/db/0002_create_post.sql).
+type UserFollowModel struct {
+	FollowerID int64          `gorm:"column:follower_id;primaryKey"`
+	FolloweeID int64          `gorm:"column:followee_id;primaryKey"`
+	CreatedAt  time.Time      `gorm:"column:created_at"`
+	UpdatedAt  time.Time      `gorm:"column:updated_at"`
+	DeletedAt  gorm.DeletedAt `gorm:"column:deleted_at"`
+}
+
+func (UserFollowModel) TableName() string {
+	return "user_follows"
+}
+
+// PostLikeModel maps post_likes (platform/db/0011_post_likes.sql).
+type PostLikeModel struct {
+	UserID    int64          `gorm:"column:user_id;primaryKey"`
+	PostID    int64          `gorm:"column:post_id;primaryKey"`
+	CreatedAt time.Time      `gorm:"column:created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at"`
+}
+
+func (PostLikeModel) TableName() string {
+	return "post_likes"
+}
+
 // SensitiveWordModel maps sensitive_words (platform/db/0007_sensitive_words.sql).
 type SensitiveWordModel struct {
 	ID        int64     `gorm:"column:id;primaryKey"`

@@ -451,7 +451,9 @@ paths:
       operationId: listPosts
       tags: [social]
       summary: 公开帖子流
-      description: Query `category_id`、`uncategorized=1`、`cursor`（上一页最后一条 id）、`limit`。
+      description: |
+        Query `category_id`、`uncategorized=1`、`cursor`（上一页最后一条 id）、`limit`。
+        可选会话（Cookie / Bearer）：登录后响应中每条帖子含 `liked`；`like_count` 始终返回。
       responses:
         "200":
           description: '`{ "posts": [...], "next_cursor": int64|null }`'
@@ -612,6 +614,124 @@ paths:
       responses:
         "201":
           description: 评论 JSON
+
+  /api/posts/{id}/likes:
+    get:
+      operationId: getPostLikes
+      tags: [social]
+      summary: 帖子点赞数（可选登录返回是否已赞）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: '`{ "post_id", "like_count", "liked"? }`（snowflake 为字符串）'
+        "404":
+          description: 帖子不存在或不可见
+
+  /api/posts/{id}/like:
+    post:
+      operationId: likePost
+      tags: [social]
+      summary: 点赞帖子
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "409":
+          description: 已点赞
+    delete:
+      operationId: unlikePost
+      tags: [social]
+      summary: 取消点赞
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "404":
+          description: 未点赞
+
+  /api/users/{id}/follow-stats:
+    get:
+      operationId: getUserFollowStats
+      tags: [social]
+      summary: 用户关注统计（可选登录返回是否已关注）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: '`{ "user_id", "follower_count", "following_count", "is_following"? }`'
+        "404":
+          description: 用户不存在
+
+  /api/users/{id}/follow:
+    post:
+      operationId: followUser
+      tags: [social]
+      summary: 关注用户
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "400":
+          description: 不能关注自己
+        "409":
+          description: 已关注
+    delete:
+      operationId: unfollowUser
+      tags: [social]
+      summary: 取消关注
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "404":
+          description: 未关注
 
   /api/replies/{id}:
     delete:

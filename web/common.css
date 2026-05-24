@@ -50,6 +50,22 @@ body.blink-page {
   max-width: 60rem;
 }
 
+.post-social-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.social-like-btn.social-liked {
+  color: var(--danger);
+}
+
+.post-meta-row + .post-social-actions {
+  margin-top: 0.25rem;
+}
+
 .top-nav {
   display: flex;
   flex-wrap: wrap;

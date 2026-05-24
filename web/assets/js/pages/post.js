@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  const { BlinkAPI, BlinkUI, BlinkMD } = window;
+  const { BlinkAPI, BlinkUI, BlinkMD, BlinkSocial } = window;
   const { el, clear, flash, errorText } = BlinkUI;
 
   const params = new URLSearchParams(location.search);
@@ -73,8 +73,19 @@
     const banner = renderModerationBanner(p);
     if (banner) root.appendChild(banner);
 
-    root.appendChild(el('div', { class: 'meta' },
+    const metaRow = el('div', { class: 'meta post-meta-row' });
+    metaRow.appendChild(document.createTextNode(
       '#' + sid(p.id) + ' · ' + authorLabel(p) + ' · 状态 ' + sid(p.status)));
+    root.appendChild(metaRow);
+
+    const socialRow = el('div', { class: 'post-social-actions' });
+    if (BlinkSocial) {
+      socialRow.appendChild(BlinkSocial.makeLikeButton(p, (err) => showErr(errorText(err))));
+      if (myUserId && sid(p.user_id) !== myUserId) {
+        loadFollowButton(socialRow, p.user_id);
+      }
+    }
+    root.appendChild(socialRow);
 
     const body = el('div', { class: 'markdown-body' });
     body.innerHTML = BlinkMD.parse(p.body || '');
@@ -93,6 +104,18 @@
           href: '/web/edit-post.html?id=' + encodeURIComponent(sid(p.id)),
         }, '编辑此帖'),
       ]));
+    }
+  }
+
+  async function loadFollowButton(container, userId) {
+    if (!BlinkSocial || !myUserId) return;
+    try {
+      const st = await BlinkSocial.loadFollowStats(userId);
+      container.appendChild(BlinkSocial.makeFollowButton(userId, st.is_following === true, (err) => {
+        showErr(errorText(err));
+      }));
+    } catch (err) {
+      showErr(errorText(err));
     }
   }
 

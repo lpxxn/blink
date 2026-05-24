@@ -330,7 +330,32 @@ curl -sS -c /tmp/blink.cookies -D - -o /dev/null \
 
 ---
 
+## 关注与点赞（需登录 Cookie）
+
+先登录或注册取得 `blink_session`（`-c /tmp/blink.cookies`），将 `POST_ID`、`USER_ID` 换成实际 snowflake 字符串。
+
+### 点赞帖子
+
+```bash
+curl -sS -b /tmp/blink.cookies -X POST "${BASE}/api/posts/${POST_ID}/like" -w '\nHTTP:%{http_code}\n'
+curl -sS -b /tmp/blink.cookies "${BASE}/api/posts/${POST_ID}/likes"
+curl -sS -b /tmp/blink.cookies -X DELETE "${BASE}/api/posts/${POST_ID}/like" -w '\nHTTP:%{http_code}\n'
+```
+
+### 关注用户
+
+```bash
+curl -sS -b /tmp/blink.cookies -X POST "${BASE}/api/users/${USER_ID}/follow" -w '\nHTTP:%{http_code}\n'
+curl -sS -b /tmp/blink.cookies "${BASE}/api/users/${USER_ID}/follow-stats"
+curl -sS -b /tmp/blink.cookies -X DELETE "${BASE}/api/users/${USER_ID}/follow" -w '\nHTTP:%{http_code}\n'
+```
+
+公开流 `GET /api/posts` 无需 Cookie 也会返回 `like_count`；带 Cookie 时额外返回每条帖子的 `liked`。
+
+---
+
 ## 与文档的关系
 
 - 流程说明：[`auth-login-registration.md`](auth-login-registration.md)  
+- 社交能力：[`social-feed-and-admin.md`](social-feed-and-admin.md)  
 - OpenAPI 字段汇总：[`../api/openapi/openapi.yaml`](../api/openapi/openapi.yaml)

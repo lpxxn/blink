@@ -142,6 +142,25 @@ func dispatchNotificationEvent(ctx context.Context, notif *appnotification.Servi
 			return nil
 		}
 		return sess.DeleteAllForUser(ctx, body.UserID)
+	case domainevent.NotificationUserFollowed:
+		var body struct {
+			FolloweeID int64 `json:"followee_id,string"`
+			FollowerID int64 `json:"follower_id,string"`
+		}
+		if err := json.Unmarshal(payload, &body); err != nil {
+			return nil
+		}
+		return notif.OnUserFollowed(ctx, body.FolloweeID, body.FollowerID)
+	case domainevent.NotificationPostLiked:
+		var body struct {
+			PostAuthorID int64 `json:"post_author_id,string"`
+			PostID       int64 `json:"post_id,string"`
+			LikerID      int64 `json:"liker_id,string"`
+		}
+		if err := json.Unmarshal(payload, &body); err != nil {
+			return nil
+		}
+		return notif.OnPostLiked(ctx, body.PostAuthorID, body.PostID, body.LikerID)
 	default:
 		return nil
 	}

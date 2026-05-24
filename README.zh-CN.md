@@ -15,6 +15,8 @@ Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/
   - 分类：`GET /api/categories`（启动时空表会写入内置分类）
   - 帖子流：`GET /api/posts`、`GET /api/posts/{id}`、`GET /api/me/posts`
   - 评论/楼中楼：`GET /api/posts/{id}/replies`、发布评论（需登录）
+  - 关注用户：`POST/DELETE /api/users/{id}/follow`，统计 `GET /api/users/{id}/follow-stats`
+  - 帖子点赞：`POST/DELETE /api/posts/{id}/like`；列表/详情含 `like_count`，登录时还含 `liked`
   - 图片上传：`POST /api/uploads`（multipart 字段 `file`），默认存储到 `data/uploads`，通过 `/uploads/...` 访问
 - **站内通知（异步）**
   - Watermill + Redis Stream：业务成功后发布事件，消费者写入 `notifications` 表（可在未来独立成 worker）

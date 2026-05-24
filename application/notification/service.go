@@ -187,6 +187,23 @@ func (s *Service) OnFeedbackSubmitted(ctx context.Context, userID, feedbackID in
 	return s.send(ctx, userID, domainnotification.TypeFeedbackSubmitted, "意见反馈已提交", body, nil, nil)
 }
 
+func (s *Service) OnUserFollowed(ctx context.Context, followeeID, followerID int64) error {
+	if followeeID == 0 || followerID == 0 || followeeID == followerID {
+		return nil
+	}
+	body := "用户 " + strconv.FormatInt(followerID, 10) + " 关注了你。"
+	return s.send(ctx, followeeID, domainnotification.TypeUserFollowed, "你有新粉丝", body, nil, nil)
+}
+
+func (s *Service) OnPostLiked(ctx context.Context, postAuthorID, postID, likerID int64) error {
+	if postAuthorID == 0 || postAuthorID == likerID {
+		return nil
+	}
+	pid := postID
+	body := "用户 " + strconv.FormatInt(likerID, 10) + " 赞了你的帖子。"
+	return s.send(ctx, postAuthorID, domainnotification.TypePostLiked, "帖子收到点赞", body, &pid, nil)
+}
+
 func (s *Service) OnFeedbackReply(ctx context.Context, userID, feedbackID int64, reply string) error {
 	if userID == 0 {
 		return nil

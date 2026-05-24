@@ -13,4 +13,6 @@ const (
 	NotificationAppealSubmitted = "appeal_submitted"
 	NotificationAppealResolved  = "appeal_resolved"
 	NotificationSensitiveHit    = "sensitive_hit"
+	NotificationUserFollowed    = "user_followed"
+	NotificationPostLiked       = "post_liked"
 )

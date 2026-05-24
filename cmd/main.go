@@ -26,6 +26,8 @@ import (
 	appcategory "github.com/lpxxn/blink/application/category"
 	appemailcode "github.com/lpxxn/blink/application/emailcode"
 	appfeedback "github.com/lpxxn/blink/application/feedback"
+	appfollow "github.com/lpxxn/blink/application/follow"
+	apppostlike "github.com/lpxxn/blink/application/postlike"
 	appidp "github.com/lpxxn/blink/application/idp"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	appnotification "github.com/lpxxn/blink/application/notification"
@@ -118,6 +120,10 @@ func main() {
 		Replies: replyRepo,
 		NewID:   func() int64 { return node.Generate().Int64() },
 	}
+	followRepo := &gormdb.FollowRepository{DB: gdb}
+	likeRepo := &gormdb.PostLikeRepository{DB: gdb}
+	followSvc := &appfollow.Service{Follows: followRepo, Users: userRepo}
+	likeSvc := &apppostlike.Service{Likes: likeRepo, Posts: postSvc}
 	notifSvc := &appnotification.Service{
 		Repo:  notifRepo,
 		NewID: func() int64 { return node.Generate().Int64() },
@@ -282,6 +288,8 @@ func main() {
 	apiSrv := &httpapi.Server{
 		Posts:         postSvc,
 		Replies:       replySvc,
+		Follows:       followSvc,
+		Likes:         likeSvc,
 		Notifications: notifSvc,
 		Feedback:      feedbackSvc,
 		NotifyEvents:  notifyEventBus,
@@ -413,12 +421,14 @@ func main() {
 
 	api := r.Group("/api")
 	api.GET("/categories", apiSrv.ListCategories)
-	api.GET("/posts", apiSrv.ListPosts)
 	api.GET("/posts/:id/replies", apiSrv.ListReplies)
 	api.POST("/logout", apiSrv.Logout)
 	opt := api.Group("")
 	opt.Use(httpauth.OptionalSession(sessStore, userRepo))
+	opt.GET("/posts", apiSrv.ListPosts)
 	opt.GET("/posts/:id", apiSrv.GetPost)
+	opt.GET("/posts/:id/likes", apiSrv.GetPostLikes)
+	opt.GET("/users/:id/follow-stats", apiSrv.GetUserFollowStats)
 
 	authed := api.Group("")
 	authed.Use(httpauth.RequireSession(sessStore))
@@ -441,6 +451,10 @@ func main() {
 	authed.GET("/me/feedback/:id", apiSrv.GetMyFeedback)
 	authed.POST("/me/feedback/:id/replies", apiSrv.ReplyMyFeedback)
 	authed.POST("/posts/:id/replies", apiSrv.CreateReply)
+	authed.POST("/posts/:id/like", apiSrv.LikePost)
+	authed.DELETE("/posts/:id/like", apiSrv.UnlikePost)
+	authed.POST("/users/:id/follow", apiSrv.FollowUser)
+	authed.DELETE("/users/:id/follow", apiSrv.UnfollowUser)
 	authed.POST("/uploads", apiSrv.UploadImage)
 	authed.DELETE("/replies/:id", apiSrv.DeleteReply)
 

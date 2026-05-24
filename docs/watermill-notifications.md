@@ -78,6 +78,8 @@
 | `reply_to_comment` | 有人回复了你的评论 | `parent_author_id`, `post_id`, `reply_id`, `snippet` |
 | `post_removed` | 帖子被管理员下架 | `author_id`, `post_id`, `reason` |
 | `appeal_resolved` | 申诉/复核已裁决 | `author_id`, `post_id`, `approved`, `admin_note` |
+| `user_followed` | 有人关注了你 | `followee_id`, `follower_id` |
+| `post_liked` | 帖子被点赞 | `post_author_id`, `post_id`, `liker_id` |
 
 发布端实现：`infrastructure/messaging/notification_watermill_publisher.go`（`type` 使用 `domain/event` 包内常量）。  
 消费端解析：`infrastructure/messaging/notification_watermill_consumer.go` 中 `dispatchNotificationEvent`。

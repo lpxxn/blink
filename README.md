@@ -15,6 +15,8 @@ Blink is a lightweight microblog backend: registration and login, post feeds, th
   - Categories: `GET /api/categories` (built-in categories are seeded on startup when empty)
   - Feeds: `GET /api/posts`, `GET /api/posts/{id}`, `GET /api/me/posts`
   - Replies / nested comments: `GET /api/posts/{id}/replies`, create reply (login required)
+  - Follow users: `POST/DELETE /api/users/{id}/follow`, stats at `GET /api/users/{id}/follow-stats`
+  - Like posts: `POST/DELETE /api/posts/{id}/like`; feeds include `like_count` (and `liked` when logged in)
   - Image upload: `POST /api/uploads` (multipart field `file`); files default to `data/uploads`, served at `/uploads/...`
 - **In-app notifications (async)**
   - Watermill + Redis Stream: publish events after successful operations; consumers persist rows in `notifications` (can be split into a dedicated worker later)

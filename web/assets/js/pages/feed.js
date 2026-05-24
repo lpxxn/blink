@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  const { BlinkAPI, BlinkUI, BlinkMD } = window;
+  const { BlinkAPI, BlinkUI, BlinkMD, BlinkSocial } = window;
   const { el, flash, mountList, createCursorPager } = BlinkUI;
 
   let categoryId = null;     // null = no specific cat; use with `uncategorized` flag
@@ -32,6 +32,13 @@
       });
       if (thumbs.childNodes.length) children.push(thumbs);
     }
+    const actions = el('div', { class: 'post-social-actions' });
+    if (BlinkSocial) {
+      actions.appendChild(BlinkSocial.makeLikeButton(p, (err) => {
+        flash('err', BlinkUI.errorText(err));
+      }));
+    }
+    children.push(actions);
     return el('article', { class: 'feed-item' }, children);
   }
 

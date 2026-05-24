@@ -10,6 +10,7 @@ import (
 	appcategory "github.com/lpxxn/blink/application/category"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	apppost "github.com/lpxxn/blink/application/post"
+	apppostlike "github.com/lpxxn/blink/application/postlike"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainuser "github.com/lpxxn/blink/domain/user"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
@@ -41,7 +42,11 @@ func (s *Server) ListPosts(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	out := s.postsToJSON(c.Request.Context(), list)
+	var viewer *int64
+	if uid, ok := httpauth.UserIDFromContext(c); ok {
+		viewer = &uid
+	}
+	out := s.postsToJSON(c.Request.Context(), list, viewer)
 	var next *string
 	if len(list) > 0 {
 		next = NextCursorString(list[len(list)-1].ID)
@@ -78,7 +83,7 @@ func (s *Server) GetPost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, s.postToJSON(c.Request.Context(), p))
+	c.JSON(http.StatusOK, s.postToJSON(c.Request.Context(), p, viewer))
 }
 
 type createPostBody struct {
@@ -119,7 +124,7 @@ func (s *Server) CreatePost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, s.postToJSON(c.Request.Context(), p))
+	c.JSON(http.StatusCreated, s.postToJSON(c.Request.Context(), p, &uid))
 }
 
 type patchPostBody struct {
@@ -178,7 +183,7 @@ func (s *Server) PatchPost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, s.postToJSON(c.Request.Context(), p))
+	c.JSON(http.StatusOK, s.postToJSON(c.Request.Context(), p, &uid))
 }
 
 func (s *Server) DeletePost(c *gin.Context) {
@@ -230,7 +235,7 @@ func (s *Server) ListMyPosts(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	out := s.postsToJSON(c.Request.Context(), list)
+	out := s.postsToJSON(c.Request.Context(), list, &uid)
 	var next *string
 	if len(list) > 0 {
 		next = NextCursorString(list[len(list)-1].ID)
@@ -238,34 +243,61 @@ func (s *Server) ListMyPosts(c *gin.Context) {
 	c.JSON(http.StatusOK, PostsPageJSON{Posts: out, NextCursor: next})
 }
 
-func (s *Server) postsToJSON(ctx context.Context, list []*domainpost.Post) []PostJSON {
+func (s *Server) postsToJSON(ctx context.Context, list []*domainpost.Post, viewerID *int64) []PostJSON {
 	if len(list) == 0 {
 		return []PostJSON{}
 	}
-	ids := make([]int64, len(list))
+	userIDs := make([]int64, len(list))
+	postIDs := make([]int64, len(list))
 	for i, p := range list {
-		ids[i] = p.UserID
+		userIDs[i] = p.UserID
+		postIDs[i] = p.ID
 	}
-	names := ResolveUserNames(ctx, s.Users, ids)
+	names := ResolveUserNames(ctx, s.Users, userIDs)
+	likeMeta := s.likeMetaMap(ctx, postIDs, viewerID)
 	out := make([]PostJSON, 0, len(list))
 	for _, p := range list {
 		j := PostToJSON(p)
 		if names != nil {
 			j.UserName = names[p.UserID]
 		}
+		if m, ok := likeMeta[p.ID]; ok {
+			j.LikeCount = m.LikeCount
+			if viewerID != nil {
+				liked := m.Liked
+				j.Liked = &liked
+			}
+		}
 		out = append(out, j)
 	}
 	return out
 }
 
-func (s *Server) postToJSON(ctx context.Context, p *domainpost.Post) PostJSON {
+func (s *Server) postToJSON(ctx context.Context, p *domainpost.Post, viewerID *int64) PostJSON {
 	j := PostToJSON(p)
-	if s.Users == nil {
-		return j
+	if s.Users != nil {
+		names := ResolveUserNames(ctx, s.Users, []int64{p.UserID})
+		if names != nil {
+			j.UserName = names[p.UserID]
+		}
 	}
-	names := ResolveUserNames(ctx, s.Users, []int64{p.UserID})
-	if names != nil {
-		j.UserName = names[p.UserID]
+	if m, ok := s.likeMetaMap(ctx, []int64{p.ID}, viewerID)[p.ID]; ok {
+		j.LikeCount = m.LikeCount
+		if viewerID != nil {
+			liked := m.Liked
+			j.Liked = &liked
+		}
 	}
 	return j
+}
+
+func (s *Server) likeMetaMap(ctx context.Context, postIDs []int64, viewerID *int64) map[int64]apppostlike.PostLikeMeta {
+	if s.Likes == nil || len(postIDs) == 0 {
+		return nil
+	}
+	m, err := s.Likes.MetaForPosts(ctx, postIDs, viewerID)
+	if err != nil {
+		return nil
+	}
+	return m
 }

@@ -147,3 +147,29 @@ func (p *NotificationWatermillPublisher) PublishUserBanned(ctx context.Context, 
 		UserID: userID,
 	})
 }
+
+func (p *NotificationWatermillPublisher) PublishUserFollowed(ctx context.Context, followeeID, followerID int64) error {
+	return p.publish(ctx, struct {
+		Type       string `json:"type"`
+		FolloweeID int64  `json:"followee_id,string"`
+		FollowerID int64  `json:"follower_id,string"`
+	}{
+		Type:       domainevent.NotificationUserFollowed,
+		FolloweeID: followeeID,
+		FollowerID: followerID,
+	})
+}
+
+func (p *NotificationWatermillPublisher) PublishPostLiked(ctx context.Context, postAuthorID, postID, likerID int64) error {
+	return p.publish(ctx, struct {
+		Type         string `json:"type"`
+		PostAuthorID int64  `json:"post_author_id,string"`
+		PostID       int64  `json:"post_id,string"`
+		LikerID      int64  `json:"liker_id,string"`
+	}{
+		Type:         domainevent.NotificationPostLiked,
+		PostAuthorID: postAuthorID,
+		PostID:       postID,
+		LikerID:      likerID,
+	})
+}

@@ -57,5 +57,5 @@ func (s *Server) SubmitModerationRequest(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, s.postToJSON(c.Request.Context(), p))
+	c.JSON(http.StatusOK, s.postToJSON(c.Request.Context(), p, &uid))
 }

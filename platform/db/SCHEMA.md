@@ -16,6 +16,9 @@ SQL 需同时兼容 **SQLite / MySQL / PostgreSQL**；业务访问请走 **repos
 | `0006_notifications_appeals.sql` | `notifications`；`posts` 申诉字段 |
 | `0007_sensitive_words.sql` | `sensitive_words`（敏感词，启用行参与内存匹配） |
 | `0008_app_settings.sql` | `app_settings`（后台可配置的应用设置） |
+| `0009_feedback.sql` | 意见反馈 |
+| `0010_admin_audit_logs.sql` | 管理审计日志 |
+| `0011_post_likes.sql` | `post_likes`（帖子点赞） |
 
 ### CLI：`cmd/migrate`
 
@@ -116,6 +119,24 @@ go run ./cmd/migrate
 | created_at / updated_at / deleted_at | TIMESTAMP | 关注时间与软删（取关）。 |
 
 **注意**：主键为 `(follower_id, followee_id)`。若取关使用软删，再次关注应对**同一行** `UPDATE` 清空 `deleted_at`，不要 `INSERT` 新行。
+
+**API**：`POST/DELETE /api/users/{id}/follow`（需登录）；`GET /api/users/{id}/follow-stats`（粉丝/关注数，可选会话返回 `is_following`）。
+
+---
+
+## post_likes
+
+用户对帖子的点赞；主键 `(user_id, post_id)`。
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| user_id | BIGINT | 点赞者，引用 users.snowflake_id。 |
+| post_id | BIGINT | 帖子，引用 posts.id。 |
+| created_at / updated_at / deleted_at | TIMESTAMP | 时间与软删（取消点赞）。 |
+
+取消点赞若用软删，再次点赞应对**同一行** `UPDATE` 清空 `deleted_at`，不要 `INSERT` 新行。
+
+**API**：`POST/DELETE /api/posts/{id}/like`（需登录）；`GET /api/posts/{id}/likes`；帖子 JSON 含 `like_count`，登录时还含 `liked`。
 
 ---
 
@@ -283,6 +304,7 @@ go run ./cmd/migrate
 | idx_sessions_user_id | sessions | 按用户查会话 |
 | idx_sessions_expires_at | sessions | 过期清理 |
 | idx_user_follows_followee_id | user_follows | 粉丝列表 |
+| idx_post_likes_post_id | post_likes | 按帖统计点赞数 |
 | idx_friendships_to_user_id | friendships | 收到的申请 |
 | idx_friendships_status | friendships | 按状态筛选 |
 | idx_user_lists_owner_user_id | user_lists | 某用户的名单列表 |

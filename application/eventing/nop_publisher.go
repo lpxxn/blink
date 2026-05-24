@@ -37,6 +37,14 @@ func (NopNotificationPublisher) PublishUserBanned(context.Context, int64) error 
 	return nil
 }
 
+func (NopNotificationPublisher) PublishUserFollowed(context.Context, int64, int64) error {
+	return nil
+}
+
+func (NopNotificationPublisher) PublishPostLiked(context.Context, int64, int64, int64) error {
+	return nil
+}
+
 // NopSensitiveWordsPublisher discards sensitive-word reload signals (tests).
 type NopSensitiveWordsPublisher struct{}
 
