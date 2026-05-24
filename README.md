@@ -18,8 +18,9 @@ Blink is a lightweight microblog backend: registration and login, post feeds, th
   - Follow users: `POST/DELETE /api/users/{id}/follow`, stats at `GET /api/users/{id}/follow-stats`
   - Like posts: `POST/DELETE /api/posts/{id}/like`; feeds include `like_count` (and `liked` when logged in)
   - Image upload: `POST /api/uploads` (multipart field `file`); files default to `data/uploads`, served at `/uploads/...`
-- **In-app notifications (async)**
-  - Watermill + Redis Stream: publish events after successful operations; consumers persist rows in `notifications` (can be split into a dedicated worker later)
+- **In-app notifications**
+  - Likes/follows: written **synchronously** to `notifications` on success (see `docs/notifications-message-body.md`)
+  - Comments, moderation, appeals, etc.: **async** via Watermill + Redis Stream → consumer persists `notifications`
 - **Feedback**
   - Logged-in users submit feedback and may follow up; admins reply in the console; both sides get in-app notification reminders
 - **Moderation & admin**
@@ -58,15 +59,15 @@ flowchart TB
   subgraph API["Go API Server (Gin)"]
     Auth["Auth & sessions<br/>auth + session middleware"]
     HTTP["HTTP APIs<br/>/api/* /admin/api/*"]
-    App["Application services<br/>auth/post/reply/feedback/admin/notification"]
+    App["Application services<br/>auth/post/reply/follow/postlike/<br/>feedback/admin/notification"]
     Domain["Domain layer<br/>domain/* models & repository ports"]
   end
 
   subgraph Infra["Infrastructure"]
-    DB[("Database<br/>SQLite / MySQL / PostgreSQL")]
+    DB[("Database<br/>SQLite / MySQL / PostgreSQL<br/>posts · user_follows · post_likes · notifications")]
     Redis[("Redis<br/>sessions + streams")]
     Uploads["Local upload dir<br/>/uploads"]
-    Watermill["Watermill consumers<br/>notifications + sensitive-word reload"]
+    Watermill["Watermill consumers<br/>async notifications · sensitive-word reload"]
   end
 
   Web --> HTTP
@@ -77,10 +78,12 @@ flowchart TB
   Domain --> DB
   Auth --> Redis
   App --> Uploads
-  App -- publish notify/reload events --> Redis
+  App -- "async events (replies, moderation, …)" --> Redis
   Redis --> Watermill
-  Watermill --> DB
+  Watermill -- "async → notifications" --> DB
 ```
+
+Sync path (not shown as a separate arrow): HTTP handlers for **like/follow** (and feedback) call `notification.Service` → `notifications` table via the same App → Domain → DB stack.
 
 ## Configuration (environment variables)
 
@@ -120,6 +123,7 @@ The migrate CLI also supports `postgres` / `mysql`. See:
 - **Login, registration & OAuth**: `docs/auth-login-registration.md`
 - **Email verification & SMTP**: `docs/email-auth.md`
 - **Feeds & admin console**: `docs/social-feed-and-admin.md`
+- **Notification message body (write & read)**: `docs/notifications-message-body.md`
 - **In-app notifications (Watermill + Redis Stream)**: `docs/watermill-notifications.md`
 - **HTTP curl examples**: `docs/http-curl-examples.md`
 - **OpenAPI**: `api/openapi/openapi.yaml`

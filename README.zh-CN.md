@@ -18,8 +18,9 @@ Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/
   - 关注用户：`POST/DELETE /api/users/{id}/follow`，统计 `GET /api/users/{id}/follow-stats`
   - 帖子点赞：`POST/DELETE /api/posts/{id}/like`；列表/详情含 `like_count`，登录时还含 `liked`
   - 图片上传：`POST /api/uploads`（multipart 字段 `file`），默认存储到 `data/uploads`，通过 `/uploads/...` 访问
-- **站内通知（异步）**
-  - Watermill + Redis Stream：业务成功后发布事件，消费者写入 `notifications` 表（可在未来独立成 worker）
+- **站内通知**
+  - 点赞/关注：成功后**同步**写入 `notifications`（见 `docs/notifications-message-body.md`）
+  - 评论、审核、申诉等：**异步**经 Watermill + Redis Stream → 消费者落库
 - **意见反馈**
   - 登录用户提交反馈并可补充，管理员在后台回复，双方通过站内消息收到提醒
 - **内容治理与后台**
@@ -58,15 +59,15 @@ flowchart TB
   subgraph API["Go API Server（Gin）"]
     Auth["认证/会话<br/>auth + session middleware"]
     HTTP["业务 HTTP API<br/>/api/* /admin/api/*"]
-    App["应用服务<br/>auth/post/reply/feedback/admin/notification"]
+    App["应用服务<br/>auth/post/reply/follow/postlike/<br/>feedback/admin/notification"]
     Domain["领域层<br/>domain/* 模型与仓储接口"]
   end
 
   subgraph Infra["基础设施"]
-    DB[("数据库<br/>SQLite / MySQL / PostgreSQL")]
+    DB[("数据库<br/>SQLite / MySQL / PostgreSQL<br/>posts · user_follows · post_likes · notifications")]
     Redis[("Redis<br/>session + stream")]
     Uploads["本地上传目录<br/>/uploads"]
-    Watermill["Watermill Consumers<br/>通知落库/敏感词刷新"]
+    Watermill["Watermill Consumers<br/>异步通知落库 · 敏感词刷新"]
   end
 
   Web --> HTTP
@@ -77,10 +78,12 @@ flowchart TB
   Domain --> DB
   Auth --> Redis
   App --> Uploads
-  App -- 发布通知/刷新事件 --> Redis
+  App -- "异步事件（评论、审核等）" --> Redis
   Redis --> Watermill
-  Watermill --> DB
+  Watermill -- "异步 → notifications" --> DB
 ```
+
+同步路径（图中未单独画线）：**点赞/关注**（及意见反馈）在 HTTP 层直接调用 `notification.Service` 写 `notifications` 表，仍经 App → Domain → DB。
 
 ## 配置（环境变量）
 
@@ -120,6 +123,7 @@ go run ./cmd/migrate
 - **登录/注册与 OAuth 流程**：`docs/auth-login-registration.md`
 - **邮箱验证与 SMTP**：`docs/email-auth.md`
 - **帖子流与管理后台**：`docs/social-feed-and-admin.md`
+- **通知消息体（生成与查询）**：`docs/notifications-message-body.md`
 - **站内通知（Watermill + Redis Stream）**：`docs/watermill-notifications.md`
 - **HTTP curl 示例**：`docs/http-curl-examples.md`
 - **OpenAPI**：`api/openapi/openapi.yaml`
