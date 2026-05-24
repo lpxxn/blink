@@ -59,26 +59,28 @@ func dispatchNotificationEvent(ctx context.Context, notif *appnotification.Servi
 	switch head.Type {
 	case domainevent.NotificationReplyToPost:
 		var body struct {
-			PostAuthorID int64  `json:"post_author_id,string"`
-			PostID       int64  `json:"post_id,string"`
-			ReplyID      int64  `json:"reply_id,string"`
-			Snippet      string `json:"snippet"`
+			PostAuthorID  int64  `json:"post_author_id,string"`
+			PostID        int64  `json:"post_id,string"`
+			ReplyID       int64  `json:"reply_id,string"`
+			ReplyAuthorID int64  `json:"reply_author_id,string"`
+			Snippet       string `json:"snippet"`
 		}
 		if err := json.Unmarshal(payload, &body); err != nil {
 			return nil
 		}
-		return notif.OnNewReply(ctx, body.PostAuthorID, body.PostID, body.ReplyID, body.Snippet)
+		return notif.OnNewReply(ctx, body.PostAuthorID, body.PostID, body.ReplyID, body.ReplyAuthorID, body.Snippet)
 	case domainevent.NotificationReplyToComment:
 		var body struct {
 			ParentAuthorID int64  `json:"parent_author_id,string"`
 			PostID         int64  `json:"post_id,string"`
 			ReplyID        int64  `json:"reply_id,string"`
+			ReplyAuthorID  int64  `json:"reply_author_id,string"`
 			Snippet        string `json:"snippet"`
 		}
 		if err := json.Unmarshal(payload, &body); err != nil {
 			return nil
 		}
-		return notif.OnReplyToYourComment(ctx, body.ParentAuthorID, body.PostID, body.ReplyID, body.Snippet)
+		return notif.OnReplyToYourComment(ctx, body.ParentAuthorID, body.PostID, body.ReplyID, body.ReplyAuthorID, body.Snippet)
 	case domainevent.NotificationPostRemoved:
 		var body struct {
 			AuthorID int64  `json:"author_id,string"`

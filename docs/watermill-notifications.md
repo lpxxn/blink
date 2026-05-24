@@ -74,8 +74,8 @@
 
 | `type` 值 | 含义 | 主要字段 |
 |-----------|------|----------|
-| `reply_to_post` | 帖子有新评论（通知楼主） | `post_author_id`, `post_id`, `reply_id`, `snippet`（均为 JSON；**整型 ID 使用 `json:",string"` 序列化为字符串**，避免 JS 精度问题） |
-| `reply_to_comment` | 有人回复了你的评论 | `parent_author_id`, `post_id`, `reply_id`, `snippet` |
+| `reply_to_post` | 帖子有新评论（通知楼主） | `post_author_id`, `post_id`, `reply_id`, `reply_author_id`, `snippet` |
+| `reply_to_comment` | 有人回复了你的评论 | `parent_author_id`, `post_id`, `reply_id`, `reply_author_id`, `snippet` |
 | `post_removed` | 帖子被管理员下架 | `author_id`, `post_id`, `reason` |
 | `appeal_resolved` | 申诉/复核已裁决 | `author_id`, `post_id`, `approved`, `admin_note` |
 | `user_followed` | 有人关注了你 | `followee_id`, `follower_id` |

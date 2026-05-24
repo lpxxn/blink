@@ -5,11 +5,11 @@ import "context"
 // NopNotificationPublisher discards all events (tests or disabled messaging).
 type NopNotificationPublisher struct{}
 
-func (NopNotificationPublisher) PublishReplyToPost(context.Context, int64, int64, int64, string) error {
+func (NopNotificationPublisher) PublishReplyToPost(context.Context, int64, int64, int64, int64, string) error {
 	return nil
 }
 
-func (NopNotificationPublisher) PublishReplyToComment(context.Context, int64, int64, int64, string) error {
+func (NopNotificationPublisher) PublishReplyToComment(context.Context, int64, int64, int64, int64, string) error {
 	return nil
 }
 

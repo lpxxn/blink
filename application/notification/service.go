@@ -60,33 +60,37 @@ func (s *Service) userDisplayName(ctx context.Context, userID int64) string {
 	return "用户 " + strconv.FormatInt(userID, 10)
 }
 
-func (s *Service) OnNewReply(ctx context.Context, postAuthorID, postID, replyID int64, replySnippet string) error {
+func (s *Service) OnNewReply(ctx context.Context, postAuthorID, postID, replyID, replyAuthorID int64, replySnippet string) error {
 	if postAuthorID == 0 {
 		return nil
 	}
+	replier := s.userDisplayName(ctx, replyAuthorID)
 	snip := strings.TrimSpace(replySnippet)
 	if len(snip) > 200 {
 		snip = snip[:200] + "…"
 	}
 	pid := postID
 	rid := replyID
-	return s.send(ctx, postAuthorID, domainnotification.TypeReply, "你的帖子有新评论",
-		"内容摘要："+snip, &pid, &rid)
+	title := replier + " 评论了你的帖子"
+	body := replier + " 评论了你的帖子。\n内容摘要：" + snip
+	return s.send(ctx, postAuthorID, domainnotification.TypeReply, title, body, &pid, &rid)
 }
 
 // OnReplyToYourComment notifies the author of the parent comment when someone replies under their comment.
-func (s *Service) OnReplyToYourComment(ctx context.Context, parentAuthorID, postID, newReplyID int64, replySnippet string) error {
+func (s *Service) OnReplyToYourComment(ctx context.Context, parentAuthorID, postID, newReplyID, replyAuthorID int64, replySnippet string) error {
 	if parentAuthorID == 0 {
 		return nil
 	}
+	replier := s.userDisplayName(ctx, replyAuthorID)
 	snip := strings.TrimSpace(replySnippet)
 	if len(snip) > 200 {
 		snip = snip[:200] + "…"
 	}
 	pid := postID
 	rid := newReplyID
-	return s.send(ctx, parentAuthorID, domainnotification.TypeReplyToComment, "有人回复了你的评论",
-		"内容摘要："+snip, &pid, &rid)
+	title := replier + " 回复了你的评论"
+	body := replier + " 回复了你的评论。\n内容摘要：" + snip
+	return s.send(ctx, parentAuthorID, domainnotification.TypeReplyToComment, title, body, &pid, &rid)
 }
 
 func (s *Service) OnPostRemoved(ctx context.Context, authorID, postID int64, reason string) error {
@@ -126,7 +130,7 @@ func (s *Service) OnAppealSubmittedForAdmins(ctx context.Context, authorID, post
 	if len(msg) > 500 {
 		msg = msg[:500] + "…"
 	}
-	body := "用户 " + strconv.FormatInt(authorID, 10) + " 对帖子 " + strconv.FormatInt(postID, 10) + " 提交了「" + kindLabel + "」。"
+	body := s.userDisplayName(ctx, authorID) + " 对帖子 " + strconv.FormatInt(postID, 10) + " 提交了「" + kindLabel + "」。"
 	if msg != "" {
 		body += "\n说明：" + msg
 	}
@@ -157,7 +161,7 @@ func (s *Service) OnSensitiveHitForAdmins(ctx context.Context, authorID, postID 
 	if len(h) > 500 {
 		h = h[:500] + "…"
 	}
-	body := "帖子 " + strconv.FormatInt(postID, 10) + " 命中敏感词，作者 " + strconv.FormatInt(authorID, 10) + "。\n命中：" + h
+	body := "帖子 " + strconv.FormatInt(postID, 10) + " 命中敏感词，作者 " + s.userDisplayName(ctx, authorID) + "。\n命中：" + h
 	body += "\n请在管理后台处理（可标记/下架）。"
 	pid := postID
 	title := "敏感词命中待处理"
@@ -206,8 +210,10 @@ func (s *Service) OnUserFollowed(ctx context.Context, followeeID, followerID int
 	if followeeID == 0 || followerID == 0 || followeeID == followerID {
 		return nil
 	}
-	body := "用户 " + strconv.FormatInt(followerID, 10) + " 关注了你。"
-	return s.send(ctx, followeeID, domainnotification.TypeUserFollowed, "你有新粉丝", body, nil, nil)
+	followerName := s.userDisplayName(ctx, followerID)
+	title := followerName + " 关注了你"
+	body := followerName + " 关注了你。"
+	return s.send(ctx, followeeID, domainnotification.TypeUserFollowed, title, body, nil, nil)
 }
 
 func (s *Service) OnPostLiked(ctx context.Context, postAuthorID, postID, likerID int64) error {

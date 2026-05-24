@@ -32,34 +32,38 @@ func (p *NotificationWatermillPublisher) publish(ctx context.Context, payload an
 	return p.inner.Publish(TopicNotificationEvents, msg)
 }
 
-func (p *NotificationWatermillPublisher) PublishReplyToPost(ctx context.Context, postAuthorID, postID, replyID int64, snippet string) error {
+func (p *NotificationWatermillPublisher) PublishReplyToPost(ctx context.Context, postAuthorID, postID, replyID, replyAuthorID int64, snippet string) error {
 	return p.publish(ctx, struct {
-		Type         string `json:"type"`
-		PostAuthorID int64  `json:"post_author_id,string"`
-		PostID       int64  `json:"post_id,string"`
-		ReplyID      int64  `json:"reply_id,string"`
-		Snippet      string `json:"snippet"`
+		Type           string `json:"type"`
+		PostAuthorID   int64  `json:"post_author_id,string"`
+		PostID         int64  `json:"post_id,string"`
+		ReplyID        int64  `json:"reply_id,string"`
+		ReplyAuthorID  int64  `json:"reply_author_id,string"`
+		Snippet        string `json:"snippet"`
 	}{
-		Type:         domainevent.NotificationReplyToPost,
-		PostAuthorID: postAuthorID,
-		PostID:       postID,
-		ReplyID:      replyID,
-		Snippet:      snippet,
+		Type:          domainevent.NotificationReplyToPost,
+		PostAuthorID:  postAuthorID,
+		PostID:        postID,
+		ReplyID:       replyID,
+		ReplyAuthorID: replyAuthorID,
+		Snippet:       snippet,
 	})
 }
 
-func (p *NotificationWatermillPublisher) PublishReplyToComment(ctx context.Context, parentAuthorID, postID, replyID int64, snippet string) error {
+func (p *NotificationWatermillPublisher) PublishReplyToComment(ctx context.Context, parentAuthorID, postID, replyID, replyAuthorID int64, snippet string) error {
 	return p.publish(ctx, struct {
 		Type           string `json:"type"`
 		ParentAuthorID int64  `json:"parent_author_id,string"`
 		PostID         int64  `json:"post_id,string"`
 		ReplyID        int64  `json:"reply_id,string"`
+		ReplyAuthorID  int64  `json:"reply_author_id,string"`
 		Snippet        string `json:"snippet"`
 	}{
 		Type:           domainevent.NotificationReplyToComment,
 		ParentAuthorID: parentAuthorID,
 		PostID:         postID,
 		ReplyID:        replyID,
+		ReplyAuthorID:  replyAuthorID,
 		Snippet:        snippet,
 	})
 }

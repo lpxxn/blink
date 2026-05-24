@@ -105,13 +105,13 @@ func (s *Server) CreateReply(c *gin.Context) {
 		post, perr := s.Posts.GetByID(c.Request.Context(), postID)
 		if perr == nil && post != nil {
 			if post.UserID != uid {
-				_ = s.NotifyEvents.PublishReplyToPost(c.Request.Context(), post.UserID, postID, rep.ID, rep.Body)
+				_ = s.NotifyEvents.PublishReplyToPost(c.Request.Context(), post.UserID, postID, rep.ID, uid, rep.Body)
 			}
 			if body.ParentReplyID != nil && s.Replies != nil {
 				parent, err := s.Replies.GetByID(c.Request.Context(), *body.ParentReplyID)
 				if err == nil && parent != nil && parent.UserID != uid {
 					if parent.UserID != post.UserID {
-						_ = s.NotifyEvents.PublishReplyToComment(c.Request.Context(), parent.UserID, postID, rep.ID, rep.Body)
+						_ = s.NotifyEvents.PublishReplyToComment(c.Request.Context(), parent.UserID, postID, rep.ID, uid, rep.Body)
 					}
 				}
 			}
