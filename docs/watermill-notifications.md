@@ -4,15 +4,17 @@
 
 整体分层与模块关系见 [architecture.md](./architecture.md) 第 4 节序列图。
 
+**消息正文（`title` / `body`）如何拼装、如何从数据库查出并展示给前端**，见 **[notifications-message-body.md](notifications-message-body.md)**。
+
 ---
 
 ## 1. Watermill 是什么？在本项目里做什么？
 
 **Watermill** 是 Go 的**消息基础设施库**：统一抽象「发布消息 / 订阅消息 / 路由与中间件」，底层可对接 Redis Stream、Kafka、RabbitMQ 等。
 
-在本仓库中，Watermill **只用于「站内通知」这一条业务链**：
+在本仓库中，Watermill 用于**部分**站内通知（评论、审核、申诉等）：
 
-1. HTTP 或应用服务在业务成功后，不直接写 `notifications` 表，而是把**一条 JSON 事件**发到 **Redis Stream**。
+1. HTTP 或应用服务在业务成功后，把**一条 JSON 事件**发到 **Redis Stream**（不经过点赞/关注；二者在 HTTP 层**同步**调用 `notification.Service`，见 [notifications-message-body.md](notifications-message-body.md)）。
 2. 同进程（或将来独立进程）里运行的 **Watermill `message.Router`** 从 Stream 读出消息，调用 `application/notification.Service` 的 `OnNewReply` / `OnPostRemoved` 等方法，**再写入数据库**。
 
 这样做的效果：
