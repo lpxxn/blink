@@ -37,12 +37,6 @@ func (s *Server) LikePost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if s.NotifyEvents != nil && s.Posts != nil {
-		post, perr := s.Posts.GetByID(c.Request.Context(), postID)
-		if perr == nil && post != nil && post.UserID != uid {
-			_ = s.NotifyEvents.PublishPostLiked(c.Request.Context(), post.UserID, postID, uid)
-		}
-	}
 	c.AbortWithStatus(http.StatusNoContent)
 }
 

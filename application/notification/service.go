@@ -45,6 +45,21 @@ func (s *Service) send(ctx context.Context, userID int64, typ, title, body strin
 	return s.Repo.Create(ctx, n)
 }
 
+func (s *Service) userDisplayName(ctx context.Context, userID int64) string {
+	if userID == 0 {
+		return "用户"
+	}
+	if s.Users != nil {
+		u, err := s.Users.GetByID(ctx, userID)
+		if err == nil && u != nil {
+			if n := strings.TrimSpace(u.Name); n != "" {
+				return n
+			}
+		}
+	}
+	return "用户 " + strconv.FormatInt(userID, 10)
+}
+
 func (s *Service) OnNewReply(ctx context.Context, postAuthorID, postID, replyID int64, replySnippet string) error {
 	if postAuthorID == 0 {
 		return nil
@@ -199,9 +214,12 @@ func (s *Service) OnPostLiked(ctx context.Context, postAuthorID, postID, likerID
 	if postAuthorID == 0 || postAuthorID == likerID {
 		return nil
 	}
+	likerName := s.userDisplayName(ctx, likerID)
+	authorName := s.userDisplayName(ctx, postAuthorID)
 	pid := postID
-	body := "用户 " + strconv.FormatInt(likerID, 10) + " 赞了你的帖子。"
-	return s.send(ctx, postAuthorID, domainnotification.TypePostLiked, "帖子收到点赞", body, &pid, nil)
+	title := likerName + " 给你的帖子点了赞"
+	body := likerName + " 给 " + authorName + " 的帖子点了赞。"
+	return s.send(ctx, postAuthorID, domainnotification.TypePostLiked, title, body, &pid, nil)
 }
 
 func (s *Service) OnFeedbackReply(ctx context.Context, userID, feedbackID int64, reply string) error {

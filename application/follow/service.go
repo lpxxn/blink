@@ -3,7 +3,9 @@ package follow
 import (
 	"context"
 	"errors"
+	"log"
 
+	appnotification "github.com/lpxxn/blink/application/notification"
 	domainfollow "github.com/lpxxn/blink/domain/follow"
 	domainuser "github.com/lpxxn/blink/domain/user"
 )
@@ -11,8 +13,9 @@ import (
 var ErrUserNotFound = errors.New("follow: user not found")
 
 type Service struct {
-	Follows domainfollow.Repository
-	Users   domainuser.Repository
+	Follows       domainfollow.Repository
+	Users         domainuser.Repository
+	Notifications *appnotification.Service // optional; sync in-app notification on follow
 }
 
 func (s *Service) Follow(ctx context.Context, followerID, followeeID int64) error {
@@ -25,7 +28,15 @@ func (s *Service) Follow(ctx context.Context, followerID, followeeID int64) erro
 		}
 		return err
 	}
-	return s.Follows.Follow(ctx, followerID, followeeID)
+	if err := s.Follows.Follow(ctx, followerID, followeeID); err != nil {
+		return err
+	}
+	if s.Notifications != nil && followerID != followeeID {
+		if err := s.Notifications.OnUserFollowed(ctx, followeeID, followerID); err != nil {
+			log.Printf("follow: notification: %v", err)
+		}
+	}
+	return nil
 }
 
 func (s *Service) Unfollow(ctx context.Context, followerID, followeeID int64) error {
