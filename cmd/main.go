@@ -478,6 +478,7 @@ func main() {
 	adminG.POST("/categories", adminSrv.CreateCategory)
 	adminG.PATCH("/categories/:id", adminSrv.PatchCategory)
 	adminG.DELETE("/categories/:id", adminSrv.DeleteCategory)
+	adminG.GET("/rankings", adminSrv.Rankings)
 	adminG.GET("/audit_logs", adminSrv.ListAuditLogs)
 	adminG.GET("/settings/sensitive_post_mode", adminSrv.GetSensitivePostMode)
 	adminG.PUT("/settings/sensitive_post_mode", adminSrv.SetSensitivePostMode)

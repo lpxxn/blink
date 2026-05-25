@@ -55,6 +55,9 @@
     patchCategory: (id, body) => API.patch('/admin/api/categories/' + encodeURIComponent(id), body),
     deleteCategory: (id) => API.del('/admin/api/categories/' + encodeURIComponent(id)),
 
+    // ---- rankings ----
+    rankings: (params) => API.get('/admin/api/rankings' + qs(params)),
+
     // ---- audit ----
     listAuditLogs: (params) => API.get('/admin/api/audit_logs' + qs(params || { limit: 50, offset: 0 })),
 

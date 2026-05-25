@@ -80,6 +80,11 @@
       actionsRow.appendChild(el('button', {
         type: 'button',
         class: 'btn btn-ghost',
+        onClick: () => ctx.navigate('rankings'),
+      }, '排名统计'));
+      actionsRow.appendChild(el('button', {
+        type: 'button',
+        class: 'btn btn-ghost',
         onClick: () => ctx.navigate('audit'),
       }, '审计日志'));
     } catch (err) {

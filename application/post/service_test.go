@@ -65,6 +65,9 @@ func (stubPostRepo) Count(context.Context) (int64, error) { panic("ni") }
 func (stubPostRepo) CountCreatedSince(context.Context, time.Time) (int64, error) {
 	panic("ni")
 }
+func (stubPostRepo) TopPosters(context.Context, time.Time, time.Time, int) ([]domainpost.UserPostCount, error) {
+	panic("ni")
+}
 
 func (s *stubPostRepo) Create(_ context.Context, p *domainpost.Post) error {
 	s.created = p
@@ -102,6 +105,9 @@ func (patchStubPostRepo) CountAdmin(context.Context, domainpost.AdminListFilters
 }
 func (patchStubPostRepo) Count(context.Context) (int64, error) { panic("ni") }
 func (patchStubPostRepo) CountCreatedSince(context.Context, time.Time) (int64, error) {
+	panic("ni")
+}
+func (patchStubPostRepo) TopPosters(context.Context, time.Time, time.Time, int) ([]domainpost.UserPostCount, error) {
 	panic("ni")
 }
 func (patchStubPostRepo) Create(context.Context, *domainpost.Post) error { panic("ni") }
@@ -149,6 +155,9 @@ func (modReqPostRepo) CountAdmin(context.Context, domainpost.AdminListFilters) (
 }
 func (modReqPostRepo) Count(context.Context) (int64, error) { panic("ni") }
 func (modReqPostRepo) CountCreatedSince(context.Context, time.Time) (int64, error) {
+	panic("ni")
+}
+func (modReqPostRepo) TopPosters(context.Context, time.Time, time.Time, int) ([]domainpost.UserPostCount, error) {
 	panic("ni")
 }
 

@@ -26,4 +26,12 @@ type Repository interface {
 	CountAdmin(ctx context.Context, f AdminListFilters) (int64, error)
 	Count(ctx context.Context) (int64, error)
 	CountCreatedSince(ctx context.Context, t time.Time) (int64, error)
+	// TopPosters returns user IDs ranked by post count in [since, until).
+	TopPosters(ctx context.Context, since, until time.Time, limit int) ([]UserPostCount, error)
+}
+
+// UserPostCount is a (user_id, count) pair returned by ranking queries.
+type UserPostCount struct {
+	UserID    int64
+	PostCount int64
 }

@@ -242,3 +242,30 @@ func (r *PostRepository) CountCreatedSince(ctx context.Context, t time.Time) (in
 		Count(&n).Error
 	return n, err
 }
+
+func (r *PostRepository) TopPosters(ctx context.Context, since, until time.Time, limit int) ([]domainpost.UserPostCount, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	type row struct {
+		UserID    int64 `gorm:"column:user_id"`
+		PostCount int64 `gorm:"column:post_count"`
+	}
+	var rows []row
+	err := r.DB.WithContext(ctx).Model(&PostModel{}).
+		Select("user_id, COUNT(*) AS post_count").
+		Where("deleted_at IS NULL AND status = ? AND created_at >= ? AND created_at < ?",
+			domainpost.StatusPublished, since, until).
+		Group("user_id").
+		Order("post_count DESC, user_id ASC").
+		Limit(limit).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domainpost.UserPostCount, len(rows))
+	for i, r := range rows {
+		out[i] = domainpost.UserPostCount{UserID: r.UserID, PostCount: r.PostCount}
+	}
+	return out, nil
+}

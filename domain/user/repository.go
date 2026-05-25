@@ -1,6 +1,9 @@
 package user
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Repository interface {
 	Create(ctx context.Context, u *User) error
@@ -17,4 +20,17 @@ type Repository interface {
 	UpdateName(ctx context.Context, id int64, name string) error
 	// UpdatePasswordHash sets bcrypt password hash (admin reset).
 	UpdatePasswordHash(ctx context.Context, id int64, passwordHash string) error
+	// TopActiveUsers returns users ranked by total activity (posts + replies + likes) in [since, until).
+	TopActiveUsers(ctx context.Context, since, until time.Time, limit int) ([]UserActivity, error)
+}
+
+// UserActivity is a ranked user entry for the activity leaderboard.
+type UserActivity struct {
+	UserID     int64
+	Name       string
+	Email      string
+	PostCount  int64
+	ReplyCount int64
+	LikeCount  int64
+	Total      int64
 }

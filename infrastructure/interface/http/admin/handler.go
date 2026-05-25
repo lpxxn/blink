@@ -475,6 +475,16 @@ func (s *Server) ListPostReplies(c *gin.Context) {
 	c.JSON(http.StatusOK, httpapi.RepliesPageJSON{Replies: out, NextCursor: next})
 }
 
+func (s *Server) Rankings(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	r, err := s.Admin.Rankings(c.Request.Context(), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, r)
+}
+
 type sensitivePostModeJSON struct {
 	Mode string `json:"mode"`
 }

@@ -195,3 +195,69 @@ func (r *UserRepository) UpdatePasswordHash(ctx context.Context, id int64, passw
 	}
 	return nil
 }
+
+func (r *UserRepository) TopActiveUsers(ctx context.Context, since, until time.Time, limit int) ([]domainuser.UserActivity, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	// Three sub-queries for post/reply/like counts, then UNION ALL + GROUP BY.
+	// Portable across SQLite/MySQL/PostgreSQL.
+	sql := `
+SELECT u.snowflake_id AS user_id, u.name, u.email,
+       COALESCE(p.cnt, 0) AS post_count,
+       COALESCE(r.cnt, 0) AS reply_count,
+       COALESCE(l.cnt, 0) AS like_count,
+       COALESCE(p.cnt, 0) + COALESCE(r.cnt, 0) + COALESCE(l.cnt, 0) AS total
+FROM users u
+LEFT JOIN (
+    SELECT user_id, COUNT(*) AS cnt FROM posts
+    WHERE deleted_at IS NULL AND status = 1 AND created_at >= ? AND created_at < ?
+    GROUP BY user_id
+) p ON p.user_id = u.snowflake_id
+LEFT JOIN (
+    SELECT user_id, COUNT(*) AS cnt FROM post_replies
+    WHERE deleted_at IS NULL AND created_at >= ? AND created_at < ?
+    GROUP BY user_id
+) r ON r.user_id = u.snowflake_id
+LEFT JOIN (
+    SELECT user_id, COUNT(*) AS cnt FROM post_likes
+    WHERE deleted_at IS NULL AND created_at >= ? AND created_at < ?
+    GROUP BY user_id
+) l ON l.user_id = u.snowflake_id
+WHERE (COALESCE(p.cnt, 0) + COALESCE(r.cnt, 0) + COALESCE(l.cnt, 0)) > 0
+ORDER BY total DESC, u.snowflake_id ASC
+LIMIT ?
+`
+	type row struct {
+		UserID     int64  `gorm:"column:user_id"`
+		Name       string `gorm:"column:name"`
+		Email      string `gorm:"column:email"`
+		PostCount  int64  `gorm:"column:post_count"`
+		ReplyCount int64  `gorm:"column:reply_count"`
+		LikeCount  int64  `gorm:"column:like_count"`
+		Total      int64  `gorm:"column:total"`
+	}
+	var rows []row
+	err := r.DB.WithContext(ctx).Raw(sql,
+		since, until,
+		since, until,
+		since, until,
+		limit,
+	).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domainuser.UserActivity, len(rows))
+	for i, r := range rows {
+		out[i] = domainuser.UserActivity{
+			UserID:     r.UserID,
+			Name:       r.Name,
+			Email:      r.Email,
+			PostCount:  r.PostCount,
+			ReplyCount: r.ReplyCount,
+			LikeCount:  r.LikeCount,
+			Total:      r.Total,
+		}
+	}
+	return out, nil
+}

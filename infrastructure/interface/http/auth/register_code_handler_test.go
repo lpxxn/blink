@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/lpxxn/blink/application/emailcode"
 	domainuser "github.com/lpxxn/blink/domain/user"
@@ -64,6 +65,10 @@ func (s *stubRegisterCodeUsers) UpdateStatusRole(context.Context, int64, *int, *
 func (s *stubRegisterCodeUsers) UpdateName(context.Context, int64, string) error { return nil }
 
 func (s *stubRegisterCodeUsers) UpdatePasswordHash(context.Context, int64, string) error { return nil }
+
+func (s *stubRegisterCodeUsers) TopActiveUsers(context.Context, time.Time, time.Time, int) ([]domainuser.UserActivity, error) {
+	return nil, nil
+}
 
 func TestRegisterCodeHandler_SendReturnsServiceUnavailableBeforeAccountLookupWhenCodesNil(t *testing.T) {
 	users := &stubRegisterCodeUsers{found: map[string]bool{"existing@example.com": true}}

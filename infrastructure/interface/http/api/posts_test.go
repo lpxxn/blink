@@ -65,6 +65,9 @@ func (createPostTestPostRepo) Count(context.Context) (int64, error) { panic("ni"
 func (createPostTestPostRepo) CountCreatedSince(context.Context, time.Time) (int64, error) {
 	panic("ni")
 }
+func (createPostTestPostRepo) TopPosters(context.Context, time.Time, time.Time, int) ([]domainpost.UserPostCount, error) {
+	panic("ni")
+}
 
 func (r *createPostTestPostRepo) Create(_ context.Context, p *domainpost.Post) error {
 	r.lastCreated = p
