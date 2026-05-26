@@ -117,7 +117,16 @@
     try {
       const d = await API.get('/api/me/notifications/unread_count');
       if (!d || d.unread_count == null) { hintEl.textContent = ''; return; }
-      hintEl.textContent = '未读 ' + String(d.unread_count);
+      var count = Number(d.unread_count);
+      hintEl.textContent = '未读 ' + String(count);
+      document.querySelectorAll('[data-blink-unread]').forEach(function (badge) {
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : String(count);
+          badge.hidden = false;
+        } else {
+          badge.hidden = true;
+        }
+      });
     } catch (_) { /* ignore — hint is advisory */ }
   }
 

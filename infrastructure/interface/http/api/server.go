@@ -12,6 +12,7 @@ import (
 	domaincategory "github.com/lpxxn/blink/domain/category"
 	domainsession "github.com/lpxxn/blink/domain/session"
 	domainuser "github.com/lpxxn/blink/domain/user"
+	"github.com/lpxxn/blink/infrastructure/sse"
 )
 
 // Server exposes JSON handlers under /api.
@@ -29,4 +30,5 @@ type Server struct {
 	Passwords     *appauth.PasswordService
 	UploadRoot    string
 	UploadURLPath string
+	SSEHub        *sse.Hub
 }

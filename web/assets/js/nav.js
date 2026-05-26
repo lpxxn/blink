@@ -54,6 +54,57 @@
     document.querySelectorAll('[data-blink-nav="guest"]').forEach((el) => {
       el.hidden = isLogged;
     });
+    if (isLogged) {
+      startSSE();
+      fetchUnreadCount();
+    }
+  }
+
+  function fetchUnreadCount() {
+    var p = window.BlinkAPI
+      ? window.BlinkAPI.get('/api/me/notifications/unread_count')
+      : fetch('/api/me/notifications/unread_count', { credentials: 'include' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function () { return null; });
+    p.then(function (d) {
+      if (d && d.unread_count != null) {
+        updateBadge(Number(d.unread_count));
+      }
+    }).catch(function () {});
+  }
+
+  function updateBadge(count) {
+    document.querySelectorAll('[data-blink-unread]').forEach(function (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.hidden = false;
+      } else {
+        badge.hidden = true;
+      }
+    });
+  }
+
+  var sseSource = null;
+  function startSSE() {
+    if (sseSource) return;
+    if (typeof EventSource === 'undefined') return;
+    sseSource = new EventSource('/api/me/notifications/stream', { withCredentials: true });
+    sseSource.addEventListener('notification', function (e) {
+      try {
+        var data = JSON.parse(e.data);
+        var count = Number(data.unread_count);
+        if (!isNaN(count)) updateBadge(count);
+      } catch (_) {}
+    });
+    sseSource.onerror = function () {
+      sseSource.close();
+      sseSource = null;
+      setTimeout(function () {
+        fetchMe().then(function (me) {
+          if (me && me.user_id) startSSE();
+        });
+      }, 5000);
+    };
   }
 
   class BlinkNav extends HTMLElement {
@@ -78,6 +129,14 @@
           a.hidden = true;
         } else if (link.guestOnly) {
           a.dataset.blinkNav = 'guest';
+        }
+        if (link.key === 'messages') {
+          a.style.position = 'relative';
+          const badge = document.createElement('span');
+          badge.className = 'nav-unread-badge';
+          badge.dataset.blinkUnread = '1';
+          badge.hidden = true;
+          a.appendChild(badge);
         }
         nav.appendChild(a);
       }

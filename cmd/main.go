@@ -46,6 +46,7 @@ import (
 	"github.com/lpxxn/blink/infrastructure/mail"
 	"github.com/lpxxn/blink/infrastructure/messaging"
 	"github.com/lpxxn/blink/infrastructure/persistence/gormdb"
+	"github.com/lpxxn/blink/infrastructure/sse"
 	"github.com/lpxxn/blink/internal/migrator"
 )
 
@@ -124,10 +125,18 @@ func main() {
 	likeRepo := &gormdb.PostLikeRepository{DB: gdb}
 	followSvc := &appfollow.Service{Follows: followRepo, Users: userRepo}
 	likeSvc := &apppostlike.Service{Likes: likeRepo, Posts: postSvc}
+	sseHub := sse.NewHub()
 	notifSvc := &appnotification.Service{
 		Repo:  notifRepo,
 		NewID: func() int64 { return node.Generate().Int64() },
 		Users: userRepo,
+		OnSent: func(userID int64) {
+			cnt, err := notifRepo.CountUnread(context.Background(), userID)
+			if err != nil {
+				cnt = 1
+			}
+			httpapi.PublishNotificationEvent(sseHub, userID, cnt)
+		},
 	}
 	feedbackSvc := &appfeedback.Service{
 		Repo:          feedbackRepo,
@@ -299,6 +308,7 @@ func main() {
 		Passwords:     passwordSvc,
 		UploadRoot:    uploadRoot,
 		UploadURLPath: "/uploads",
+		SSEHub:        sseHub,
 	}
 	adminSrv := &httpadmin.Server{
 		Admin:         adminSvc,
@@ -446,6 +456,7 @@ func main() {
 	authed.GET("/me/notifications/unread_count", apiSrv.UnreadNotificationCount)
 	authed.POST("/me/notifications/:id/read", apiSrv.MarkNotificationRead)
 	authed.POST("/me/notifications/read_all", apiSrv.MarkAllNotificationsRead)
+	authed.GET("/me/notifications/stream", apiSrv.NotificationStream)
 	authed.POST("/feedback", apiSrv.CreateFeedback)
 	authed.GET("/me/feedback", apiSrv.ListMyFeedback)
 	authed.GET("/me/feedback/:id", apiSrv.GetMyFeedback)

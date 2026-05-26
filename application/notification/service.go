@@ -19,6 +19,9 @@ type Service struct {
 	NewID func() int64
 	// Users is optional; when set, used to notify super admins (e.g. new appeal).
 	Users domainuser.Repository
+	// OnSent is an optional callback invoked after a notification is persisted.
+	// Typically used to push an SSE event.
+	OnSent func(userID int64)
 }
 
 func (s *Service) send(ctx context.Context, userID int64, typ, title, body string, postID, replyID *int64) error {
@@ -42,7 +45,13 @@ func (s *Service) send(ctx context.Context, userID int64, typ, title, body strin
 		RefPostID:  postID,
 		RefReplyID: replyID,
 	}
-	return s.Repo.Create(ctx, n)
+	if err := s.Repo.Create(ctx, n); err != nil {
+		return err
+	}
+	if s.OnSent != nil {
+		s.OnSent(userID)
+	}
+	return nil
 }
 
 func (s *Service) userDisplayName(ctx context.Context, userID int64) string {
