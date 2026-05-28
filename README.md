@@ -21,12 +21,14 @@ Blink is a lightweight microblog backend: registration and login, post feeds, th
 - **In-app notifications**
   - Likes/follows: written **synchronously** to `notifications` on success (see `docs/notifications-message-body.md`)
   - Comments, moderation, appeals, etc.: **async** via Watermill + Redis Stream → consumer persists `notifications`
+  - **SSE push**: `GET /api/me/notifications/stream` — Web nav subscribes via `EventSource` and shows an unread badge when new messages arrive
 - **Feedback**
   - Logged-in users submit feedback and may follow up; admins reply in the console; both sides get in-app notification reminders
 - **Moderation & admin**
   - Sensitive words: block publish/reply on hit; admin CRUD broadcasts reload via Redis Stream
   - Admin JSON API: `/admin/api/*` (`users.role` is `admin` or `super_admin`; see OpenAPI)
   - Categories CRUD, audit logs, feedback management, SMTP/settings
+  - Rankings: daily / monthly / yearly post counts and user activity (`GET /admin/api/rankings`)
   - Static pages: `/web/*.html` (vanilla JS, no React)
 - **Conventions**
   - Snowflake IDs are serialized as **strings** in JSON to avoid JavaScript precision loss
@@ -52,13 +54,14 @@ curl -sS http://127.0.0.1:11110/health
 ```mermaid
 flowchart TB
   subgraph Clients["Clients"]
-    Web["Web static pages<br/>/web/*.html + vanilla JS"]
+    Web["Web static pages<br/>/web/*.html + vanilla JS<br/>EventSource → unread badge"]
     Flutter["Flutter client<br/>planned / in progress"]
   end
 
   subgraph API["Go API Server (Gin)"]
     Auth["Auth & sessions<br/>auth + session middleware"]
     HTTP["HTTP APIs<br/>/api/* /admin/api/*"]
+    SSE["SSE Hub (in-memory)<br/>GET /api/me/notifications/stream"]
     App["Application services<br/>auth/post/reply/follow/postlike/<br/>feedback/admin/notification"]
     Domain["Domain layer<br/>domain/* models & repository ports"]
   end
@@ -71,9 +74,11 @@ flowchart TB
   end
 
   Web --> HTTP
+  Web -. "SSE (text/event-stream)" .-> SSE
   Flutter --> HTTP
   HTTP --> Auth
   HTTP --> App
+  HTTP --> SSE
   App --> Domain
   Domain --> DB
   Auth --> Redis
@@ -81,9 +86,11 @@ flowchart TB
   App -- "async events (replies, moderation, …)" --> Redis
   Redis --> Watermill
   Watermill -- "async → notifications" --> DB
+  App -- "OnSent → unread_count" --> SSE
+  App -- "sync like/follow → notifications" --> DB
 ```
 
-Sync path (not shown as a separate arrow): HTTP handlers for **like/follow** (and feedback) call `notification.Service` → `notifications` table via the same App → Domain → DB stack.
+**Notification paths:** (1) **Sync** — HTTP handlers for like/follow (and feedback) call `notification.Service` → `notifications` table. (2) **Async** — other events via Watermill → DB. (3) **SSE** — after any notification is persisted, `OnSent` publishes to the in-memory hub; connected browsers update the nav unread badge without polling.
 
 ## Configuration (environment variables)
 

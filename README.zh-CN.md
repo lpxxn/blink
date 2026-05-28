@@ -21,12 +21,14 @@ Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/
 - **站内通知**
   - 点赞/关注：成功后**同步**写入 `notifications`（见 `docs/notifications-message-body.md`）
   - 评论、审核、申诉等：**异步**经 Watermill + Redis Stream → 消费者落库
+  - **SSE 推送**：`GET /api/me/notifications/stream` — Web 导航通过 `EventSource` 订阅，有新消息时显示未读徽标
 - **意见反馈**
   - 登录用户提交反馈并可补充，管理员在后台回复，双方通过站内消息收到提醒
 - **内容治理与后台**
   - 敏感词：命中则拒绝发布/评论；后台 CRUD 后通过 Redis Stream 广播刷新
   - 管理 JSON API：`/admin/api/*`（`users.role` 为 `admin` 或 `super_admin`，详见 OpenAPI）
   - 分类 CRUD、审计日志、反馈管理、SMTP/后台设置
+  - 排名统计：今日/本月/本年发帖排名与用户活跃排名（`GET /admin/api/rankings`）
   - 静态页面：`/web/*.html`（无 React 等框架，保持简单）
 - **工程约定**
   - Snowflake ID 在 JSON 中统一用**字符串**传输，避免 JS 精度问题
@@ -52,13 +54,14 @@ curl -sS http://127.0.0.1:11110/health
 ```mermaid
 flowchart TB
   subgraph Clients["客户端"]
-    Web["Web 静态页面<br/>/web/*.html + vanilla JS"]
+    Web["Web 静态页面<br/>/web/*.html + vanilla JS<br/>EventSource → 未读徽标"]
     Flutter["Flutter 客户端<br/>规划/实现中"]
   end
 
   subgraph API["Go API Server（Gin）"]
     Auth["认证/会话<br/>auth + session middleware"]
     HTTP["业务 HTTP API<br/>/api/* /admin/api/*"]
+    SSE["SSE Hub（进程内）<br/>GET /api/me/notifications/stream"]
     App["应用服务<br/>auth/post/reply/follow/postlike/<br/>feedback/admin/notification"]
     Domain["领域层<br/>domain/* 模型与仓储接口"]
   end
@@ -71,9 +74,11 @@ flowchart TB
   end
 
   Web --> HTTP
+  Web -. "SSE（text/event-stream）" .-> SSE
   Flutter --> HTTP
   HTTP --> Auth
   HTTP --> App
+  HTTP --> SSE
   App --> Domain
   Domain --> DB
   Auth --> Redis
@@ -81,9 +86,11 @@ flowchart TB
   App -- "异步事件（评论、审核等）" --> Redis
   Redis --> Watermill
   Watermill -- "异步 → notifications" --> DB
+  App -- "OnSent → unread_count" --> SSE
+  App -- "同步点赞/关注 → notifications" --> DB
 ```
 
-同步路径（图中未单独画线）：**点赞/关注**（及意见反馈）在 HTTP 层直接调用 `notification.Service` 写 `notifications` 表，仍经 App → Domain → DB。
+**通知三条路径：** (1) **同步** — 点赞/关注（及意见反馈）由 HTTP 直接调用 `notification.Service` 写 `notifications` 表。(2) **异步** — 评论、审核等经 Watermill 落库。(3) **SSE** — 任意通知写入后，`OnSent` 向进程内 Hub 推送；已连接的浏览器更新导航未读徽标，无需轮询。
 
 ## 配置（环境变量）
 
