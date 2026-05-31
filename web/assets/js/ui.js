@@ -144,5 +144,16 @@
     };
   }
 
-  window.BlinkUI = { el, append, clear, flash, errorText, mountList, createCursorPager };
+  function fmtTime(s) {
+    if (!s) return '';
+    try {
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) return String(s);
+      return d.toLocaleString('zh-CN', { hour12: false });
+    } catch (_) {
+      return String(s);
+    }
+  }
+
+  window.BlinkUI = { el, append, clear, flash, errorText, fmtTime, mountList, createCursorPager };
 })();

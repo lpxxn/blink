@@ -3,7 +3,7 @@
   'use strict';
 
   const { BlinkAPI, BlinkUI, BlinkMD, BlinkSocial } = window;
-  const { el, flash, mountList, createCursorPager } = BlinkUI;
+  const { el, flash, mountList, createCursorPager, fmtTime } = BlinkUI;
 
   let categoryId = null;     // null = no specific cat; use with `uncategorized` flag
   let uncategorized = false;
@@ -14,11 +14,18 @@
     return n || ('用户 ' + (p && p.user_id));
   }
 
+  function postMeta(p) {
+    const parts = ['帖子 #' + p.id, authorLabel(p)];
+    const t = fmtTime(p.created_at);
+    if (t) parts.push(t);
+    return parts.join(' · ');
+  }
+
   function renderPost(p) {
     const postHref = '/web/post.html?id=' + encodeURIComponent(p.id);
     const children = [
       el('h2', {}, [el('a', { href: postHref }, BlinkMD.plainSnippet(p.body, 80))]),
-      el('div', { class: 'meta' }, '帖子 #' + p.id + ' · ' + authorLabel(p)),
+      el('div', { class: 'meta' }, postMeta(p)),
     ];
     if (Array.isArray(p.images) && p.images.length) {
       const thumbs = el('div', { class: 'feed-thumbs' });
