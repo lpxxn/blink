@@ -17,6 +17,7 @@ Blink is a lightweight microblog backend: registration and login, post feeds, th
   - Replies / nested comments: `GET /api/posts/{id}/replies`, create reply (login required)
   - Follow users: `POST/DELETE /api/users/{id}/follow`, stats at `GET /api/users/{id}/follow-stats`
   - Like posts: `POST/DELETE /api/posts/{id}/like`; feeds include `like_count` (and `liked` when logged in)
+  - Like rankings: `GET /api/posts/like_rankings?period=day|week|month` (Web: `/web/trending.html`)
   - Image upload: `POST /api/uploads` (multipart field `file`); files default to `data/uploads`, served at `/uploads/...`
 - **In-app notifications**
   - Likes/follows: written **synchronously** to `notifications` on success (see `docs/notifications-message-body.md`)

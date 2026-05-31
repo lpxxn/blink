@@ -16,6 +16,7 @@
     { key: 'register', href: '/web/register.html', label: '注册', guestOnly: true },
     { key: 'login',    href: '/web/login.html',    label: '登录', guestOnly: true },
     { key: 'feed',     href: '/web/feed.html',     label: '帖子流' },
+    { key: 'trending', href: '/web/trending.html', label: '热门' },
     { key: 'compose',  href: '/web/compose.html',  label: '发帖' },
     { key: 'mine',     href: '/web/mine.html',     label: '我的' },
     { key: 'messages', href: '/web/messages.html', label: '消息' },

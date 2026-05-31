@@ -350,6 +350,16 @@ curl -sS -b /tmp/blink.cookies "${BASE}/api/users/${USER_ID}/follow-stats"
 curl -sS -b /tmp/blink.cookies -X DELETE "${BASE}/api/users/${USER_ID}/follow" -w '\nHTTP:%{http_code}\n'
 ```
 
+### 点赞排行榜（今日 / 近 7 天 / 本月）
+
+```bash
+curl -sS "${BASE}/api/posts/like_rankings?period=day&limit=10"
+curl -sS "${BASE}/api/posts/like_rankings?period=week&limit=20"
+curl -sS "${BASE}/api/posts/like_rankings?period=month&limit=20"
+```
+
+Web 页面：`/web/trending.html`（导航「热门」）。
+
 公开流 `GET /api/posts` 无需 Cookie 也会返回 `like_count`；带 Cookie 时额外返回每条帖子的 `liked`。
 
 ---

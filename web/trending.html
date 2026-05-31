@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>热门 — Blink</title>
+  <link rel="stylesheet" href="/web/common.css" />
+</head>
+<body class="blink-page">
+  <div class="shell shell-wide">
+    <blink-nav active="trending"></blink-nav>
+
+    <h1 class="page-title">热门帖子</h1>
+    <p class="page-lead">按点赞数排行（今日 / 近 7 天 / 本月）</p>
+    <p id="err" class="err" role="alert"></p>
+
+    <div class="card" style="padding:1rem 1.25rem">
+      <div class="tabs" id="period-tabs"></div>
+      <div id="list"></div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+  <script src="/web/assets/js/md.js"></script>
+  <script src="/web/assets/js/api.js"></script>
+  <script src="/web/assets/js/social.js"></script>
+  <script src="/web/assets/js/ui.js"></script>
+  <script src="/web/assets/js/nav.js"></script>
+  <script src="/web/assets/js/pages/trending.js"></script>
+</body>
+</html>

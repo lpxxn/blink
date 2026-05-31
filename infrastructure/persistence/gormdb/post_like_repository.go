@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostlike "github.com/lpxxn/blink/domain/postlike"
 	"gorm.io/gorm"
 )
@@ -108,6 +109,36 @@ func (r *PostLikeRepository) LikedPostIDs(ctx context.Context, userID int64, pos
 	}
 	for _, id := range ids {
 		out[id] = true
+	}
+	return out, nil
+}
+
+func (r *PostLikeRepository) TopLikedPosts(ctx context.Context, since, until time.Time, limit int) ([]domainpostlike.PostLikeRank, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	type row struct {
+		PostID int64 `gorm:"column:post_id"`
+		Cnt    int64 `gorm:"column:cnt"`
+	}
+	var rows []row
+	err := r.DB.WithContext(ctx).Model(&PostLikeModel{}).
+		Select("post_likes.post_id, COUNT(*) AS cnt").
+		Joins("INNER JOIN posts ON posts.id = post_likes.post_id").
+		Where("post_likes.deleted_at IS NULL AND posts.deleted_at IS NULL").
+		Where("posts.status = ? AND posts.moderation_flag = ? AND posts.post_type = ? AND posts.visibility = ?",
+			domainpost.StatusPublished, domainpost.ModerationNormal, domainpost.TypeOriginal, domainpost.VisibilityPublic).
+		Where("post_likes.created_at >= ? AND post_likes.created_at < ?", since, until).
+		Group("post_likes.post_id").
+		Order("cnt DESC, post_likes.post_id ASC").
+		Limit(limit).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domainpostlike.PostLikeRank, len(rows))
+	for i, r := range rows {
+		out[i] = domainpostlike.PostLikeRank{PostID: r.PostID, LikeCount: r.Cnt}
 	}
 	return out, nil
 }

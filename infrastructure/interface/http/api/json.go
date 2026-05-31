@@ -40,6 +40,19 @@ type PostLikeJSON struct {
 	Liked     bool  `json:"liked,omitempty"`
 }
 
+// LikeRankingPostJSON is one row in GET /api/posts/like_rankings.
+type LikeRankingPostJSON struct {
+	PostJSON
+	PeriodLikeCount int64 `json:"period_like_count,string"`
+	Rank            int   `json:"rank"`
+}
+
+// LikeRankingPageJSON is GET /api/posts/like_rankings.
+type LikeRankingPageJSON struct {
+	Period string                `json:"period"`
+	Posts  []LikeRankingPostJSON `json:"posts"`
+}
+
 // PostToJSON maps a domain post to the JSON response (IDs as strings in JSON).
 func PostToJSON(p *domainpost.Post) PostJSON {
 	return PostJSON{

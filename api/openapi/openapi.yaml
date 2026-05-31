@@ -615,6 +615,36 @@ paths:
         "201":
           description: 评论 JSON
 
+  /api/posts/like_rankings:
+    get:
+      operationId: listLikeRankings
+      tags: [social]
+      summary: 帖子点赞排行榜（今日 / 近 7 天 / 本月）
+      description: |
+        按时间窗口内收到的点赞数（`post_likes.created_at`）对**已发布且公开可见**的帖子排名。
+        - `day`：今日 0:00（UTC）至今
+        - `week`：近 7 天（滚动窗口）
+        - `month`：本月 1 日 0:00（UTC）至今
+        可选登录 Cookie 时返回 `liked`。
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: week
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+      responses:
+        "200":
+          description: '`{ "period", "posts": [{ "rank", "period_like_count", …PostJSON }] }`'
+        "400":
+          description: period 无效
+
   /api/posts/{id}/likes:
     get:
       operationId: getPostLikes

@@ -17,6 +17,7 @@ Blink 是一个轻量的微博/动态（microblog）后端项目：提供注册/
   - 评论/楼中楼：`GET /api/posts/{id}/replies`、发布评论（需登录）
   - 关注用户：`POST/DELETE /api/users/{id}/follow`，统计 `GET /api/users/{id}/follow-stats`
   - 帖子点赞：`POST/DELETE /api/posts/{id}/like`；列表/详情含 `like_count`，登录时还含 `liked`
+  - 点赞排行榜：`GET /api/posts/like_rankings?period=day|week|month`（Web：`/web/trending.html`，「近 7 天」为滚动窗口）
   - 图片上传：`POST /api/uploads`（multipart 字段 `file`），默认存储到 `data/uploads`，通过 `/uploads/...` 访问
 - **站内通知**
   - 点赞/关注：成功后**同步**写入 `notifications`（见 `docs/notifications-message-body.md`）

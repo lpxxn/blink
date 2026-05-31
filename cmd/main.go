@@ -436,6 +436,7 @@ func main() {
 	opt := api.Group("")
 	opt.Use(httpauth.OptionalSession(sessStore, userRepo))
 	opt.GET("/posts", apiSrv.ListPosts)
+	opt.GET("/posts/like_rankings", apiSrv.ListLikeRankings)
 	opt.GET("/posts/:id", apiSrv.GetPost)
 	opt.GET("/posts/:id/likes", apiSrv.GetPostLikes)
 	opt.GET("/users/:id/follow-stats", apiSrv.GetUserFollowStats)
