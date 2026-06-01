@@ -12,7 +12,6 @@ import (
 	apppost "github.com/lpxxn/blink/application/post"
 	apppostlike "github.com/lpxxn/blink/application/postlike"
 	domainpost "github.com/lpxxn/blink/domain/post"
-	domainuser "github.com/lpxxn/blink/domain/user"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 )
 
@@ -65,7 +64,7 @@ func (s *Server) GetPost(c *gin.Context) {
 	if uid, ok := httpauth.UserIDFromContext(c); ok {
 		viewer = &uid
 		if s.Users != nil {
-			if u, err := s.Users.GetByID(c.Request.Context(), uid); err == nil && u.Role == domainuser.RoleSuperAdmin {
+			if u, err := s.Users.GetByID(c.Request.Context(), uid); err == nil && viewerBypassesPostVisibility(u.Role) {
 				viewerIsSuperAdmin = true
 			}
 		}

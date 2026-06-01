@@ -12,7 +12,6 @@ import (
 	apppostreply "github.com/lpxxn/blink/application/postreply"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
-	domainuser "github.com/lpxxn/blink/domain/user"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
 )
 
@@ -37,7 +36,7 @@ func (s *Server) ListReplies(c *gin.Context) {
 	if uid, ok := httpauth.UserIDFromContext(c); ok {
 		viewer = &uid
 		if s.Users != nil {
-			if u, err := s.Users.GetByID(c.Request.Context(), uid); err == nil && u.Role == domainuser.RoleSuperAdmin {
+			if u, err := s.Users.GetByID(c.Request.Context(), uid); err == nil && viewerBypassesPostVisibility(u.Role) {
 				viewerIsSuperAdmin = true
 			}
 		}

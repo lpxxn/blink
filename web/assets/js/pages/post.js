@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  const { BlinkAPI, BlinkUI, BlinkMD, BlinkSocial } = window;
+  const { BlinkAPI, BlinkUI, BlinkMD, BlinkSocial, BlinkAdminAPI, BlinkModal } = window;
   const { el, clear, flash, errorText } = BlinkUI;
 
   const params = new URLSearchParams(location.search);
@@ -13,7 +13,7 @@
   let parentReplyId = null;
 
   function sid(v) { return v != null ? String(v) : ''; }
-  function isSuperAdmin() { return myRole === 'super_admin'; }
+  function isStaff() { return myRole === 'super_admin' || myRole === 'admin'; }
 
   function authorLabel(obj) {
     const n = obj && obj.user_name != null ? String(obj.user_name).trim() : '';
@@ -55,11 +55,11 @@
         '。',
       ]));
     }
-    if (isSuperAdmin()) {
+    if (isStaff()) {
       children.push(el('div', { class: 'btn-row', style: { marginTop: '0.75rem' } }, [
         el('button', {
           type: 'button', class: 'btn btn-primary btn-sm',
-          onClick: () => adminRestorePost(sid(p.id), mf),
+          onClick: () => staffRestorePost(sid(p.id), mf),
         }, mf === 2 ? '管理员：恢复上架' : '管理员：解除违规'),
       ]));
     }
@@ -97,6 +97,11 @@
         orphans.map((u) => el('img', { src: u, alt: '' }))));
     }
 
+    if (isStaff()) {
+      const staffActs = renderStaffPostActions(p);
+      if (staffActs) root.appendChild(staffActs);
+    }
+
     if (myUserId && sid(p.user_id) === myUserId) {
       root.appendChild(el('div', { class: 'post-author-actions' }, [
         el('a', {
@@ -104,6 +109,84 @@
           href: '/web/edit-post.html?id=' + encodeURIComponent(sid(p.id)),
         }, '编辑此帖'),
       ]));
+    }
+  }
+
+  function renderStaffPostActions(p) {
+    if (!BlinkAdminAPI || !BlinkModal) return null;
+    const mf = p.moderation_flag != null ? Number(p.moderation_flag) : 0;
+    const row = el('div', { class: 'post-author-actions post-staff-actions' }, [
+      el('span', { class: 'field-hint', style: { marginRight: '0.35rem' } }, '管理：'),
+    ]);
+    if (mf !== 2) {
+      row.appendChild(el('button', {
+        type: 'button', class: 'btn btn-danger btn-sm',
+        onClick: () => staffTakeDown(p),
+      }, '下架'));
+    }
+    if (mf === 0) {
+      row.appendChild(el('button', {
+        type: 'button', class: 'btn btn-secondary btn-sm',
+        onClick: () => staffFlag(p),
+      }, '标违规'));
+    }
+    if (mf !== 0 || Number(p.status) !== 1) {
+      row.appendChild(el('button', {
+        type: 'button', class: 'btn btn-primary btn-sm',
+        onClick: () => staffRestorePost(sid(p.id), mf === 2 ? 2 : (mf === 1 ? 1 : 0)),
+      }, '恢复'));
+    }
+    return row.childNodes.length > 1 ? row : null;
+  }
+
+  async function staffTakeDown(p) {
+    const result = await BlinkModal.open({
+      title: '下架帖子 #' + sid(p.id),
+      description: '作者会收到通知，内容将从公开流中移除。请写明下架理由。',
+      fields: [{
+        name: 'note',
+        label: '下架理由',
+        type: 'textarea',
+        required: true,
+        maxLength: 500,
+        placeholder: '例如：内容含违规信息…',
+      }],
+      confirmLabel: '确认下架',
+      danger: true,
+    });
+    if (!result) return;
+    showErr('');
+    try {
+      await BlinkAdminAPI.patchPost(p.id, { moderation_flag: 2, moderation_note: result.note });
+      loadPost();
+    } catch (err) {
+      showErr(errorText(err));
+    }
+  }
+
+  async function staffFlag(p) {
+    const result = await BlinkModal.open({
+      title: '标记违规 #' + sid(p.id),
+      description: '仅做标记，不影响公开可见性。可附说明以便后续处理。',
+      fields: [{
+        name: 'note',
+        label: '说明（可选）',
+        type: 'textarea',
+        maxLength: 500,
+        placeholder: '例如：疑似广告，需进一步审查…',
+      }],
+      confirmLabel: '标记违规',
+    });
+    if (!result) return;
+    showErr('');
+    try {
+      await BlinkAdminAPI.patchPost(p.id, {
+        moderation_flag: 1,
+        moderation_note: result.note || undefined,
+      });
+      loadPost();
+    } catch (err) {
+      showErr(errorText(err));
     }
   }
 
@@ -129,16 +212,26 @@
     }
   }
 
-  async function adminRestorePost(id, mf) {
-    const msg = mf === 2
-      ? '确定恢复该帖上架？将清除下架标记、清空备注，并把状态设为「已发布」。'
-      : '确定解除违规标记？将清空备注；不改变帖子发布/草稿状态。';
-    if (!window.confirm(msg)) return;
+  async function staffRestorePost(id, mf) {
+    if (BlinkModal) {
+      const ok = await BlinkModal.confirm({
+        title: '恢复公开 #' + id,
+        description: mf === 2
+          ? '将清除下架标记、清空备注，并把状态设为「已发布」。'
+          : '将清除违规标记并清空备注；不改变帖子发布/草稿状态。',
+      });
+      if (!ok) return;
+    } else if (!window.confirm('确定恢复该帖？')) {
+      return;
+    }
     showErr('');
     const body = { moderation_flag: 0, moderation_note: '' };
     if (mf === 2) body.status = 1;
     try {
-      await BlinkAPI.patch('/admin/api/posts/' + encodeURIComponent(id), body);
+      const patch = BlinkAdminAPI
+        ? BlinkAdminAPI.patchPost.bind(BlinkAdminAPI)
+        : (pid, b) => BlinkAPI.patch('/admin/api/posts/' + encodeURIComponent(pid), b);
+      await patch(id, body);
       loadPost();
     } catch (err) {
       showErr(errorText(err));
@@ -209,10 +302,10 @@
       onClick: () => setReplyTarget(x),
     }, '回复'));
 
-    if (isSuperAdmin()) {
+    if (isStaff()) {
       actions.appendChild(el('button', {
         type: 'button', class: 'btn btn-secondary btn-sm',
-        onClick: () => adminHideReply(x),
+        onClick: () => staffHideReply(x),
       }, '隐藏'));
     }
     if (myUserId && sid(x.user_id) === myUserId) {
@@ -246,10 +339,14 @@
     document.getElementById('cancel-reply').hidden = true;
   }
 
-  async function adminHideReply(x) {
+  async function staffHideReply(x) {
     if (!window.confirm('隐藏评论 #' + sid(x.id) + '（含所有子评论）？')) return;
     try {
-      await BlinkAPI.patch('/admin/api/replies/' + encodeURIComponent(sid(x.id)), { hidden: true });
+      if (BlinkAdminAPI) {
+        await BlinkAdminAPI.hideReplyCascade(sid(x.id));
+      } else {
+        await BlinkAPI.patch('/admin/api/replies/' + encodeURIComponent(sid(x.id)), { hidden: true });
+      }
       loadReplies();
     } catch (err) {
       showErr(errorText(err));

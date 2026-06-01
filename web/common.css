@@ -620,6 +620,13 @@ article.feed-item a:hover {
   margin-top: 0.65rem;
 }
 
+.post-staff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .mine-row {
   padding: 0.85rem 0;
   border-bottom: 1px solid var(--border);
