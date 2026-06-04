@@ -440,6 +440,8 @@ func main() {
 	opt.GET("/posts/:id", apiSrv.GetPost)
 	opt.GET("/posts/:id/likes", apiSrv.GetPostLikes)
 	opt.GET("/users/:id/follow-stats", apiSrv.GetUserFollowStats)
+	opt.GET("/users/:id/following", apiSrv.ListUserFollowing)
+	opt.GET("/users/:id/followers", apiSrv.ListUserFollowers)
 
 	authed := api.Group("")
 	authed.Use(httpauth.RequireSession(sessStore))
@@ -453,6 +455,8 @@ func main() {
 	authed.DELETE("/posts/:id", apiSrv.DeletePost)
 	authed.POST("/posts/:id/moderation_request", apiSrv.SubmitModerationRequest)
 	authed.GET("/me/posts", apiSrv.ListMyPosts)
+	authed.GET("/me/following", apiSrv.ListMyFollowing)
+	authed.GET("/me/followers", apiSrv.ListMyFollowers)
 	authed.GET("/me/notifications", apiSrv.ListNotifications)
 	authed.GET("/me/notifications/unread_count", apiSrv.UnreadNotificationCount)
 	authed.POST("/me/notifications/:id/read", apiSrv.MarkNotificationRead)

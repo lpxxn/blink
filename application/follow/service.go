@@ -35,6 +35,10 @@ func (s *Service) Unfollow(ctx context.Context, followerID, followeeID int64) er
 	return s.Follows.Unfollow(ctx, followerID, followeeID)
 }
 
+func (s *Service) IsFollowing(ctx context.Context, followerID, followeeID int64) (bool, error) {
+	return s.Follows.IsFollowing(ctx, followerID, followeeID)
+}
+
 type Stats struct {
 	FollowerCount  int64
 	FollowingCount int64
@@ -65,4 +69,30 @@ func (s *Service) Stats(ctx context.Context, targetUserID int64, viewerID *int64
 		st.IsFollowing = ok
 	}
 	return st, nil
+}
+
+func (s *Service) ListFollowing(ctx context.Context, targetUserID int64, beforeUserID *int64, limit int) ([]int64, error) {
+	if _, err := s.Users.GetByID(ctx, targetUserID); err != nil {
+		if errors.Is(err, domainuser.ErrNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	return s.Follows.ListFollowing(ctx, targetUserID, beforeUserID, limit)
+}
+
+func (s *Service) ListFollowers(ctx context.Context, targetUserID int64, beforeUserID *int64, limit int) ([]int64, error) {
+	if _, err := s.Users.GetByID(ctx, targetUserID); err != nil {
+		if errors.Is(err, domainuser.ErrNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	return s.Follows.ListFollowers(ctx, targetUserID, beforeUserID, limit)
 }

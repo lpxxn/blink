@@ -77,3 +77,25 @@ func (r *FollowRepository) CountFollowing(ctx context.Context, userID int64) (in
 		Count(&n).Error
 	return n, err
 }
+
+func (r *FollowRepository) ListFollowing(ctx context.Context, userID int64, beforeUserID *int64, limit int) ([]int64, error) {
+	q := r.DB.WithContext(ctx).Model(&UserFollowModel{}).
+		Where("follower_id = ? AND deleted_at IS NULL", userID)
+	if beforeUserID != nil {
+		q = q.Where("followee_id < ?", *beforeUserID)
+	}
+	var ids []int64
+	err := q.Order("followee_id DESC").Limit(limit).Pluck("followee_id", &ids).Error
+	return ids, err
+}
+
+func (r *FollowRepository) ListFollowers(ctx context.Context, userID int64, beforeUserID *int64, limit int) ([]int64, error) {
+	q := r.DB.WithContext(ctx).Model(&UserFollowModel{}).
+		Where("followee_id = ? AND deleted_at IS NULL", userID)
+	if beforeUserID != nil {
+		q = q.Where("follower_id < ?", *beforeUserID)
+	}
+	var ids []int64
+	err := q.Order("follower_id DESC").Limit(limit).Pluck("follower_id", &ids).Error
+	return ids, err
+}

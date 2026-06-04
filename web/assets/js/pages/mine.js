@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  const { BlinkAPI, BlinkUI, BlinkMD } = window;
+  const { BlinkAPI, BlinkUI, BlinkMD, BlinkSocial } = window;
   const { el, clear, flash, errorText, createCursorPager } = BlinkUI;
 
   let me = null;
@@ -31,6 +31,21 @@
     document.getElementById('profile-user').hidden = false;
     const pwCard = document.getElementById('password-card');
     if (pwCard) pwCard.hidden = false;
+    loadFollowStats(d.user_id);
+  }
+
+  async function loadFollowStats(userId) {
+    const followingEl = document.getElementById('me-following');
+    const followersEl = document.getElementById('me-followers');
+    if (!followingEl || !followersEl || !BlinkSocial) return;
+    try {
+      const st = await BlinkSocial.loadFollowStats(userId);
+      followingEl.textContent = st && st.following_count != null ? String(st.following_count) : '0';
+      followersEl.textContent = st && st.follower_count != null ? String(st.follower_count) : '0';
+    } catch (_) {
+      followingEl.textContent = '—';
+      followersEl.textContent = '—';
+    }
   }
 
   function showGuest() {
