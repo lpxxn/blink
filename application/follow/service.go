@@ -71,7 +71,7 @@ func (s *Service) Stats(ctx context.Context, targetUserID int64, viewerID *int64
 	return st, nil
 }
 
-func (s *Service) ListFollowing(ctx context.Context, targetUserID int64, beforeUserID *int64, limit int) ([]int64, error) {
+func (s *Service) ListFollowing(ctx context.Context, targetUserID int64, cursor *domainfollow.PageCursor, limit int) ([]domainfollow.ListEntry, error) {
 	if _, err := s.Users.GetByID(ctx, targetUserID); err != nil {
 		if errors.Is(err, domainuser.ErrNotFound) {
 			return nil, ErrUserNotFound
@@ -81,10 +81,10 @@ func (s *Service) ListFollowing(ctx context.Context, targetUserID int64, beforeU
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	return s.Follows.ListFollowing(ctx, targetUserID, beforeUserID, limit)
+	return s.Follows.ListFollowing(ctx, targetUserID, cursor, limit)
 }
 
-func (s *Service) ListFollowers(ctx context.Context, targetUserID int64, beforeUserID *int64, limit int) ([]int64, error) {
+func (s *Service) ListFollowers(ctx context.Context, targetUserID int64, cursor *domainfollow.PageCursor, limit int) ([]domainfollow.ListEntry, error) {
 	if _, err := s.Users.GetByID(ctx, targetUserID); err != nil {
 		if errors.Is(err, domainuser.ErrNotFound) {
 			return nil, ErrUserNotFound
@@ -94,5 +94,5 @@ func (s *Service) ListFollowers(ctx context.Context, targetUserID int64, beforeU
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	return s.Follows.ListFollowers(ctx, targetUserID, beforeUserID, limit)
+	return s.Follows.ListFollowers(ctx, targetUserID, cursor, limit)
 }

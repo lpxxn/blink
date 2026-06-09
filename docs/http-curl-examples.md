@@ -350,6 +350,23 @@ curl -sS -b /tmp/blink.cookies "${BASE}/api/users/${USER_ID}/follow-stats"
 curl -sS -b /tmp/blink.cookies -X DELETE "${BASE}/api/users/${USER_ID}/follow" -w '\nHTTP:%{http_code}\n'
 ```
 
+### 关注 / 粉丝列表
+
+```bash
+# 我关注的
+curl -sS -b /tmp/blink.cookies "${BASE}/api/me/following?limit=30"
+# 关注我的（粉丝）
+curl -sS -b /tmp/blink.cookies "${BASE}/api/me/followers?limit=30"
+# 翻页：用上页响应里的 next_cursor
+curl -sS -b /tmp/blink.cookies "${BASE}/api/me/following?limit=30&cursor=${CURSOR}"
+
+# 查看任意用户（无需登录；带 Cookie 时每条含 is_following）
+curl -sS "${BASE}/api/users/${USER_ID}/following"
+curl -sS "${BASE}/api/users/${USER_ID}/followers"
+```
+
+Web 页面：`/web/follows.html`（「我的」页可点关注/粉丝数进入）。
+
 ### 点赞排行榜（今日 / 近 7 天 / 本月）
 
 ```bash

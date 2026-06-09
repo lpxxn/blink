@@ -78,24 +78,44 @@ func (r *FollowRepository) CountFollowing(ctx context.Context, userID int64) (in
 	return n, err
 }
 
-func (r *FollowRepository) ListFollowing(ctx context.Context, userID int64, beforeUserID *int64, limit int) ([]int64, error) {
+func (r *FollowRepository) ListFollowing(ctx context.Context, userID int64, cursor *domainfollow.PageCursor, limit int) ([]domainfollow.ListEntry, error) {
 	q := r.DB.WithContext(ctx).Model(&UserFollowModel{}).
 		Where("follower_id = ? AND deleted_at IS NULL", userID)
-	if beforeUserID != nil {
-		q = q.Where("followee_id < ?", *beforeUserID)
+	if cursor != nil {
+		q = q.Where("(created_at < ? OR (created_at = ? AND followee_id < ?))",
+			cursor.CreatedAt, cursor.CreatedAt, cursor.UserID)
 	}
-	var ids []int64
-	err := q.Order("followee_id DESC").Limit(limit).Pluck("followee_id", &ids).Error
-	return ids, err
+	var rows []UserFollowModel
+	if err := q.Order("created_at DESC, followee_id DESC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]domainfollow.ListEntry, 0, len(rows))
+	for i := range rows {
+		out = append(out, domainfollow.ListEntry{
+			UserID:    rows[i].FolloweeID,
+			CreatedAt: rows[i].CreatedAt,
+		})
+	}
+	return out, nil
 }
 
-func (r *FollowRepository) ListFollowers(ctx context.Context, userID int64, beforeUserID *int64, limit int) ([]int64, error) {
+func (r *FollowRepository) ListFollowers(ctx context.Context, userID int64, cursor *domainfollow.PageCursor, limit int) ([]domainfollow.ListEntry, error) {
 	q := r.DB.WithContext(ctx).Model(&UserFollowModel{}).
 		Where("followee_id = ? AND deleted_at IS NULL", userID)
-	if beforeUserID != nil {
-		q = q.Where("follower_id < ?", *beforeUserID)
+	if cursor != nil {
+		q = q.Where("(created_at < ? OR (created_at = ? AND follower_id < ?))",
+			cursor.CreatedAt, cursor.CreatedAt, cursor.UserID)
 	}
-	var ids []int64
-	err := q.Order("follower_id DESC").Limit(limit).Pluck("follower_id", &ids).Error
-	return ids, err
+	var rows []UserFollowModel
+	if err := q.Order("created_at DESC, follower_id DESC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]domainfollow.ListEntry, 0, len(rows))
+	for i := range rows {
+		out = append(out, domainfollow.ListEntry{
+			UserID:    rows[i].FollowerID,
+			CreatedAt: rows[i].CreatedAt,
+		})
+	}
+	return out, nil
 }

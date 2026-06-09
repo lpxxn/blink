@@ -152,24 +152,27 @@ func (s *Server) ListUserFollowers(c *gin.Context) {
 }
 
 func (s *Server) listFollowUsers(c *gin.Context, targetUserID int64, following bool) {
-	var beforeID *int64
+	var cursor *domainfollow.PageCursor
 	if v := c.Query("cursor"); v != "" {
-		id, err := strconv.ParseInt(v, 10, 64)
+		parsed, err := parseFollowListCursor(v)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "bad cursor"})
 			return
 		}
-		beforeID = &id
+		cursor = parsed
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
 
 	ctx := c.Request.Context()
-	var ids []int64
+	var entries []domainfollow.ListEntry
 	var err error
 	if following {
-		ids, err = s.Follows.ListFollowing(ctx, targetUserID, beforeID, limit)
+		entries, err = s.Follows.ListFollowing(ctx, targetUserID, cursor, limit)
 	} else {
-		ids, err = s.Follows.ListFollowers(ctx, targetUserID, beforeID, limit)
+		entries, err = s.Follows.ListFollowers(ctx, targetUserID, cursor, limit)
 	}
 	if err != nil {
 		if errors.Is(err, appfollow.ErrUserNotFound) {
@@ -184,15 +187,19 @@ func (s *Server) listFollowUsers(c *gin.Context, targetUserID int64, following b
 	if uid, ok := httpauth.UserIDFromContext(c); ok {
 		viewer = &uid
 	}
-	names := ResolveUserNames(ctx, s.Users, ids)
-	out := make([]FollowUserJSON, 0, len(ids))
-	for _, id := range ids {
-		j := FollowUserJSON{UserID: id}
+	userIDs := make([]int64, 0, len(entries))
+	for _, e := range entries {
+		userIDs = append(userIDs, e.UserID)
+	}
+	names := ResolveUserNames(ctx, s.Users, userIDs)
+	out := make([]FollowUserJSON, 0, len(entries))
+	for _, e := range entries {
+		j := FollowUserJSON{UserID: e.UserID}
 		if names != nil {
-			j.UserName = names[id]
+			j.UserName = names[e.UserID]
 		}
-		if viewer != nil && *viewer != id {
-			ok, err := s.Follows.IsFollowing(ctx, *viewer, id)
+		if viewer != nil && *viewer != e.UserID {
+			ok, err := s.Follows.IsFollowing(ctx, *viewer, e.UserID)
 			if err == nil {
 				j.IsFollowing = &ok
 			}
@@ -200,8 +207,9 @@ func (s *Server) listFollowUsers(c *gin.Context, targetUserID int64, following b
 		out = append(out, j)
 	}
 	var next *string
-	if len(ids) > 0 {
-		next = NextCursorString(ids[len(ids)-1])
+	if len(entries) == limit {
+		s := formatFollowListCursor(entries[len(entries)-1])
+		next = &s
 	}
 	c.JSON(http.StatusOK, FollowUsersPageJSON{Users: out, NextCursor: next})
 }

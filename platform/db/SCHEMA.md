@@ -120,7 +120,7 @@ go run ./cmd/migrate
 
 **注意**：主键为 `(follower_id, followee_id)`。若取关使用软删，再次关注应对**同一行** `UPDATE` 清空 `deleted_at`，不要 `INSERT` 新行。
 
-**API**：`POST/DELETE /api/users/{id}/follow`（需登录）；`GET /api/users/{id}/follow-stats`（粉丝/关注数，可选会话返回 `is_following`）。
+**API**：`POST/DELETE /api/users/{id}/follow`（需登录）；`GET /api/users/{id}/follow-stats`（粉丝/关注数，可选会话返回 `is_following`）；`GET /api/me/following`、`GET /api/me/followers`（登录，自己的列表）；`GET /api/users/{id}/following`、`GET /api/users/{id}/followers`（任意用户的列表，可选会话返回每条 `is_following`）。列表按 `created_at` 降序分页，Query `cursor`（`{unix_nano},{user_id}`）、`limit`（默认 50，最大 100）。
 
 ---
 

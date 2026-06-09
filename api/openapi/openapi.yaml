@@ -570,6 +570,48 @@ paths:
         "200":
           description: 同 listPosts
 
+  /api/me/following:
+    get:
+      operationId: listMyFollowing
+      tags: [social]
+      summary: 我关注的用户列表
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FollowListCursor"
+        - $ref: "#/components/parameters/FollowListLimit"
+      responses:
+        "200":
+          description: 关注列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowUsersPage"
+        "401":
+          description: 未登录
+
+  /api/me/followers:
+    get:
+      operationId: listMyFollowers
+      tags: [social]
+      summary: 关注我的用户列表（粉丝）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FollowListCursor"
+        - $ref: "#/components/parameters/FollowListLimit"
+      responses:
+        "200":
+          description: 粉丝列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowUsersPage"
+        "401":
+          description: 未登录
+
   /api/posts/{id}/replies:
     get:
       operationId: listReplies
@@ -718,6 +760,54 @@ paths:
       responses:
         "200":
           description: '`{ "user_id", "follower_count", "following_count", "is_following"? }`'
+        "404":
+          description: 用户不存在
+
+  /api/users/{id}/following:
+    get:
+      operationId: listUserFollowing
+      tags: [social]
+      summary: 某用户关注的列表
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: "#/components/parameters/FollowListCursor"
+        - $ref: "#/components/parameters/FollowListLimit"
+      responses:
+        "200":
+          description: 关注列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowUsersPage"
+        "404":
+          description: 用户不存在
+
+  /api/users/{id}/followers:
+    get:
+      operationId: listUserFollowers
+      tags: [social]
+      summary: 某用户的粉丝列表
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: "#/components/parameters/FollowListCursor"
+        - $ref: "#/components/parameters/FollowListLimit"
+      responses:
+        "200":
+          description: 粉丝列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowUsersPage"
         "404":
           description: 用户不存在
 
@@ -1756,6 +1846,19 @@ components:
       schema:
         type: string
         example: code
+    FollowListCursor:
+      name: cursor
+      in: query
+      description: 分页游标，上一页最后一条的 `{unix_nano},{user_id}`
+      schema:
+        type: string
+    FollowListLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 50
+        maximum: 100
 
   schemas:
     HealthResponse:
@@ -1765,6 +1868,31 @@ components:
         status:
           type: string
           example: ok
+
+    FollowUser:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        user_name:
+          type: string
+        is_following:
+          type: boolean
+          description: 当前登录用户是否已关注该用户（登录且非本人时返回）
+
+    FollowUsersPage:
+      type: object
+      required: [users]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/FollowUser"
+        next_cursor:
+          type: string
+          description: 仅当本页满 limit 条时返回；值为 `{unix_nano},{user_id}`
 
     RegisterRequest:
       type: object
