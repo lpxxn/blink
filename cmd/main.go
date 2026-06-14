@@ -439,6 +439,8 @@ func main() {
 	opt.GET("/posts/like_rankings", apiSrv.ListLikeRankings)
 	opt.GET("/posts/:id", apiSrv.GetPost)
 	opt.GET("/posts/:id/likes", apiSrv.GetPostLikes)
+	opt.GET("/users/:id", apiSrv.GetUser)
+	opt.GET("/users/:id/posts", apiSrv.ListUserPosts)
 	opt.GET("/users/:id/follow-stats", apiSrv.GetUserFollowStats)
 	opt.GET("/users/:id/following", apiSrv.ListUserFollowing)
 	opt.GET("/users/:id/followers", apiSrv.ListUserFollowers)

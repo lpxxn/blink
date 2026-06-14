@@ -154,6 +154,28 @@ func (r *PostRepository) ListPublicFeed(ctx context.Context, categoryID *int64, 
 	return out, nil
 }
 
+func (r *PostRepository) ListPublicByUserID(ctx context.Context, userID int64, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+	q := r.DB.WithContext(ctx).Model(&PostModel{}).
+		Where("user_id = ? AND deleted_at IS NULL AND status = ? AND moderation_flag = ? AND post_type = ? AND visibility = ?",
+			userID, domainpost.StatusPublished, domainpost.ModerationNormal, domainpost.TypeOriginal, domainpost.VisibilityPublic)
+	if beforeID != nil {
+		q = q.Where("id < ?", *beforeID)
+	}
+	var rows []PostModel
+	if err := q.Order("id DESC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]*domainpost.Post, 0, len(rows))
+	for i := range rows {
+		p, err := postModelToDomain(&rows[i])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
 func (r *PostRepository) ListByUserID(ctx context.Context, userID int64, includeDraft bool, beforeID *int64, limit int) ([]*domainpost.Post, error) {
 	q := r.DB.WithContext(ctx).Model(&PostModel{}).Where("user_id = ? AND deleted_at IS NULL", userID)
 	if !includeDraft {

@@ -266,6 +266,14 @@ func (s *Service) ListFeed(ctx context.Context, categoryID *int64, uncategorized
 	return s.Posts.ListPublicFeed(ctx, categoryID, uncategorizedOnly, beforeID, limit)
 }
 
+// ListPublicByUser returns published public posts by one author (newest first).
+func (s *Service) ListPublicByUser(ctx context.Context, userID int64, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	return s.Posts.ListPublicByUserID(ctx, userID, beforeID, limit)
+}
+
 // ListMine returns the author's posts (newest first).
 func (s *Service) ListMine(ctx context.Context, userID int64, includeDraft bool, beforeID *int64, limit int) ([]*domainpost.Post, error) {
 	if limit <= 0 || limit > 50 {

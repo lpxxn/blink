@@ -130,6 +130,12 @@ type MeJSON struct {
 	Status int    `json:"status,omitempty"`
 }
 
+// PublicUserJSON is GET /api/users/{id} — public profile (no email).
+type PublicUserJSON struct {
+	UserID int64  `json:"user_id,string"`
+	Name   string `json:"name"`
+}
+
 // PostsPageJSON is the list response for GET /api/posts and GET /api/me/posts.
 type PostsPageJSON struct {
 	Posts      []PostJSON `json:"posts"`

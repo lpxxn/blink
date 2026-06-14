@@ -21,6 +21,8 @@ type Repository interface {
 	SoftDelete(ctx context.Context, id int64) error
 	GetByID(ctx context.Context, id int64) (*Post, error)
 	ListPublicFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int) ([]*Post, error)
+	// ListPublicByUserID returns published public original posts by one author (same rules as ListPublicFeed).
+	ListPublicByUserID(ctx context.Context, userID int64, beforeID *int64, limit int) ([]*Post, error)
 	ListByUserID(ctx context.Context, userID int64, includeDraft bool, beforeID *int64, limit int) ([]*Post, error)
 	AdminList(ctx context.Context, f AdminListFilters, offset, limit int) ([]*Post, int64, error)
 	CountAdmin(ctx context.Context, f AdminListFilters) (int64, error)
