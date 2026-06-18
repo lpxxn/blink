@@ -17,9 +17,9 @@
     { key: 'login',    href: '/web/login.html',    label: '登录', guestOnly: true },
     { key: 'feed',     href: '/web/feed.html',     label: '帖子流' },
     { key: 'trending', href: '/web/trending.html', label: '热门' },
-    { key: 'compose',  href: '/web/compose.html',  label: '发帖' },
-    { key: 'mine',     href: '/web/mine.html',     label: '我的' },
-    { key: 'messages', href: '/web/messages.html', label: '消息' },
+    { key: 'compose',  href: '/web/compose.html',  label: '发帖', authOnly: true },
+    { key: 'mine',     href: '/web/mine.html',     label: '我的', authOnly: true },
+    { key: 'messages', href: '/web/messages.html', label: '消息', authOnly: true },
     { key: 'feedback', href: '/web/feedback.html', label: '反馈' },
     { key: 'admin',    href: '/web/admin.html',    label: '管理', adminOnly: true },
   ];
@@ -54,6 +54,9 @@
     const isLogged = !!(me && me.user_id);
     document.querySelectorAll('[data-blink-nav="guest"]').forEach((el) => {
       el.hidden = isLogged;
+    });
+    document.querySelectorAll('[data-blink-nav="auth"]').forEach((el) => {
+      el.hidden = !isLogged;
     });
     if (isLogged) {
       startSSE();
@@ -127,6 +130,9 @@
         if (link.key === active) a.className = 'nav-active';
         if (link.adminOnly) {
           a.dataset.blinkNav = 'admin';
+          a.hidden = true;
+        } else if (link.authOnly) {
+          a.dataset.blinkNav = 'auth';
           a.hidden = true;
         } else if (link.guestOnly) {
           a.dataset.blinkNav = 'guest';
