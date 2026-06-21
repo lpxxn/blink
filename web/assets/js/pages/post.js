@@ -3,7 +3,7 @@
   'use strict';
 
   const { BlinkAPI, BlinkUI, BlinkMD, BlinkSocial, BlinkAdminAPI, BlinkModal } = window;
-  const { el, clear, flash, errorText } = BlinkUI;
+  const { el, clear, flash, errorText, authorLink, authorLabelText } = BlinkUI;
 
   const params = new URLSearchParams(location.search);
   const postId = params.get('id');
@@ -16,8 +16,7 @@
   function isStaff() { return myRole === 'super_admin' || myRole === 'admin'; }
 
   function authorLabel(obj) {
-    const n = obj && obj.user_name != null ? String(obj.user_name).trim() : '';
-    return n || ('用户 ' + sid(obj && obj.user_id));
+    return authorLabelText(obj && obj.user_id, obj && obj.user_name);
   }
 
   function showErr(msg) { flash('err', msg || '', msg ? 'err' : ''); }
@@ -74,8 +73,9 @@
     if (banner) root.appendChild(banner);
 
     const metaRow = el('div', { class: 'meta post-meta-row' });
-    metaRow.appendChild(document.createTextNode(
-      '#' + sid(p.id) + ' · ' + authorLabel(p) + ' · 状态 ' + sid(p.status)));
+    metaRow.appendChild(document.createTextNode('#' + sid(p.id) + ' · '));
+    metaRow.appendChild(authorLink(p.user_id, p.user_name));
+    metaRow.appendChild(document.createTextNode(' · 状态 ' + sid(p.status)));
     root.appendChild(metaRow);
 
     const socialRow = el('div', { class: 'post-social-actions' });
@@ -285,16 +285,27 @@
     return { ordered, byId };
   }
 
+  function renderReplyMeta(x, byId) {
+    const meta = el('div', { class: 'meta' });
+    if (x.parent_reply_id != null && x.parent_reply_id !== '') {
+      const par = byId[sid(x.parent_reply_id)];
+      meta.appendChild(document.createTextNode('↪ 回复 '));
+      if (par) {
+        meta.appendChild(authorLink(par.user_id, par.user_name));
+      } else {
+        meta.appendChild(document.createTextNode('#' + sid(x.parent_reply_id)));
+      }
+      meta.appendChild(document.createTextNode(' · '));
+    }
+    meta.appendChild(authorLink(x.user_id, x.user_name));
+    meta.appendChild(document.createTextNode(' · #' + sid(x.id)));
+    return meta;
+  }
+
   function renderReply(x, byId) {
     const depth = replyDepth(x, byId);
     const children = [document.createTextNode(x.body)];
-
-    let metaLine = authorLabel(x) + ' · #' + sid(x.id);
-    if (x.parent_reply_id != null && x.parent_reply_id !== '') {
-      const par = byId[sid(x.parent_reply_id)];
-      metaLine = '↪ 回复 ' + (par ? authorLabel(par) : '#' + sid(x.parent_reply_id)) + ' · ' + metaLine;
-    }
-    children.push(el('div', { class: 'meta' }, metaLine));
+    children.push(renderReplyMeta(x, byId));
 
     const actions = el('div', { class: 'reply-actions' });
     actions.appendChild(el('button', {

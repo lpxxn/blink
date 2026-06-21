@@ -84,9 +84,9 @@
     const followingCount = st && st.following_count != null ? String(st.following_count) : '0';
     const followerCount = st && st.follower_count != null ? String(st.follower_count) : '0';
     followingEl.textContent = followingCount;
-    followersEl.href = '/web/follows.html?tab=following&user_id=' + encodeURIComponent(profileUserId);
-    followersEl.href = '/web/follows.html?tab=followers&user_id=' + encodeURIComponent(profileUserId);
+    followersEl.textContent = followerCount;
     followingEl.href = '/web/follows.html?tab=following&user_id=' + encodeURIComponent(profileUserId);
+    followersEl.href = '/web/follows.html?tab=followers&user_id=' + encodeURIComponent(profileUserId);
 
     const actions = document.getElementById('profile-actions');
     clear(actions);

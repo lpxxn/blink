@@ -154,28 +154,32 @@
     return { items: d.feedback || [], next: d.next_cursor || null };
   }
 
-  const pager = createCursorPager({
-    loader,
-    onAppend: handleAppend,
-    onError: (err) => showMsg(errorText(err), 'err'),
-    moreButton: moreBtn,
-  });
+  function init() {
+    const pager = createCursorPager({
+      loader,
+      onAppend: handleAppend,
+      onError: (err) => showMsg(errorText(err), 'err'),
+      moreButton: moreBtn,
+    });
 
-  formEl.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    showMsg('');
-    submitBtn.disabled = true;
-    try {
-      await API.post('/api/feedback', { body: bodyEl.value });
-      bodyEl.value = '';
-      showMsg('反馈已提交，管理员会收到站内消息。', 'ok');
-      await pager.reset();
-    } catch (err) {
-      showMsg(errorText(err), 'err');
-    } finally {
-      submitBtn.disabled = false;
-    }
-  });
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      showMsg('');
+      submitBtn.disabled = true;
+      try {
+        await API.post('/api/feedback', { body: bodyEl.value });
+        bodyEl.value = '';
+        showMsg('反馈已提交，管理员会收到站内消息。', 'ok');
+        await pager.reset();
+      } catch (err) {
+        showMsg(errorText(err), 'err');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
 
-  pager.reset();
+    pager.reset();
+  }
+
+  window.BlinkAuth.requireLogin(init);
 })();

@@ -155,5 +155,22 @@
     }
   }
 
-  window.BlinkUI = { el, append, clear, flash, errorText, fmtTime, mountList, createCursorPager };
+  function authorLabelText(userId, userName) {
+    const n = userName != null ? String(userName).trim() : '';
+    const id = userId != null ? String(userId) : '';
+    return n || (id ? '用户 ' + id : '用户');
+  }
+
+  /** Link to /web/user.html when userId is present; otherwise plain text. */
+  function authorLink(userId, userName) {
+    const label = authorLabelText(userId, userName);
+    const id = userId != null ? String(userId) : '';
+    if (!id) return document.createTextNode(label);
+    return el('a', { href: '/web/user.html?id=' + encodeURIComponent(id) }, label);
+  }
+
+  window.BlinkUI = {
+    el, append, clear, flash, errorText, fmtTime, mountList, createCursorPager,
+    authorLabelText, authorLink,
+  };
 })();

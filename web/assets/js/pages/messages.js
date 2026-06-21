@@ -136,25 +136,29 @@
     return { items: d.notifications || [], next: d.next_cursor || null };
   }
 
-  const pager = createCursorPager({
-    loader,
-    onAppend: handleAppend,
-    onError: showErr,
-    moreButton: moreBtn,
-  });
+  function init() {
+    const pager = createCursorPager({
+      loader,
+      onAppend: handleAppend,
+      onError: showErr,
+      moreButton: moreBtn,
+    });
 
-  markAllBtn.addEventListener('click', async () => {
-    showErr(null);
-    markAllBtn.disabled = true;
-    try {
-      await API.post('/api/me/notifications/read_all');
-      await pager.reset();
-    } catch (err) {
-      showErr(err);
-    } finally {
-      markAllBtn.disabled = false;
-    }
-  });
+    markAllBtn.addEventListener('click', async () => {
+      showErr(null);
+      markAllBtn.disabled = true;
+      try {
+        await API.post('/api/me/notifications/read_all');
+        await pager.reset();
+      } catch (err) {
+        showErr(err);
+      } finally {
+        markAllBtn.disabled = false;
+      }
+    });
 
-  pager.reset();
+    pager.reset();
+  }
+
+  window.BlinkAuth.requireLogin(init);
 })();

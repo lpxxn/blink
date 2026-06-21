@@ -5,7 +5,7 @@
   'use strict';
 
   const { BlinkAPI, BlinkUI, BlinkMD, BlinkSocial } = window;
-  const { el, flash, clear, fmtTime } = BlinkUI;
+  const { el, flash, clear, fmtTime, authorLink } = BlinkUI;
 
   const PERIODS = [
     { key: 'day', label: '今日' },
@@ -15,16 +15,13 @@
 
   let currentPeriod = 'week';
 
-  function authorLabel(p) {
-    const n = p && p.user_name != null ? String(p.user_name).trim() : '';
-    return n || ('用户 ' + (p && p.user_id));
-  }
-
   function postMeta(p) {
-    const parts = ['帖子 #' + p.id, authorLabel(p)];
+    const meta = el('div', { class: 'meta' });
+    meta.appendChild(document.createTextNode('帖子 #' + p.id + ' · '));
+    meta.appendChild(authorLink(p.user_id, p.user_name));
     const t = fmtTime(p.created_at);
-    if (t) parts.push(t);
-    return parts.join(' · ');
+    if (t) meta.appendChild(document.createTextNode(' · ' + t));
+    return meta;
   }
 
   function renderPost(p) {
@@ -34,7 +31,7 @@
     const children = [
       el('div', { class: 'meta' }, '#' + rank + ' · ' + likeCount + ' 赞'),
       el('h2', {}, [el('a', { href: postHref }, BlinkMD.plainSnippet(p.body, 80))]),
-      el('div', { class: 'meta' }, postMeta(p)),
+      postMeta(p),
     ];
     if (Array.isArray(p.images) && p.images.length) {
       const thumbs = el('div', { class: 'feed-thumbs' });

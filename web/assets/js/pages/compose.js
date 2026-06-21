@@ -316,8 +316,8 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => window.BlinkAuth.requireLogin(init));
   } else {
-    init();
+    window.BlinkAuth.requireLogin(init);
   }
 })();
