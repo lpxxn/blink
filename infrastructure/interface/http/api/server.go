@@ -9,6 +9,7 @@ import (
 	appnotification "github.com/lpxxn/blink/application/notification"
 	apppost "github.com/lpxxn/blink/application/post"
 	apppostreply "github.com/lpxxn/blink/application/postreply"
+	appsearch "github.com/lpxxn/blink/application/search"
 	domaincategory "github.com/lpxxn/blink/domain/category"
 	domainsession "github.com/lpxxn/blink/domain/session"
 	domainuser "github.com/lpxxn/blink/domain/user"
@@ -19,6 +20,7 @@ import (
 type Server struct {
 	Posts         *apppost.Service
 	Replies       *apppostreply.Service
+	Search        *appsearch.Service
 	Follows       *appfollow.Service
 	Likes         *apppostlike.Service
 	Notifications *appnotification.Service

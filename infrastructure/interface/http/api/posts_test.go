@@ -52,6 +52,12 @@ func (r *createPostTestPostRepo) GetByID(_ context.Context, id int64) (*domainpo
 func (createPostTestPostRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
 }
+func (createPostTestPostRepo) ListFollowingFeed(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
+func (createPostTestPostRepo) SearchPublic(context.Context, string, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
 func (createPostTestPostRepo) ListPublicByUserID(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
 }

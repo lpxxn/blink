@@ -22,6 +22,8 @@ type Repository interface {
 	UpdatePasswordHash(ctx context.Context, id int64, passwordHash string) error
 	// TopActiveUsers returns users ranked by total activity (posts + replies + likes) in [since, until).
 	TopActiveUsers(ctx context.Context, since, until time.Time, limit int) ([]UserActivity, error)
+	// SearchPublic finds active users by display name (case-sensitive LIKE).
+	SearchPublic(ctx context.Context, query string, offset, limit int) ([]PublicProfile, error)
 }
 
 // UserActivity is a ranked user entry for the activity leaderboard.

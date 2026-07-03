@@ -52,6 +52,12 @@ func (r *stubPostRepo) GetByID(_ context.Context, id int64) (*domainpost.Post, e
 func (stubPostRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
 }
+func (stubPostRepo) ListFollowingFeed(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
+func (stubPostRepo) SearchPublic(context.Context, string, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
 func (stubPostRepo) ListPublicByUserID(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
 }
@@ -95,6 +101,12 @@ type patchStubPostRepo struct {
 
 func (patchStubPostRepo) SoftDelete(context.Context, int64) error { panic("ni") }
 func (patchStubPostRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
+func (patchStubPostRepo) ListFollowingFeed(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
+func (patchStubPostRepo) SearchPublic(context.Context, string, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
 }
 func (patchStubPostRepo) ListPublicByUserID(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {
@@ -148,6 +160,12 @@ func (r *modReqPostRepo) Update(_ context.Context, p *domainpost.Post) error {
 func (modReqPostRepo) Create(context.Context, *domainpost.Post) error { panic("ni") }
 func (modReqPostRepo) SoftDelete(context.Context, int64) error        { panic("ni") }
 func (modReqPostRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
+func (modReqPostRepo) ListFollowingFeed(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {
+	panic("ni")
+}
+func (modReqPostRepo) SearchPublic(context.Context, string, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
 }
 func (modReqPostRepo) ListPublicByUserID(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {

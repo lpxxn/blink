@@ -151,6 +151,35 @@ func (r *UserRepository) CountForAdmin(ctx context.Context, query string) (int64
 	return n, err
 }
 
+func (r *UserRepository) SearchPublic(ctx context.Context, query string, offset, limit int) ([]domainuser.PublicProfile, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	pattern := likeContainsPattern(query)
+	var rows []UserModel
+	err := r.DB.WithContext(ctx).Model(&UserModel{}).
+		Where("status = ?", domainuser.StatusActive).
+		Where("name LIKE ? ESCAPE '\\'", pattern).
+		Order("snowflake_id DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domainuser.PublicProfile, 0, len(rows))
+	for i := range rows {
+		out = append(out, domainuser.PublicProfile{
+			SnowflakeID: rows[i].SnowflakeID,
+			Name:        rows[i].Name,
+		})
+	}
+	return out, nil
+}
+
 func (r *UserRepository) Count(ctx context.Context) (int64, error) {
 	var n int64
 	err := r.DB.WithContext(ctx).Model(&UserModel{}).Count(&n).Error

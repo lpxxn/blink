@@ -34,6 +34,7 @@ import (
 	appoauth "github.com/lpxxn/blink/application/oauth"
 	apppost "github.com/lpxxn/blink/application/post"
 	apppostreply "github.com/lpxxn/blink/application/postreply"
+	appsearch "github.com/lpxxn/blink/application/search"
 	domainuser "github.com/lpxxn/blink/domain/user"
 	oauthadapter "github.com/lpxxn/blink/infrastructure/adapter/oauth2"
 	redisstore "github.com/lpxxn/blink/infrastructure/cache/redisstore"
@@ -297,6 +298,7 @@ func main() {
 	apiSrv := &httpapi.Server{
 		Posts:         postSvc,
 		Replies:       replySvc,
+		Search:        &appsearch.Service{Posts: postRepo, Users: userRepo},
 		Follows:       followSvc,
 		Likes:         likeSvc,
 		Notifications: notifSvc,
@@ -444,6 +446,8 @@ func main() {
 	opt.GET("/users/:id/follow-stats", apiSrv.GetUserFollowStats)
 	opt.GET("/users/:id/following", apiSrv.ListUserFollowing)
 	opt.GET("/users/:id/followers", apiSrv.ListUserFollowers)
+	opt.GET("/search/posts", apiSrv.SearchPosts)
+	opt.GET("/search/users", apiSrv.SearchUsers)
 
 	authed := api.Group("")
 	authed.Use(httpauth.RequireSession(sessStore))
@@ -457,6 +461,7 @@ func main() {
 	authed.DELETE("/posts/:id", apiSrv.DeletePost)
 	authed.POST("/posts/:id/moderation_request", apiSrv.SubmitModerationRequest)
 	authed.GET("/me/posts", apiSrv.ListMyPosts)
+	authed.GET("/me/posts/following", apiSrv.ListFollowingPosts)
 	authed.GET("/me/following", apiSrv.ListMyFollowing)
 	authed.GET("/me/followers", apiSrv.ListMyFollowers)
 	authed.GET("/me/notifications", apiSrv.ListNotifications)

@@ -142,6 +142,12 @@ type PostsPageJSON struct {
 	NextCursor *string    `json:"next_cursor,omitempty"`
 }
 
+// UsersSearchPageJSON is GET /api/search/users.
+type UsersSearchPageJSON struct {
+	Users      []PublicUserJSON `json:"users"`
+	NextOffset *int             `json:"next_offset,omitempty"`
+}
+
 // RepliesPageJSON is the list response for GET /api/posts/:id/replies.
 type RepliesPageJSON struct {
 	Replies    []ReplyJSON `json:"replies"`

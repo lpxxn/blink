@@ -127,10 +127,14 @@ func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domainpost.Pos
 	return postModelToDomain(&m)
 }
 
-func (r *PostRepository) ListPublicFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int) ([]*domainpost.Post, error) {
-	q := r.DB.WithContext(ctx).Model(&PostModel{}).
-		Where("deleted_at IS NULL AND status = ? AND moderation_flag = ? AND post_type = ? AND visibility = ?",
+func (r *PostRepository) publicFeedBaseQuery(ctx context.Context) *gorm.DB {
+	return r.DB.WithContext(ctx).Model(&PostModel{}).
+		Where("posts.deleted_at IS NULL AND posts.status = ? AND posts.moderation_flag = ? AND posts.post_type = ? AND posts.visibility = ?",
 			domainpost.StatusPublished, domainpost.ModerationNormal, domainpost.TypeOriginal, domainpost.VisibilityPublic)
+}
+
+func (r *PostRepository) ListPublicFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+	q := r.publicFeedBaseQuery(ctx)
 	if categoryID != nil {
 		q = q.Where("category_id = ?", *categoryID)
 	} else if uncategorizedOnly {
@@ -141,6 +145,48 @@ func (r *PostRepository) ListPublicFeed(ctx context.Context, categoryID *int64, 
 	}
 	var rows []PostModel
 	if err := q.Order("id DESC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]*domainpost.Post, 0, len(rows))
+	for i := range rows {
+		p, err := postModelToDomain(&rows[i])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
+func (r *PostRepository) ListFollowingFeed(ctx context.Context, followerID int64, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+	q := r.publicFeedBaseQuery(ctx).
+		Joins("INNER JOIN user_follows uf ON uf.followee_id = posts.user_id AND uf.follower_id = ? AND uf.deleted_at IS NULL", followerID)
+	if beforeID != nil {
+		q = q.Where("posts.id < ?", *beforeID)
+	}
+	var rows []PostModel
+	if err := q.Order("posts.id DESC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]*domainpost.Post, 0, len(rows))
+	for i := range rows {
+		p, err := postModelToDomain(&rows[i])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
+func (r *PostRepository) SearchPublic(ctx context.Context, query string, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+	pattern := likeContainsPattern(query)
+	q := r.publicFeedBaseQuery(ctx).Where("posts.body LIKE ? ESCAPE '\\'", pattern)
+	if beforeID != nil {
+		q = q.Where("posts.id < ?", *beforeID)
+	}
+	var rows []PostModel
+	if err := q.Order("posts.id DESC").Limit(limit).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	out := make([]*domainpost.Post, 0, len(rows))

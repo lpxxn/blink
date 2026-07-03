@@ -266,6 +266,14 @@ func (s *Service) ListFeed(ctx context.Context, categoryID *int64, uncategorized
 	return s.Posts.ListPublicFeed(ctx, categoryID, uncategorizedOnly, beforeID, limit)
 }
 
+// ListFollowingFeed returns published public posts from users the viewer follows.
+func (s *Service) ListFollowingFeed(ctx context.Context, followerID int64, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	return s.Posts.ListFollowingFeed(ctx, followerID, beforeID, limit)
+}
+
 // ListPublicByUser returns published public posts by one author (newest first).
 func (s *Service) ListPublicByUser(ctx context.Context, userID int64, beforeID *int64, limit int) ([]*domainpost.Post, error) {
 	if limit <= 0 || limit > 50 {

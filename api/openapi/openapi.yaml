@@ -570,6 +570,79 @@ paths:
         "200":
           description: 同 listPosts
 
+  /api/me/posts/following:
+    get:
+      operationId: listFollowingPosts
+      tags: [social]
+      summary: 关注流（需登录）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      description: |
+        返回当前用户所关注用户发布的公开已发布原创帖，按 id 降序分页。
+        Query：`cursor`（上一页最后一条帖子 id）、`limit`（默认 20，最大 50）。
+      responses:
+        "200":
+          description: 同 listPosts
+        "401":
+          description: 未登录
+
+  /api/search/posts:
+    get:
+      operationId: searchPosts
+      tags: [social]
+      summary: 搜索帖子（可选登录）
+      description: |
+        Query：`q`（必填，1–100 字符）、`cursor`、`limit`。
+        仅匹配已发布、公开、审核正常的原创帖正文；登录时含 `liked`。
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: 同 listPosts
+        "400":
+          description: 缺少或无效 q
+
+  /api/search/users:
+    get:
+      operationId: searchUsers
+      tags: [social]
+      summary: 搜索用户（按展示名）
+      description: |
+        Query：`q`（必填）、`offset`（默认 0）、`limit`（默认 20，最大 50）。
+        仅返回 status=正常 的用户；响应不含邮箱。
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: '`{ "users": [...], "next_offset": int|null }`'
+        "400":
+          description: 缺少或无效 q
+
   /api/me/following:
     get:
       operationId: listMyFollowing

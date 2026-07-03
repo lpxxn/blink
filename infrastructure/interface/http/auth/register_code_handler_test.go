@@ -70,6 +70,10 @@ func (s *stubRegisterCodeUsers) TopActiveUsers(context.Context, time.Time, time.
 	return nil, nil
 }
 
+func (s *stubRegisterCodeUsers) SearchPublic(context.Context, string, int, int) ([]domainuser.PublicProfile, error) {
+	return nil, nil
+}
+
 func TestRegisterCodeHandler_SendReturnsServiceUnavailableBeforeAccountLookupWhenCodesNil(t *testing.T) {
 	users := &stubRegisterCodeUsers{found: map[string]bool{"existing@example.com": true}}
 	h := &RegisterCodeHandler{
