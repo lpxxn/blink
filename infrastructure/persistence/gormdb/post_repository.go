@@ -133,8 +133,26 @@ func (r *PostRepository) publicFeedBaseQuery(ctx context.Context) *gorm.DB {
 			domainpost.StatusPublished, domainpost.ModerationNormal, domainpost.TypeOriginal, domainpost.VisibilityPublic)
 }
 
-func (r *PostRepository) ListPublicFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int) ([]*domainpost.Post, error) {
-	q := r.publicFeedBaseQuery(ctx)
+func applyBlockFilter(q *gorm.DB, viewerID int64) *gorm.DB {
+	if viewerID == 0 {
+		return q
+	}
+	return q.Where(`posts.user_id NOT IN (
+		SELECT blocked_id FROM user_blocks WHERE blocker_id = ? AND deleted_at IS NULL
+		UNION
+		SELECT blocker_id FROM user_blocks WHERE blocked_id = ? AND deleted_at IS NULL
+	)`, viewerID, viewerID)
+}
+
+func derefViewerID(viewerID *int64) int64 {
+	if viewerID == nil {
+		return 0
+	}
+	return *viewerID
+}
+
+func (r *PostRepository) ListPublicFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int, viewerID *int64) ([]*domainpost.Post, error) {
+	q := applyBlockFilter(r.publicFeedBaseQuery(ctx), derefViewerID(viewerID))
 	if categoryID != nil {
 		q = q.Where("category_id = ?", *categoryID)
 	} else if uncategorizedOnly {
@@ -159,7 +177,7 @@ func (r *PostRepository) ListPublicFeed(ctx context.Context, categoryID *int64, 
 }
 
 func (r *PostRepository) ListFollowingFeed(ctx context.Context, followerID int64, beforeID *int64, limit int) ([]*domainpost.Post, error) {
-	q := r.publicFeedBaseQuery(ctx).
+	q := applyBlockFilter(r.publicFeedBaseQuery(ctx), followerID).
 		Joins("INNER JOIN user_follows uf ON uf.followee_id = posts.user_id AND uf.follower_id = ? AND uf.deleted_at IS NULL", followerID)
 	if beforeID != nil {
 		q = q.Where("posts.id < ?", *beforeID)
@@ -179,9 +197,9 @@ func (r *PostRepository) ListFollowingFeed(ctx context.Context, followerID int64
 	return out, nil
 }
 
-func (r *PostRepository) SearchPublic(ctx context.Context, query string, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+func (r *PostRepository) SearchPublic(ctx context.Context, query string, beforeID *int64, limit int, viewerID *int64) ([]*domainpost.Post, error) {
 	pattern := likeContainsPattern(query)
-	q := r.publicFeedBaseQuery(ctx).Where("posts.body LIKE ? ESCAPE '\\'", pattern)
+	q := applyBlockFilter(r.publicFeedBaseQuery(ctx), derefViewerID(viewerID)).Where("posts.body LIKE ? ESCAPE '\\'", pattern)
 	if beforeID != nil {
 		q = q.Where("posts.id < ?", *beforeID)
 	}

@@ -20,11 +20,11 @@ type Repository interface {
 	Update(ctx context.Context, p *Post) error
 	SoftDelete(ctx context.Context, id int64) error
 	GetByID(ctx context.Context, id int64) (*Post, error)
-	ListPublicFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int) ([]*Post, error)
+	ListPublicFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int, viewerID *int64) ([]*Post, error)
 	// ListFollowingFeed returns published public posts by users that followerID follows (newest first).
 	ListFollowingFeed(ctx context.Context, followerID int64, beforeID *int64, limit int) ([]*Post, error)
 	// SearchPublic finds published public posts whose body contains query (LIKE).
-	SearchPublic(ctx context.Context, query string, beforeID *int64, limit int) ([]*Post, error)
+	SearchPublic(ctx context.Context, query string, beforeID *int64, limit int, viewerID *int64) ([]*Post, error)
 	// ListPublicByUserID returns published public original posts by one author (same rules as ListPublicFeed).
 	ListPublicByUserID(ctx context.Context, userID int64, beforeID *int64, limit int) ([]*Post, error)
 	ListByUserID(ctx context.Context, userID int64, includeDraft bool, beforeID *int64, limit int) ([]*Post, error)

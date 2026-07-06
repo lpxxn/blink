@@ -145,6 +145,32 @@ func (PostLikeModel) TableName() string {
 	return "post_likes"
 }
 
+// ReplyLikeModel maps reply_likes (platform/db/0012_reply_likes.sql).
+type ReplyLikeModel struct {
+	UserID    int64          `gorm:"column:user_id;primaryKey"`
+	ReplyID   int64          `gorm:"column:reply_id;primaryKey"`
+	CreatedAt time.Time      `gorm:"column:created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at"`
+}
+
+func (ReplyLikeModel) TableName() string {
+	return "reply_likes"
+}
+
+// UserBlockModel maps user_blocks (platform/db/0013_user_blocks.sql).
+type UserBlockModel struct {
+	BlockerID int64          `gorm:"column:blocker_id;primaryKey"`
+	BlockedID int64          `gorm:"column:blocked_id;primaryKey"`
+	CreatedAt time.Time      `gorm:"column:created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at"`
+}
+
+func (UserBlockModel) TableName() string {
+	return "user_blocks"
+}
+
 // SensitiveWordModel maps sensitive_words (platform/db/0007_sensitive_words.sql).
 type SensitiveWordModel struct {
 	ID        int64     `gorm:"column:id;primaryKey"`
