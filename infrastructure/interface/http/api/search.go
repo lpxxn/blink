@@ -56,7 +56,11 @@ func (s *Server) SearchPosts(c *gin.Context) {
 		beforeID = &id
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	list, err := s.Search.SearchPosts(c.Request.Context(), q, beforeID, limit)
+	var viewer *int64
+	if uid, ok := httpauth.UserIDFromContext(c); ok {
+		viewer = &uid
+	}
+	list, err := s.Search.SearchPosts(c.Request.Context(), q, beforeID, limit, viewer)
 	if err != nil {
 		if errors.Is(err, appsearch.ErrInvalidQuery) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "query required"})
@@ -64,10 +68,6 @@ func (s *Server) SearchPosts(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
-	}
-	var viewer *int64
-	if uid, ok := httpauth.UserIDFromContext(c); ok {
-		viewer = &uid
 	}
 	out := s.postsToJSON(c.Request.Context(), list, viewer)
 	var next *string

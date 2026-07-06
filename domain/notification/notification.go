@@ -6,6 +6,7 @@ import "time"
 const (
 	TypeReply                = "reply"
 	TypeReplyToComment       = "reply_to_comment"
+	TypeReplyLiked           = "reply_liked"
 	TypePostRemoved          = "post_removed"
 	TypePostFlagged          = "post_flagged"
 	TypeAppealSubmittedAdmin = "appeal_submitted_admin"

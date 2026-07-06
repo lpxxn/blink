@@ -26,8 +26,10 @@ import (
 	appcategory "github.com/lpxxn/blink/application/category"
 	appemailcode "github.com/lpxxn/blink/application/emailcode"
 	appfeedback "github.com/lpxxn/blink/application/feedback"
+	appblock "github.com/lpxxn/blink/application/block"
 	appfollow "github.com/lpxxn/blink/application/follow"
 	apppostlike "github.com/lpxxn/blink/application/postlike"
+	appreplylike "github.com/lpxxn/blink/application/replylike"
 	appidp "github.com/lpxxn/blink/application/idp"
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	appnotification "github.com/lpxxn/blink/application/notification"
@@ -124,8 +126,12 @@ func main() {
 	}
 	followRepo := &gormdb.FollowRepository{DB: gdb}
 	likeRepo := &gormdb.PostLikeRepository{DB: gdb}
-	followSvc := &appfollow.Service{Follows: followRepo, Users: userRepo}
+	replyLikeRepo := &gormdb.ReplyLikeRepository{DB: gdb}
+	blockRepo := &gormdb.BlockRepository{DB: gdb}
+	followSvc := &appfollow.Service{Follows: followRepo, Users: userRepo, Blocks: blockRepo}
 	likeSvc := &apppostlike.Service{Likes: likeRepo, Posts: postSvc}
+	replyLikeSvc := &appreplylike.Service{Likes: replyLikeRepo, Replies: replySvc}
+	blockSvc := &appblock.Service{Blocks: blockRepo, Follows: followRepo, Users: userRepo}
 	sseHub := sse.NewHub()
 	notifSvc := &appnotification.Service{
 		Repo:  notifRepo,
@@ -301,6 +307,8 @@ func main() {
 		Search:        &appsearch.Service{Posts: postRepo, Users: userRepo},
 		Follows:       followSvc,
 		Likes:         likeSvc,
+		ReplyLikes:    replyLikeSvc,
+		Blocks:        blockSvc,
 		Notifications: notifSvc,
 		Feedback:      feedbackSvc,
 		NotifyEvents:  notifyEventBus,
@@ -441,6 +449,7 @@ func main() {
 	opt.GET("/posts/like_rankings", apiSrv.ListLikeRankings)
 	opt.GET("/posts/:id", apiSrv.GetPost)
 	opt.GET("/posts/:id/likes", apiSrv.GetPostLikes)
+	opt.GET("/replies/:id/likes", apiSrv.GetReplyLikes)
 	opt.GET("/users/:id", apiSrv.GetUser)
 	opt.GET("/users/:id/posts", apiSrv.ListUserPosts)
 	opt.GET("/users/:id/follow-stats", apiSrv.GetUserFollowStats)
@@ -476,8 +485,13 @@ func main() {
 	authed.POST("/posts/:id/replies", apiSrv.CreateReply)
 	authed.POST("/posts/:id/like", apiSrv.LikePost)
 	authed.DELETE("/posts/:id/like", apiSrv.UnlikePost)
+	authed.POST("/replies/:id/like", apiSrv.LikeReply)
+	authed.DELETE("/replies/:id/like", apiSrv.UnlikeReply)
 	authed.POST("/users/:id/follow", apiSrv.FollowUser)
 	authed.DELETE("/users/:id/follow", apiSrv.UnfollowUser)
+	authed.POST("/users/:id/block", apiSrv.BlockUser)
+	authed.DELETE("/users/:id/block", apiSrv.UnblockUser)
+	authed.GET("/me/blocked", apiSrv.ListMyBlocked)
 	authed.POST("/uploads", apiSrv.UploadImage)
 	authed.DELETE("/replies/:id", apiSrv.DeleteReply)
 

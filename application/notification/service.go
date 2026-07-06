@@ -237,6 +237,18 @@ func (s *Service) OnPostLiked(ctx context.Context, postAuthorID, postID, likerID
 	return s.send(ctx, postAuthorID, domainnotification.TypePostLiked, title, body, &pid, nil)
 }
 
+func (s *Service) OnReplyLiked(ctx context.Context, replyAuthorID, postID, replyID, likerID int64) error {
+	if replyAuthorID == 0 || replyAuthorID == likerID {
+		return nil
+	}
+	likerName := s.userDisplayName(ctx, likerID)
+	pid := postID
+	rid := replyID
+	title := likerName + " 给你的评论点了赞"
+	body := likerName + " 给你的评论点了赞。"
+	return s.send(ctx, replyAuthorID, domainnotification.TypeReplyLiked, title, body, &pid, &rid)
+}
+
 func (s *Service) OnFeedbackReply(ctx context.Context, userID, feedbackID int64, reply string) error {
 	if userID == 0 {
 		return nil

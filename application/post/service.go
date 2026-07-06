@@ -259,11 +259,11 @@ func (s *Service) GetForAuthor(ctx context.Context, authorID, postID int64) (*do
 }
 
 // ListFeed returns newest-first published posts for the public timeline.
-func (s *Service) ListFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+func (s *Service) ListFeed(ctx context.Context, categoryID *int64, uncategorizedOnly bool, beforeID *int64, limit int, viewerID *int64) ([]*domainpost.Post, error) {
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
-	return s.Posts.ListPublicFeed(ctx, categoryID, uncategorizedOnly, beforeID, limit)
+	return s.Posts.ListPublicFeed(ctx, categoryID, uncategorizedOnly, beforeID, limit, viewerID)
 }
 
 // ListFollowingFeed returns published public posts from users the viewer follows.

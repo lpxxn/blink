@@ -106,6 +106,21 @@ type ReplyJSON struct {
 	Status        int    `json:"status"`
 	CreatedAt     string `json:"created_at"`
 	ParentReplyID *int64 `json:"parent_reply_id,string"`
+	LikeCount     int64  `json:"like_count,string"`
+	Liked         *bool  `json:"liked,omitempty"`
+}
+
+// ReplyLikeJSON is GET /api/replies/:id/likes.
+type ReplyLikeJSON struct {
+	ReplyID   int64 `json:"reply_id,string"`
+	LikeCount int64 `json:"like_count,string"`
+	Liked     bool  `json:"liked,omitempty"`
+}
+
+// BlockedUsersPageJSON is GET /api/me/blocked.
+type BlockedUsersPageJSON struct {
+	Users      []PublicUserJSON `json:"users"`
+	NextOffset *int             `json:"next_offset,omitempty"`
 }
 
 // ReplyToJSON maps a domain reply.

@@ -4,20 +4,34 @@ import (
 	"context"
 	"errors"
 
+	domainblock "github.com/lpxxn/blink/domain/block"
 	domainfollow "github.com/lpxxn/blink/domain/follow"
 	domainuser "github.com/lpxxn/blink/domain/user"
 )
 
-var ErrUserNotFound = errors.New("follow: user not found")
+var (
+	ErrUserNotFound = errors.New("follow: user not found")
+	ErrBlocked      = errors.New("follow: blocked")
+)
 
 type Service struct {
 	Follows domainfollow.Repository
 	Users   domainuser.Repository
+	Blocks  domainblock.Repository
 }
 
 func (s *Service) Follow(ctx context.Context, followerID, followeeID int64) error {
 	if followerID == followeeID {
 		return domainfollow.ErrSelfFollow
+	}
+	if s.Blocks != nil {
+		blocked, err := s.Blocks.IsEitherBlocked(ctx, followerID, followeeID)
+		if err != nil {
+			return err
+		}
+		if blocked {
+			return ErrBlocked
+		}
 	}
 	if _, err := s.Users.GetByID(ctx, followeeID); err != nil {
 		if errors.Is(err, domainuser.ErrNotFound) {

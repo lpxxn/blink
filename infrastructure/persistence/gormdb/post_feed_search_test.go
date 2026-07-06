@@ -104,7 +104,7 @@ func TestPostRepository_SearchPublic(t *testing.T) {
 		}
 	}
 
-	list, err := postRepo.SearchPublic(ctx, "golang", nil, 10)
+	list, err := postRepo.SearchPublic(ctx, "golang", nil, 10, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

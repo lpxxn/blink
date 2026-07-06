@@ -39,7 +39,7 @@ func clampLimit(limit int) int {
 	return limit
 }
 
-func (s *Service) SearchPosts(ctx context.Context, rawQuery string, beforeID *int64, limit int) ([]*domainpost.Post, error) {
+func (s *Service) SearchPosts(ctx context.Context, rawQuery string, beforeID *int64, limit int, viewerID *int64) ([]*domainpost.Post, error) {
 	query, err := normalizeQuery(rawQuery)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (s *Service) SearchPosts(ctx context.Context, rawQuery string, beforeID *in
 	if s.Posts == nil {
 		return nil, errors.New("search: posts unavailable")
 	}
-	return s.Posts.SearchPublic(ctx, query, beforeID, clampLimit(limit))
+	return s.Posts.SearchPublic(ctx, query, beforeID, clampLimit(limit), viewerID)
 }
 
 func (s *Service) SearchUsers(ctx context.Context, rawQuery string, offset, limit int) ([]domainuser.PublicProfile, error) {

@@ -19,6 +19,8 @@ SQL 需同时兼容 **SQLite / MySQL / PostgreSQL**；业务访问请走 **repos
 | `0009_feedback.sql` | 意见反馈 |
 | `0010_admin_audit_logs.sql` | 管理审计日志 |
 | `0011_post_likes.sql` | `post_likes`（帖子点赞） |
+| `0012_reply_likes.sql` | `reply_likes`（评论点赞） |
+| `0013_user_blocks.sql` | `user_blocks`（用户拉黑） |
 
 ### CLI：`cmd/migrate`
 
@@ -137,6 +139,38 @@ go run ./cmd/migrate
 取消点赞若用软删，再次点赞应对**同一行** `UPDATE` 清空 `deleted_at`，不要 `INSERT` 新行。
 
 **API**：`POST/DELETE /api/posts/{id}/like`（需登录）；`GET /api/posts/{id}/likes`；帖子 JSON 含 `like_count`，登录时还含 `liked`。
+
+---
+
+## reply_likes
+
+用户对评论的点赞；主键 `(user_id, reply_id)`。
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| user_id | BIGINT | 点赞者，引用 users.snowflake_id。 |
+| reply_id | BIGINT | 评论，引用 post_replies.id。 |
+| created_at / updated_at / deleted_at | TIMESTAMP | 时间与软删（取消点赞）。 |
+
+取消点赞若用软删，再次点赞应对**同一行** `UPDATE` 清空 `deleted_at`，不要 `INSERT` 新行。
+
+**API**：`POST/DELETE /api/replies/{id}/like`（需登录）；`GET /api/replies/{id}/likes`；评论 JSON 含 `like_count`，登录时还含 `liked`。
+
+---
+
+## user_blocks
+
+用户拉黑关系；主键 `(blocker_id, blocked_id)`。`blocker_id` 拉黑 `blocked_id`。
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| blocker_id | BIGINT | 发起拉黑的用户。 |
+| blocked_id | BIGINT | 被拉黑的用户。 |
+| created_at / updated_at / deleted_at | TIMESTAMP | 时间与软删（取消拉黑）。 |
+
+拉黑为**双向不可见**：双方主页、帖子流、搜索、关注均互不可见；拉黑时自动双向取关。
+
+**API**：`POST/DELETE /api/users/{id}/block`（需登录）；`GET /api/me/blocked`（登录，分页 `offset`/`limit`）。
 
 ---
 

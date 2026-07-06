@@ -20,13 +20,13 @@ func (s *stubPostSearchRepo) SoftDelete(context.Context, int64) error        { p
 func (s *stubPostSearchRepo) GetByID(context.Context, int64) (*domainpost.Post, error) {
 	panic("ni")
 }
-func (s *stubPostSearchRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int) ([]*domainpost.Post, error) {
+func (s *stubPostSearchRepo) ListPublicFeed(context.Context, *int64, bool, *int64, int, *int64) ([]*domainpost.Post, error) {
 	panic("ni")
 }
 func (s *stubPostSearchRepo) ListFollowingFeed(context.Context, int64, *int64, int) ([]*domainpost.Post, error) {
 	panic("ni")
 }
-func (s *stubPostSearchRepo) SearchPublic(_ context.Context, query string, _ *int64, _ int) ([]*domainpost.Post, error) {
+func (s *stubPostSearchRepo) SearchPublic(_ context.Context, query string, _ *int64, _ int, _ *int64) ([]*domainpost.Post, error) {
 	if query != "go" {
 		return nil, nil
 	}
@@ -93,7 +93,7 @@ func (s *stubUserSearchRepo) SearchPublic(_ context.Context, query string, _ int
 
 func TestService_SearchPosts_rejectsEmptyQuery(t *testing.T) {
 	svc := &Service{Posts: &stubPostSearchRepo{}}
-	_, err := svc.SearchPosts(context.Background(), "  ", nil, 20)
+	_, err := svc.SearchPosts(context.Background(), "  ", nil, 20, nil)
 	if !errors.Is(err, ErrInvalidQuery) {
 		t.Fatalf("err=%v", err)
 	}
@@ -102,7 +102,7 @@ func TestService_SearchPosts_rejectsEmptyQuery(t *testing.T) {
 func TestService_SearchPosts_trimsQuery(t *testing.T) {
 	want := []*domainpost.Post{{ID: 1, Body: "go"}}
 	svc := &Service{Posts: &stubPostSearchRepo{posts: want}}
-	list, err := svc.SearchPosts(context.Background(), "  go  ", nil, 20)
+	list, err := svc.SearchPosts(context.Background(), "  go  ", nil, 20, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

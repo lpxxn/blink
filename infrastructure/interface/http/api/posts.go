@@ -36,14 +36,14 @@ func (s *Server) ListPosts(c *gin.Context) {
 		beforeID = &id
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	list, err := s.Posts.ListFeed(c.Request.Context(), categoryID, uncategorized, beforeID, limit)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
 	var viewer *int64
 	if uid, ok := httpauth.UserIDFromContext(c); ok {
 		viewer = &uid
+	}
+	list, err := s.Posts.ListFeed(c.Request.Context(), categoryID, uncategorized, beforeID, limit, viewer)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	out := s.postsToJSON(c.Request.Context(), list, viewer)
 	var next *string

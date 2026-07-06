@@ -81,6 +81,10 @@ func (s *Server) FollowUser(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 			return
 		}
+		if errors.Is(err, appfollow.ErrBlocked) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "blocked"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

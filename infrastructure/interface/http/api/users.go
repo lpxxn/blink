@@ -49,6 +49,14 @@ func (s *Server) GetUser(c *gin.Context) {
 	if !ok {
 		return
 	}
+	var viewer *int64
+	if uid, ok := httpauth.UserIDFromContext(c); ok {
+		viewer = &uid
+	}
+	if viewer != nil && s.isEitherBlocked(c, *viewer, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
 	u, ok := s.loadPublicUser(c, userID)
 	if !ok {
 		return
@@ -62,6 +70,14 @@ func (s *Server) GetUser(c *gin.Context) {
 func (s *Server) ListUserPosts(c *gin.Context) {
 	userID, ok := parsePathUserID(c)
 	if !ok {
+		return
+	}
+	var viewer *int64
+	if uid, ok := httpauth.UserIDFromContext(c); ok {
+		viewer = &uid
+	}
+	if viewer != nil && s.isEitherBlocked(c, *viewer, userID) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
 	if _, ok := s.loadPublicUser(c, userID); !ok {
@@ -81,10 +97,6 @@ func (s *Server) ListUserPosts(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
-	}
-	var viewer *int64
-	if uid, ok := httpauth.UserIDFromContext(c); ok {
-		viewer = &uid
 	}
 	out := s.postsToJSON(c.Request.Context(), list, viewer)
 	var next *string

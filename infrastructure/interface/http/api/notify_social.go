@@ -29,3 +29,18 @@ func (s *Server) notifyUserFollowed(followeeID, followerID int64) {
 		log.Printf("notify user followed: %v", err)
 	}
 }
+
+// notifyReplyLiked writes an in-app notification to the reply author (sync, detached context).
+func (s *Server) notifyReplyLiked(replyID, likerID int64) {
+	if s.Notifications == nil || s.Replies == nil {
+		return
+	}
+	ctx := context.Background()
+	rep, err := s.Replies.GetByID(ctx, replyID)
+	if err != nil || rep == nil || rep.UserID == likerID {
+		return
+	}
+	if err := s.Notifications.OnReplyLiked(ctx, rep.UserID, rep.PostID, replyID, likerID); err != nil {
+		log.Printf("notify reply liked: %v", err)
+	}
+}

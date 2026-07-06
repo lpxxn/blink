@@ -685,6 +685,32 @@ paths:
         "401":
           description: 未登录
 
+  /api/me/blocked:
+    get:
+      operationId: listMyBlocked
+      tags: [social]
+      summary: 我拉黑的用户列表
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        "200":
+          description: '`{ "users": [{ "user_id", "name" }], "next_offset"? }`'
+        "401":
+          description: 未登录
+
   /api/posts/{id}/replies:
     get:
       operationId: listReplies
@@ -925,6 +951,104 @@ paths:
           description: 成功
         "404":
           description: 未关注
+
+  /api/users/{id}/block:
+    post:
+      operationId: blockUser
+      tags: [social]
+      summary: 拉黑用户（双向取关）
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "409":
+          description: 已拉黑
+    delete:
+      operationId: unblockUser
+      tags: [social]
+      summary: 取消拉黑
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "404":
+          description: 未拉黑
+
+  /api/replies/{id}/likes:
+    get:
+      operationId: getReplyLikes
+      tags: [social]
+      summary: 评论点赞数（可选登录返回 liked）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: '`{ "reply_id", "like_count", "liked"? }`'
+        "404":
+          description: 评论不存在
+
+  /api/replies/{id}/like:
+    post:
+      operationId: likeReply
+      tags: [social]
+      summary: 点赞评论
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "409":
+          description: 已点赞
+    delete:
+      operationId: unlikeReply
+      tags: [social]
+      summary: 取消评论点赞
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "204":
+          description: 成功
+        "404":
+          description: 未点赞
 
   /api/replies/{id}:
     delete:

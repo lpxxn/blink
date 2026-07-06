@@ -10,6 +10,7 @@ import (
 	appmoderation "github.com/lpxxn/blink/application/moderation"
 	apppost "github.com/lpxxn/blink/application/post"
 	apppostreply "github.com/lpxxn/blink/application/postreply"
+	appreplylike "github.com/lpxxn/blink/application/replylike"
 	domainpost "github.com/lpxxn/blink/domain/post"
 	domainpostreply "github.com/lpxxn/blink/domain/postreply"
 	httpauth "github.com/lpxxn/blink/infrastructure/interface/http/auth"
@@ -50,7 +51,7 @@ func (s *Server) ListReplies(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	out := s.repliesToJSON(c.Request.Context(), list)
+	out := s.repliesToJSON(c.Request.Context(), list, viewer)
 	var next *string
 	if len(list) > 0 {
 		next = NextCursorString(list[len(list)-1].ID)
@@ -116,39 +117,66 @@ func (s *Server) CreateReply(c *gin.Context) {
 			}
 		}
 	}
-	c.JSON(http.StatusCreated, s.replyToJSON(c.Request.Context(), rep))
+	c.JSON(http.StatusCreated, s.replyToJSON(c.Request.Context(), rep, &uid))
 }
 
-func (s *Server) repliesToJSON(ctx context.Context, list []*domainpostreply.Reply) []ReplyJSON {
+func (s *Server) repliesToJSON(ctx context.Context, list []*domainpostreply.Reply, viewerID *int64) []ReplyJSON {
 	if len(list) == 0 {
 		return []ReplyJSON{}
 	}
-	ids := make([]int64, len(list))
+	userIDs := make([]int64, len(list))
+	replyIDs := make([]int64, len(list))
 	for i, r := range list {
-		ids[i] = r.UserID
+		userIDs[i] = r.UserID
+		replyIDs[i] = r.ID
 	}
-	names := ResolveUserNames(ctx, s.Users, ids)
+	names := ResolveUserNames(ctx, s.Users, userIDs)
+	likeMeta := s.replyLikeMetaMap(ctx, replyIDs, viewerID)
 	out := make([]ReplyJSON, 0, len(list))
 	for _, r := range list {
 		j := ReplyToJSON(r)
 		if names != nil {
 			j.UserName = names[r.UserID]
 		}
+		if m, ok := likeMeta[r.ID]; ok {
+			j.LikeCount = m.LikeCount
+			if viewerID != nil {
+				liked := m.Liked
+				j.Liked = &liked
+			}
+		}
 		out = append(out, j)
 	}
 	return out
 }
 
-func (s *Server) replyToJSON(ctx context.Context, r *domainpostreply.Reply) ReplyJSON {
+func (s *Server) replyToJSON(ctx context.Context, r *domainpostreply.Reply, viewerID *int64) ReplyJSON {
 	j := ReplyToJSON(r)
-	if s.Users == nil {
-		return j
+	if s.Users != nil {
+		names := ResolveUserNames(ctx, s.Users, []int64{r.UserID})
+		if names != nil {
+			j.UserName = names[r.UserID]
+		}
 	}
-	names := ResolveUserNames(ctx, s.Users, []int64{r.UserID})
-	if names != nil {
-		j.UserName = names[r.UserID]
+	if m, ok := s.replyLikeMetaMap(ctx, []int64{r.ID}, viewerID)[r.ID]; ok {
+		j.LikeCount = m.LikeCount
+		if viewerID != nil {
+			liked := m.Liked
+			j.Liked = &liked
+		}
 	}
 	return j
+}
+
+func (s *Server) replyLikeMetaMap(ctx context.Context, replyIDs []int64, viewerID *int64) map[int64]appreplylike.ReplyLikeMeta {
+	if s.ReplyLikes == nil || len(replyIDs) == 0 {
+		return nil
+	}
+	m, err := s.ReplyLikes.MetaForReplies(ctx, replyIDs, viewerID)
+	if err != nil {
+		return nil
+	}
+	return m
 }
 
 func (s *Server) DeleteReply(c *gin.Context) {
